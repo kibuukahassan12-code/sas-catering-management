@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Schedule Maintenance</p>
+        <h1>Schedule Equipment Maintenance</h1>
+        <p class="muted">Schedule routine maintenance, repairs, or emergency service for equipment.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('maintenance.dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>New Maintenance Schedule</h3>
+    </div>
+    
+    <form method="POST" action="{{ url_for('maintenance.schedule') }}">
+        <div style="display: grid; gap: 1.5rem; max-width: 800px;">
+            <div>
+                <label for="hire_item_id"><strong>Equipment Item *</strong></label>
+                <select name="hire_item_id" id="hire_item_id" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Select Equipment...</option>
+                    {% for item in items %}
+                    <option value="{{ item.id }}">{{ item.name }} {% if item.sku %}(SKU: {{ item.sku }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="maintenance_type"><strong>Maintenance Type *</strong></label>
+                <select name="maintenance_type" id="maintenance_type" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Select Type...</option>
+                    <option value="routine">Routine Maintenance</option>
+                    <option value="repair">Repair</option>
+                    <option value="emergency">Emergency</option>
+                </select>
+            </div>
+            
+            <div>
+                <label for="scheduled_date"><strong>Scheduled Date *</strong></label>
+                <input type="date" name="scheduled_date" id="scheduled_date" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div>
+                <label for="technician_name"><strong>Technician Name</strong></label>
+                <input type="text" name="technician_name" id="technician_name" placeholder="Enter technician name" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div>
+                <label for="cost"><strong>Estimated Cost</strong></label>
+                <input type="number" name="cost" id="cost" step="0.01" min="0" placeholder="0.00" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div>
+                <label for="notes"><strong>Notes</strong></label>
+                <textarea name="notes" id="notes" rows="4" placeholder="Enter maintenance notes, instructions, or requirements..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+            </div>
+            
+            <div>
+                <button type="submit" class="btn-primary">Schedule Maintenance</button>
+                <a href="{{ url_for('maintenance.dashboard') }}" class="btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+// Set default date to today
+document.getElementById('scheduled_date').valueAsDate = new Date();
+</script>
+
+{% endblock %}
+

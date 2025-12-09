@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence</p>
+        <h1>Staff Performance Analytics</h1>
+        <p class="muted">Track and analyze staff performance metrics.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('bi.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Add Performance Metric -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Add Performance Metric</h3>
+    </div>
+    <form id="performance-form" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+        <div>
+            <label>Employee</label>
+            <select name="employee_id" required>
+                <option value="">Select Employee</option>
+                {% for emp in employees %}
+                <option value="{{ emp.id }}">{{ emp.first_name }} {{ emp.last_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Metric</label>
+            <select name="metric" required>
+                <option value="orders_completed">Orders Completed</option>
+                <option value="hours_worked">Hours Worked</option>
+                <option value="efficiency_score">Efficiency Score</option>
+                <option value="revenue_generated">Revenue Generated</option>
+            </select>
+        </div>
+        <div>
+            <label>Value</label>
+            <input type="number" name="value" step="0.01" required>
+        </div>
+        <div>
+            <label>Period</label>
+            <select name="period">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="btn-primary">Add Metric</button>
+        </div>
+    </form>
+</section>
+
+<!-- Performance Chart -->
+{% if performance_records %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Performance Trends</h3>
+    </div>
+    <div style="padding: 2rem;">
+        <canvas id="performanceChart" style="max-height: 400px;"></canvas>
+    </div>
+</section>
+{% endif %}
+
+<!-- Performance Records -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Performance Records</h3>
+        <span class="badge">{{ performance_records|length }} records</span>
+    </div>
+    {% if performance_records %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Metric</th>
+                    <th>Value</th>
+                    <th>Period</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in performance_records %}
+                <tr>
+                    <td>{% if record.employee %}{{ record.employee.first_name }} {{ record.employee.last_name }} ({{ record.employee.employee_number }}){% else %}N/A{% endif %}</td>
+                    <td><span class="badge">{{ record.metric }}</span></td>
+                    <td><strong>{{ "{:,.2f}".format(record.value) }}</strong></td>
+                    <td>{{ record.period }}</td>
+                    <td>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="padding: 2rem; text-align: center;">No performance records yet. Add metrics using the form above.</p>
+    {% endif %}
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.getElementById('performance-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        employee_id: parseInt(formData.get('employee_id')),
+        metric: formData.get('metric'),
+        value: parseFloat(formData.get('value')),
+        period: formData.get('period')
+    };
+    
+    fetch('/bi/api/staff-performance/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Performance metric added!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding metric');
+    });
+});
+</script>
+{% endblock %}
+

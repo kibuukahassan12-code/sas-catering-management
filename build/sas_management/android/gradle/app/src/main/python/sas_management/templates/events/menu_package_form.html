@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+:root {
+    --sas-primary: #BF360C;
+    --sas-accent: #FF7043;
+    --sas-orange: #FF6E1F;
+    --sas-dark: #121212;
+    --sas-light: #F5F5F5;
+}
+
+.sas-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--sas-primary);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--sas-light);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--sas-primary);
+    font-size: 1.25rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sas-accent);
+    color: white;
+    border-radius: 10px;
+    font-size: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--sas-dark);
+    font-size: 0.95rem;
+}
+
+.form-group label .tooltip {
+    margin-left: 0.5rem;
+    color: #999;
+    cursor: help;
+    font-size: 0.85rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--sas-primary);
+    box-shadow: 0 0 0 3px rgba(191, 54, 12, 0.1);
+}
+
+.form-control:hover {
+    border-color: #ccc;
+}
+
+.btn-primary {
+    background: var(--sas-primary);
+    color: white;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.btn-primary:hover {
+    background: var(--sas-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(191, 54, 12, 0.3);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--sas-primary);
+    padding: 0.75rem 2rem;
+    border: 2px solid var(--sas-primary);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--sas-light);
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    display: block;
+}
+
+.field-hint {
+    background: var(--sas-light);
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+    border-left: 3px solid var(--sas-accent);
+}
+
+.json-editor {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.items-preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--sas-light);
+    border-radius: 8px;
+    display: none;
+}
+
+.items-preview.active {
+    display: block;
+}
+
+.items-preview h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--sas-primary);
+    font-size: 0.9rem;
+}
+
+.items-preview ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: #666;
+}
+
+.items-preview li {
+    margin: 0.25rem 0;
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Menu Packages</p>
+        <h1>{{ 'Edit Menu Package' if package else 'Create New Menu Package' }}</h1>
+        <p class="muted">{{ 'Update menu package details' if package else 'Create a new menu package for events' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.menu_packages_list') }}">← Back to Packages</a>
+</section>
+
+<div class="sas-card">
+    <div class="section-header">
+        <div class="section-icon">🍽️</div>
+        <h3>Package Details</h3>
+    </div>
+    
+    <form method="POST" id="packageForm">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="name">
+                    Package Name 
+                    <span class="tooltip" title="Give your menu package a descriptive name">ℹ️</span> *
+                </label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    value="{{ package.name if package else '' }}" 
+                    required 
+                    class="form-control"
+                    placeholder="e.g., Premium Buffet, Standard Set Menu"
+                >
+                <span class="help-text">This name will appear in event menu selection</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="price_per_guest">
+                    Price per Guest (UGX) 
+                    <span class="tooltip" title="Cost per person for this menu package">ℹ️</span> *
+                </label>
+                <input 
+                    type="number" 
+                    id="price_per_guest" 
+                    name="price_per_guest" 
+                    value="{{ package.price_per_guest if package else 0 }}" 
+                    step="0.01" 
+                    min="0" 
+                    required 
+                    class="form-control"
+                    placeholder="0.00"
+                >
+                <span class="help-text">Enter the price per guest in Ugandan Shillings</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">
+                Description 
+                <span class="tooltip" title="Describe what's included in this package">ℹ️</span>
+            </label>
+            <textarea 
+                id="description" 
+                name="description" 
+                class="form-control" 
+                rows="4"
+                placeholder="Describe the package, dietary options, and what makes it special..."
+            >{{ package.description if package else '' }}</textarea>
+            <span class="help-text">Help clients understand what's included in this package</span>
+        </div>
+        
+        <div class="form-group">
+            <label for="items">
+                Menu Items 
+                <span class="tooltip" title="List all menu items included in this package as a JSON array">ℹ️</span>
+            </label>
+            <textarea 
+                id="items" 
+                name="items" 
+                class="form-control json-editor" 
+                rows="8"
+                placeholder='["Starter: Soup of the Day", "Main: Grilled Chicken", "Dessert: Fruit Salad", "Beverages: Soft Drinks"]'
+                oninput="previewItems()"
+            >{{ package.items|tojson if package and package.items else '[]' }}</textarea>
+            <div class="field-hint">
+                💡 <strong>Format:</strong> Enter as JSON array. Example: <code>["Item 1", "Item 2", "Item 3"]</code>
+            </div>
+            <div id="itemsPreview" class="items-preview">
+                <h4>Preview:</h4>
+                <ul id="previewList"></ul>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--sas-light);">
+            <button type="submit" class="btn-primary">
+                {{ 'Update Package' if package else 'Create Package' }}
+            </button>
+            <a href="{{ url_for('events.menu_packages_list') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if not package %}
+<div class="sas-card" style="background: var(--sas-light); border-left-color: var(--sas-accent);">
+    <div style="display: flex; align-items: start; gap: 1rem;">
+        <div style="font-size: 2rem;">💡</div>
+        <div>
+            <h4 style="margin: 0 0 0.5rem 0; color: var(--sas-primary);">Quick Tips</h4>
+            <ul style="margin: 0; padding-left: 1.5rem; color: #666;">
+                <li>Use descriptive package names that clearly indicate what's included</li>
+                <li>Set competitive prices per guest based on your costs</li>
+                <li>List all menu items in the JSON array for transparency</li>
+                <li>Include dietary information in the description (vegetarian, halal, etc.)</li>
+                <li>You can edit this package later to update prices or items</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function previewItems() {
+    const textarea = document.getElementById('items');
+    const preview = document.getElementById('itemsPreview');
+    const previewList = document.getElementById('previewList');
+    
+    try {
+        const items = JSON.parse(textarea.value || '[]');
+        if (Array.isArray(items) && items.length > 0) {
+            previewList.innerHTML = '';
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                previewList.appendChild(li);
+            });
+            preview.classList.add('active');
+        } else {
+            preview.classList.remove('active');
+        }
+    } catch (e) {
+        preview.classList.remove('active');
+    }
+}
+
+// Validate JSON on form submit
+document.getElementById('packageForm').addEventListener('submit', function(e) {
+    const itemsField = document.getElementById('items');
+    if (itemsField.value.trim()) {
+        try {
+            JSON.parse(itemsField.value);
+        } catch (e) {
+            e.preventDefault();
+            alert('Invalid JSON format in Menu Items field. Please check your syntax.');
+            itemsField.focus();
+            return false;
+        }
+    }
+});
+
+// Show preview on page load if items exist
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsField = document.getElementById('items');
+    if (itemsField && itemsField.value && itemsField.value !== '[]') {
+        previewItems();
+    }
+});
+</script>
+{% endblock %}

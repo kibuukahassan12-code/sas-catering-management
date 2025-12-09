@@ -1,0 +1,597 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence · Analytics</p>
+        <h1>Event Profitability Analysis</h1>
+        <p class="muted">Generate detailed profitability metrics for completed events.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('bi.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Info Message if No Data -->
+{% if completed_events_count == 0 %}
+<section class="panel" style="background: linear-gradient(135deg, rgba(242, 104, 34, 0.1) 0%, rgba(246, 188, 56, 0.1) 100%); border: 2px solid rgba(242, 104, 34, 0.3);">
+    <div style="padding: 2rem; text-align: center;">
+        <h3 style="color: var(--brand); margin-bottom: 1rem;">📊 No Event Profitability Data Yet</h3>
+        <p style="color: rgba(255,255,255,0.8); margin-bottom: 1.5rem;">
+            To generate Event Profitability Analysis, you need completed events with revenue and COGS data.
+            Click the button below to generate sample data for testing.
+        </p>
+        <form method="POST" action="{{ url_for('bi.seed_profitability_data') }}" style="display: inline;">
+            <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%); padding: 0.875rem 2rem; font-size: 1rem;">
+                🌱 Generate Sample Event Data
+            </button>
+        </form>
+    </div>
+</section>
+{% endif %}
+
+<!-- Generation Actions -->
+{% if events_needing_analysis %}
+<section class="panel" style="background: linear-gradient(135deg, rgba(242, 104, 34, 0.1) 0%, rgba(246, 188, 56, 0.1) 100%); border: 2px solid rgba(242, 104, 34, 0.3);">
+    <div class="panel-header">
+        <div>
+            <h3>Generate Profitability Analysis</h3>
+            <p class="muted" style="margin: 0.5rem 0 0 0;">{{ events_needing_analysis|length }} events need analysis</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn-primary" onclick="generateForAllEvents()" id="generate-all-btn">
+                <span id="generate-all-text">⚡ Generate All ({{ events_needing_analysis|length }})</span>
+                <span id="generate-all-loading" style="display: none;">⏳ Generating...</span>
+            </button>
+            {% if profitability_records|length > 0 %}
+            <a href="{{ url_for('bi.event_profitability_pdf') }}" class="btn-secondary" target="_blank">
+                📄 Generate PDF Report
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Events Needing Analysis -->
+{% if events_needing_analysis %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Events Needing Profitability Analysis</h3>
+        <span class="badge badge-warning">{{ events_needing_analysis|length }} events</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event ID</th>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Quoted Value</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events_needing_analysis[:50] %}
+                <tr id="event-row-{{ event.id }}">
+                    <td><strong>#{{ event.id }}</strong></td>
+                    <td>
+                        <a href="{{ url_for('events.event_view', event_id=event.id) }}" class="link-primary">
+                            {{ event.event_name }}
+                        </a>
+                    </td>
+                    <td>{{ event.event_date.strftime('%Y-%m-%d') if event.event_date else '—' }}</td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(event.quoted_value or 0) }}</strong></td>
+                    <td><span class="badge badge-info">{{ event.status }}</span></td>
+                    <td>
+                        <button class="btn-primary btn-sm" onclick="generateProfitability({{ event.id }})" id="btn-{{ event.id }}">
+                            <span class="btn-text">📊 Generate Analysis</span>
+                            <span class="btn-loading" style="display: none;">⏳ Generating...</span>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if events_needing_analysis|length > 50 %}
+    <div style="padding: 1rem; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+        <p class="muted">Showing first 50 events. Use "Generate All" to process all {{ events_needing_analysis|length }} events.</p>
+    </div>
+    {% endif %}
+</section>
+{% endif %}
+
+<!-- Profitability Records -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Profitability Records</h3>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <span class="badge badge-success">{{ profitability_records|length }} records</span>
+            {% if profitability_records|length > 0 %}
+            <a href="{{ url_for('bi.event_profitability_pdf') }}" class="btn-secondary btn-sm" target="_blank">
+                📄 PDF Report
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% if profitability_records %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event ID</th>
+                    <th>Revenue</th>
+                    <th>COGS</th>
+                    <th>Labor</th>
+                    <th>Overhead</th>
+                    <th>Profit</th>
+                    <th>Margin %</th>
+                    <th>Generated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prof in profitability_records %}
+                <tr>
+                    <td>
+                        {% if prof.event_id %}
+                        <a href="{{ url_for('events.event_view', event_id=prof.event_id) }}" class="link-primary">
+                            #{{ prof.event_id }}
+                        </a>
+                        {% else %}
+                        <span class="muted">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(prof.revenue) }}</strong></td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(prof.cost_of_goods) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(prof.labor_cost) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(prof.overhead_cost) }}</td>
+                    <td>
+                        <strong style="color: {% if prof.profit > 0 %}var(--accent){% else %}#ff5c5c{% endif %};">
+                            {{ CURRENCY }}{{ "{:,.0f}".format(prof.profit) }}
+                        </strong>
+                    </td>
+                    <td>
+                        <span class="badge {% if prof.margin_percent > 30 %}badge-success{% elif prof.margin_percent > 15 %}badge-warning{% else %}badge-danger{% endif %}">
+                            {{ prof.margin_percent }}%
+                        </span>
+                    </td>
+                    <td>{{ prof.generated_at.strftime('%Y-%m-%d %H:%M') if prof.generated_at else '—' }}</td>
+                    <td>
+                        {% if prof.event_id %}
+                        <button class="btn-ghost btn-sm" onclick="regenerateProfitability({{ prof.event_id }})" title="Regenerate Analysis">
+                            🔄 Regenerate
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+        <p class="muted" style="font-size: 1.1rem; margin-bottom: 0.5rem;">No profitability records yet</p>
+        <p class="muted">Generate analysis for events above to see profitability metrics.</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Profitability Chart -->
+{% if profitability_records|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Profitability Trends</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        <canvas id="profitabilityChart" style="max-height: 400px;"></canvas>
+    </div>
+</section>
+{% endif %}
+
+<!-- Summary Statistics -->
+{% if profitability_records|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Summary Statistics</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; padding: 1.5rem;">
+        <div class="stat-card">
+            <p class="stat-label">Total Revenue</p>
+            <h2 class="stat-value">{{ CURRENCY }}{{ "{:,.0f}".format(profitability_records|sum(attribute='revenue') or 0) }}</h2>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Total Profit</p>
+            <h2 class="stat-value" style="color: {% if (profitability_records|sum(attribute='profit') or 0) > 0 %}var(--accent){% else %}#ff5c5c{% endif %};">
+                {{ CURRENCY }}{{ "{:,.0f}".format(profitability_records|sum(attribute='profit') or 0) }}
+            </h2>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Average Margin</p>
+            <h2 class="stat-value">
+                {% set avg_margin = (profitability_records|sum(attribute='margin_percent') or 0) / profitability_records|length if profitability_records|length > 0 else 0 %}
+                {{ "{:.1f}".format(avg_margin) }}%
+            </h2>
+        </div>
+        <div class="stat-card">
+            <p class="stat-label">Profitable Events</p>
+            <h2 class="stat-value" style="color: var(--accent);">
+                {{ profitability_records|selectattr('profit', 'gt', 0)|list|length }} / {{ profitability_records|length }}
+            </h2>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<style>
+.stat-card {
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-label {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 500;
+}
+
+.stat-value {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table thead {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--accent);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-success {
+    background: rgba(246, 188, 56, 0.2);
+    color: var(--accent);
+}
+
+.badge-warning {
+    background: rgba(242, 104, 34, 0.2);
+    color: var(--brand);
+}
+
+.badge-danger {
+    background: rgba(255, 92, 92, 0.2);
+    color: #ff5c5c;
+}
+
+.badge-info {
+    background: rgba(246, 188, 56, 0.2);
+    color: var(--accent);
+}
+
+.link-primary {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.link-primary:hover {
+    text-decoration: underline;
+}
+
+.muted {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+#generate-all-btn:disabled,
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let profitabilityChart = null;
+
+function generateProfitability(eventId) {
+    const btn = document.getElementById(`btn-${eventId}`);
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoading = btn.querySelector('.btn-loading');
+    
+    // Disable button and show loading
+    btn.disabled = true;
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    
+    fetch('/bi/api/event-profitability/generate', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({event_id: eventId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const row = document.getElementById(`event-row-${eventId}`);
+            if (row) {
+                row.style.background = 'rgba(246, 188, 56, 0.2)';
+                setTimeout(() => {
+                    row.style.background = '';
+                }, 2000);
+            }
+            
+            // Show success notification
+            showNotification(`Analysis generated! Profit: ${data.profit ? new Intl.NumberFormat('en-US', {style: 'currency', currency: 'UGX', minimumFractionDigits: 0}).format(data.profit) : 'N/A'}, Margin: ${data.margin_percent || 0}%`, 'success');
+            
+            // Reload page after a short delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+            btn.disabled = false;
+            btnText.style.display = 'inline';
+            btnLoading.style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error generating profitability analysis', 'error');
+        btn.disabled = false;
+        btnText.style.display = 'inline';
+        btnLoading.style.display = 'none';
+    });
+}
+
+function regenerateProfitability(eventId) {
+    if (!confirm('Regenerate profitability analysis for this event? This will update the existing record.')) {
+        return;
+    }
+    generateProfitability(eventId);
+}
+
+function generateForAllEvents() {
+    const events = [
+        {% for event in events_needing_analysis[:50] %}
+        {{ event.id }}{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    if (events.length === 0) {
+        alert('No events need analysis.');
+        return;
+    }
+    
+    if (!confirm(`Generate profitability analysis for ${events.length} events? This may take a moment.`)) {
+        return;
+    }
+    
+    const btn = document.getElementById('generate-all-btn');
+    const btnText = document.getElementById('generate-all-text');
+    const btnLoading = document.getElementById('generate-all-loading');
+    
+    btn.disabled = true;
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+    
+    let completed = 0;
+    let failed = 0;
+    const total = events.length;
+    
+    // Process events sequentially to avoid overwhelming the server
+    function processNext(index) {
+        if (index >= events.length) {
+            // All done
+            showNotification(`Completed! Generated ${completed} analyses${failed > 0 ? `, ${failed} failed` : ''}.`, 'success');
+            btn.disabled = false;
+            btnText.style.display = 'inline';
+            btnLoading.style.display = 'none';
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+            return;
+        }
+        
+        const eventId = events[index];
+        fetch('/bi/api/event-profitability/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({event_id: eventId})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                completed++;
+            } else {
+                failed++;
+            }
+            // Update button text
+            btnLoading.textContent = `⏳ Generating... (${completed + failed}/${total})`;
+            // Process next
+            setTimeout(() => processNext(index + 1), 500);
+        })
+        .catch(error => {
+            console.error(`Error processing event ${eventId}:`, error);
+            failed++;
+            btnLoading.textContent = `⏳ Generating... (${completed + failed}/${total})`;
+            setTimeout(() => processNext(index + 1), 500);
+        });
+    }
+    
+    processNext(0);
+}
+
+function showNotification(message, type) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? 'rgba(246, 188, 56, 0.2)' : 'rgba(255, 92, 92, 0.2)'};
+        color: ${type === 'success' ? 'var(--accent)' : '#ff5c5c'};
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        font-weight: 500;
+        max-width: 400px;
+        border: 1px solid ${type === 'success' ? 'rgba(246, 188, 56, 0.4)' : 'rgba(255, 92, 92, 0.4)'};
+    `;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.3s';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Profitability Chart
+{% if profitability_records|length > 0 %}
+const ctx = document.getElementById('profitabilityChart');
+if (ctx) {
+    const records = [
+        {% for prof in profitability_records[:20] %}
+        {
+            event_id: {{ prof.event_id or 'null' }},
+            revenue: {{ prof.revenue }},
+            profit: {{ prof.profit }},
+            margin_percent: {{ prof.margin_percent }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    profitabilityChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: records.map(r => `Event #${r.event_id || 'N/A'}`),
+            datasets: [{
+                label: 'Profit',
+                data: records.map(r => parseFloat(r.profit) || 0),
+                backgroundColor: records.map(r => parseFloat(r.profit) > 0 ? 'rgba(246, 188, 56, 0.8)' : 'rgba(255, 92, 92, 0.8)'),
+                borderRadius: 8
+            }, {
+                label: 'Revenue',
+                data: records.map(r => parseFloat(r.revenue) || 0),
+                backgroundColor: 'rgba(242, 104, 34, 0.6)',
+                borderRadius: 8,
+                type: 'line',
+                yAxisID: 'y1',
+                borderColor: '#F26822',
+                borderWidth: 2,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: 'UGX',
+                                minimumFractionDigits: 0
+                            }).format(context.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Profit (UGX)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: 'UGX',
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0
+                            }).format(value);
+                        }
+                    }
+                },
+                y1: {
+                    position: 'right',
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Revenue (UGX)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return new Intl.NumberFormat('en-US', {
+                                style: 'currency',
+                                currency: 'UGX',
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0
+                            }).format(value);
+                        }
+                    },
+                    grid: {
+                        drawOnChartArea: false
+                    }
+                }
+            }
+        }
+    });
+}
+{% endif %}
+</script>
+{% endblock %}

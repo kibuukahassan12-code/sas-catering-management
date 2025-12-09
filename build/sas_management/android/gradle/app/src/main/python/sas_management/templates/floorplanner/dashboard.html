@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Floor Planner - SAS Best Foods{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/floorplanner.css') }}">
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Floor Planner</p>
+        <h1>Event Floor Plans</h1>
+        <p class="muted">Design and manage professional event layouts.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Dashboard</a>
+    </div>
+</section>
+
+<section class="floorplanner-dashboard">
+    <!-- Search and Actions Bar -->
+    <div class="dashboard-toolbar">
+        <form method="GET" action="{{ url_for('floorplanner.dashboard') }}" class="search-form">
+            <input 
+                type="search" 
+                name="search" 
+                placeholder="Search floor plans..." 
+                value="{{ search_query }}"
+                class="search-input"
+            >
+            <button type="submit" class="btn-search">🔍</button>
+        </form>
+        <a href="{{ url_for('events.events_list') }}" class="btn-primary" title="Select an event to create a floor plan">
+            <span>+</span> New Floor Plan
+        </a>
+    </div>
+
+    <!-- Floor Plans Grid -->
+    {% if floorplans %}
+    <div class="floorplans-grid">
+        {% for floorplan in floorplans %}
+        <div class="floorplan-card">
+            <div class="floorplan-thumbnail">
+                {% if floorplan.thumbnail_b64 %}
+                <img src="data:image/png;base64,{{ floorplan.thumbnail_b64 }}" alt="{{ floorplan.name }}">
+                {% else %}
+                <div class="thumbnail-placeholder">
+                    <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="10" y="10" width="80" height="80" rx="4" fill="#F26822" opacity="0.2"/>
+                        <rect x="20" y="20" width="30" height="30" rx="2" fill="#F26822" opacity="0.4"/>
+                        <rect x="60" y="20" width="30" height="30" rx="2" fill="#F26822" opacity="0.4"/>
+                        <circle cx="35" cy="65" r="8" fill="#F26822" opacity="0.4"/>
+                        <circle cx="65" cy="65" r="8" fill="#F26822" opacity="0.4"/>
+                    </svg>
+                </div>
+                {% endif %}
+            </div>
+            <div class="floorplan-info">
+                <h3>{{ floorplan.name }}</h3>
+                <p class="floorplan-event">{{ floorplan.event.event_name }}</p>
+                <p class="floorplan-meta">
+                    <span>Updated: {{ floorplan.updated_at.strftime('%b %d, %Y') if floorplan.updated_at else 'Never' }}</span>
+                </p>
+            </div>
+            <div class="floorplan-actions">
+                <a href="{{ url_for('floorplanner.editor', id=floorplan.id) }}" class="btn-edit">Edit</a>
+                <form method="POST" action="{{ url_for('floorplanner.delete', id=floorplan.id) }}" 
+                      onsubmit="return confirm('Are you sure you want to delete this floor plan?');" 
+                      style="display: inline;">
+                    <button type="submit" class="btn-delete">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">
+            <svg width="120" height="120" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="10" y="10" width="80" height="80" rx="4" fill="#F26822" opacity="0.1"/>
+                <rect x="20" y="20" width="30" height="30" rx="2" fill="#F26822" opacity="0.2"/>
+                <rect x="60" y="20" width="30" height="30" rx="2" fill="#F26822" opacity="0.2"/>
+                <circle cx="35" cy="65" r="8" fill="#F26822" opacity="0.2"/>
+                <circle cx="65" cy="65" r="8" fill="#F26822" opacity="0.2"/>
+            </svg>
+        </div>
+        <h2>No Floor Plans Yet</h2>
+        <p>Create your first floor plan to get started.</p>
+        <a href="{{ url_for('events.events_list') }}" class="btn-primary">Create Floor Plan</a>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}
+

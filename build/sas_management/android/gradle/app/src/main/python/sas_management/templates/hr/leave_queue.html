@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">HR Department</p>
+        <h1>Leave Requests</h1>
+        <p class="muted">Review and approve leave requests.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('hr.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Status Filter -->
+<section class="panel">
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        <a href="?status=pending" class="btn-ghost {% if status == 'pending' %}active{% endif %}">Pending</a>
+        <a href="?status=approved" class="btn-ghost {% if status == 'approved' %}active{% endif %}">Approved</a>
+        <a href="?status=rejected" class="btn-ghost {% if status == 'rejected' %}active{% endif %}">Rejected</a>
+        <a href="?status=all" class="btn-ghost {% if status == 'all' %}active{% endif %}">All</a>
+    </div>
+</section>
+
+<!-- Leave Requests Table -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Leave Requests</h3>
+        <span class="badge">{{ leave_requests|length }} request(s)</span>
+    </div>
+    
+    {% if leave_requests %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Leave Type</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Days</th>
+                    <th>Reason</th>
+                    <th>Status</th>
+                    <th>Applied</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for leave in leave_requests %}
+                <tr>
+                    <td><strong>{{ leave.employee.full_name }}</strong></td>
+                    <td><span class="badge">{{ leave.leave_type }}</span></td>
+                    <td>{{ leave.start_date.strftime('%Y-%m-%d') if leave.start_date else 'N/A' }}</td>
+                    <td>{{ leave.end_date.strftime('%Y-%m-%d') if leave.end_date else 'N/A' }}</td>
+                    <td>{{ leave.days_requested }} days</td>
+                    <td>{{ leave.reason[:50] if leave.reason else 'N/A' }}...</td>
+                    <td>
+                        {% if leave.status == 'approved' %}
+                        <span class="badge success">Approved</span>
+                        {% elif leave.status == 'rejected' %}
+                        <span class="badge danger">Rejected</span>
+                        {% else %}
+                        <span class="badge warning">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ leave.applied_at.strftime('%Y-%m-%d') if leave.applied_at else 'N/A' }}</td>
+                    <td>
+                        {% if leave.status == 'pending' and current_user.is_super_admin() %}
+                        <button class="btn-ghost btn-sm" onclick="approveLeave({{ leave.id }})">Approve</button>
+                        <button class="btn-ghost btn-sm" onclick="rejectLeave({{ leave.id }})">Reject</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No leave requests found.</p>
+    </div>
+    {% endif %}
+</section>
+
+<script>
+function approveLeave(leaveId) {
+    fetch(`/hr/api/leave/${leaveId}/approve`, {method: 'POST'})
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+}
+
+function rejectLeave(leaveId) {
+    const reason = prompt('Rejection reason:');
+    if (reason !== null) {
+        fetch(`/hr/api/leave/${leaveId}/reject`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({reason: reason})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}
+
+

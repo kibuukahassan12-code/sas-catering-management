@@ -1,0 +1,785 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Bakery · New Order</p>
+        <h1>Create New Bakery Order</h1>
+        <p class="muted">Add items, set pickup dates, and customize customer orders with ease.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('bakery.orders_list') }}">← Back to Orders</a>
+</section>
+
+<style>
+.order-form-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+}
+
+.order-form-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-section {
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.form-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.form-section-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.form-section-header-icon {
+    font-size: 1.5rem;
+}
+
+.form-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.7);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.5);
+    color: var(--text, #f5f5f5);
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--brand, #F26822);
+    background: rgba(0,0,0,0.7);
+    box-shadow: 0 0 0 3px rgba(242,104,34,0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-group small {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: -0.25rem;
+}
+
+.order-items-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.order-item-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.order-item-card:hover {
+    border-color: rgba(242,104,34,0.4);
+    background: rgba(242,104,34,0.1);
+}
+
+.order-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.order-item-number {
+    font-weight: 600;
+    color: var(--accent, #F6BC38);
+    font-size: 0.875rem;
+}
+
+.remove-item-btn {
+    background: rgba(220,53,69,0.2);
+    border: 1px solid rgba(220,53,69,0.4);
+    color: #dc3545;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.remove-item-btn:hover {
+    background: rgba(220,53,69,0.3);
+    border-color: #dc3545;
+}
+
+.item-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 1rem;
+}
+
+.item-grid-3col {
+    grid-template-columns: 2fr 1fr 1fr;
+}
+
+.item-grid-2col {
+    grid-template-columns: 1fr 1fr;
+}
+
+.item-grid-1col {
+    grid-template-columns: 1fr;
+}
+
+.add-item-btn {
+    background: rgba(242,104,34,0.2);
+    border: 2px dashed rgba(242,104,34,0.5);
+    color: var(--accent, #F6BC38);
+    padding: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-align: center;
+    width: 100%;
+}
+
+.add-item-btn:hover {
+    background: rgba(242,104,34,0.3);
+    border-color: var(--brand, #F26822);
+    transform: translateY(-1px);
+}
+
+.order-summary {
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(242,104,34,0.3);
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+}
+
+.summary-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+}
+
+.summary-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+}
+
+.summary-total {
+    font-size: 1.25rem;
+    color: var(--accent, #F6BC38);
+}
+
+.form-actions-modern {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: 1rem;
+}
+
+.client-selector {
+    background: rgba(242,104,34,0.1);
+    border: 1px solid rgba(242,104,34,0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.client-selector.active {
+    background: rgba(242,104,34,0.2);
+    border-color: var(--brand, #F26822);
+}
+
+.walk-in-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+}
+
+.walk-in-toggle input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+.file-upload-area {
+    border: 2px dashed rgba(242,104,34,0.4);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    background: rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.file-upload-area:hover {
+    border-color: var(--brand, #F26822);
+    background: rgba(242,104,34,0.1);
+}
+
+.file-upload-area input[type="file"] {
+    display: none;
+}
+
+.file-upload-label {
+    cursor: pointer;
+    color: var(--accent, #F6BC38);
+    font-weight: 500;
+}
+
+.file-upload-preview {
+    margin-top: 1rem;
+    max-width: 100%;
+    border-radius: 8px;
+    display: none;
+}
+
+@media (max-width: 1024px) {
+    .order-form-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .order-summary {
+        position: relative;
+        top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .form-grid-modern {
+        grid-template-columns: 1fr;
+    }
+    
+    .item-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .item-grid-3col {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="order-form-container">
+    <div class="order-form-main">
+        <form method="post" enctype="multipart/form-data" id="bakeryOrderForm">
+            <!-- Customer Information Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-header-icon">👤</span>
+                    <h3>Customer Information</h3>
+                </div>
+                
+                <div class="client-selector" id="clientSelector">
+                    <div class="form-group full-width">
+                        <label>Existing Client <span style="color: rgba(255,255,255,0.5); font-weight: normal;">(Optional)</span></label>
+                        <select name="customer_id" id="customerSelect" onchange="handleClientSelect()">
+                            <option value="">-- Select from existing clients --</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}" 
+                                    data-name="{{ client.name }}"
+                                    data-phone="{{ client.phone or '' }}"
+                                    data-email="{{ client.email or '' }}">
+                                {{ client.name }} - {{ client.phone or client.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="walk-in-toggle" onclick="toggleWalkIn()">
+                        <input type="checkbox" id="walkInToggle" onchange="toggleWalkIn()">
+                        <label for="walkInToggle" style="cursor: pointer; margin: 0;">Or create as walk-in customer</label>
+                    </div>
+                </div>
+                
+                <div class="form-grid-modern" id="walkInFields" style="display: none;">
+                    <div class="form-group full-width">
+                        <label>Customer Name <span style="color: rgba(255,255,255,0.5);">(Required for walk-in)</span></label>
+                        <input type="text" name="customer_name" id="customerName" placeholder="Enter customer full name">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" name="customer_phone" id="customerPhone" placeholder="+256 XXX XXX XXX">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" name="customer_email" id="customerEmail" placeholder="customer@email.com">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Details Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-header-icon">📋</span>
+                    <h3>Order Details</h3>
+                </div>
+                
+                <div class="form-grid-modern">
+                    <div class="form-group">
+                        <label>Pickup Date <span style="color: #dc3545;">*</span></label>
+                        <input type="date" name="pickup_date" id="pickupDate" required{% if today %} min="{{ today.isoformat() }}"{% endif %}>
+                        <small>Select when the order should be ready for pickup</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Delivery Required?</label>
+                        <select name="delivery_required" id="deliveryToggle" onchange="toggleDelivery()">
+                            <option value="no">No - Customer Pickup</option>
+                            <option value="yes">Yes - Deliver to Address</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group full-width" id="deliveryAddressGroup" style="display: none;">
+                        <label>Delivery Address</label>
+                        <textarea name="delivery_address" rows="3" placeholder="Enter complete delivery address including landmarks"></textarea>
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label>Special Instructions / Notes</label>
+                        <textarea name="bakery_notes" rows="4" placeholder="Any special requirements, customization requests, dietary restrictions, or notes for the bakery team..."></textarea>
+                        <small>These notes will be visible to the production team</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reference Image Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-header-icon">🖼️</span>
+                    <h3>Reference Image</h3>
+                </div>
+                
+                <div class="file-upload-area" onclick="document.getElementById('referenceImage').click()">
+                    <input type="file" name="reference_image" id="referenceImage" accept="image/*" onchange="previewImage(this)">
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📸</div>
+                        <div class="file-upload-label">Click to upload reference image</div>
+                        <small style="display: block; margin-top: 0.5rem; color: rgba(255,255,255,0.5);">Upload a photo for custom designs, cakes, or special requests</small>
+                    </div>
+                    <img id="imagePreview" class="file-upload-preview" alt="Preview">
+                </div>
+            </div>
+
+            <!-- Order Items Section -->
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-header-icon">🍰</span>
+                    <h3>Order Items</h3>
+                </div>
+                
+                <div class="order-items-container" id="itemsContainer">
+                    <!-- Item rows will be added dynamically -->
+                </div>
+                
+                <button type="button" class="add-item-btn" onclick="addItemRow()">
+                    ➕ Add Item to Order
+                </button>
+                
+                <small style="display: block; margin-top: 0.75rem; color: rgba(255,255,255,0.5); text-align: center;">
+                    Add all items for this order. You can mix bakery catalog items and custom items.
+                </small>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-actions-modern">
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 1rem; font-size: 1rem; font-weight: 600;">
+                    ✅ Create Bakery Order
+                </button>
+                <a class="btn-ghost" href="{{ url_for('bakery.orders_list') }}" style="padding: 1rem;">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Order Summary Sidebar -->
+    <div class="order-summary">
+        <div class="summary-header">
+            <span>💰</span>
+            <h3>Order Summary</h3>
+        </div>
+        
+        <div id="summaryContent">
+            <div class="summary-row">
+                <span class="summary-label">Items:</span>
+                <span class="summary-value" id="itemCount">0</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Subtotal:</span>
+                <span class="summary-value" id="subtotal">{{ CURRENCY }}0.00</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Total Items:</span>
+                <span class="summary-value" id="totalQty">0</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Estimated Total:</span>
+                <span class="summary-value summary-total" id="totalAmount">{{ CURRENCY }}0.00</span>
+            </div>
+        </div>
+        
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 0.8125rem; color: rgba(255,255,255,0.6); line-height: 1.6;">
+                <strong style="color: var(--accent, #F6BC38);">💡 Tip:</strong><br>
+                Make sure all items and quantities are correct before creating the order. You can edit the order after creation if needed.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let itemCounter = 0;
+
+// Item options HTML (generated server-side)
+const itemOptionsHtml = `
+    <option value="">-- Select Bakery Item --</option>
+    {%- for item in items -%}
+    {%- set price_val = (item.selling_price or 0) -%}
+    <option value="{{ item.id }}" data-price="{{ price_val }}">{{ item.name }} - {{ item.category or '' }} - {{ CURRENCY }}{{ "%.0f"|format(price_val) }}</option>
+    {%- endfor -%}
+`;
+
+// Template for new item row
+function getItemRowTemplate() {
+    itemCounter++;
+    const itemId = `item_${itemCounter}`;
+    
+    return `
+        <div class="order-item-card" data-item-id="${itemId}">
+            <div class="order-item-header">
+                <span class="order-item-number">Item #${itemCounter}</span>
+                <button type="button" class="remove-item-btn" onclick="removeItemRow(this)">🗑️ Remove</button>
+            </div>
+            <div class="item-grid">
+                <div class="form-group">
+                    <label>Bakery Item</label>
+                    <select name="item_id" class="item-select" onchange="updateItemPrice(this, '${itemId}')">
+                        ${itemOptionsHtml}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Or Custom Name</label>
+                    <input type="text" name="item_name" placeholder="Custom item name" onchange="clearCatalogSelection(this)">
+                </div>
+                <div class="form-group">
+                    <label>Quantity <span style="color: #dc3545;">*</span></label>
+                    <input type="number" name="item_qty" value="1" min="1" required onchange="updateSummary()" oninput="updateSummary()">
+                </div>
+                <div class="form-group">
+                    <label>Price ({{ CURRENCY }})</label>
+                    <input type="number" name="item_price" step="0.01" min="0" placeholder="0.00" onchange="updateSummary()" oninput="updateSummary()" class="item-price">
+                </div>
+            </div>
+            <div class="form-group full-width" style="margin-top: 0.75rem;">
+                <label>Item Notes / Customization</label>
+                <input type="text" name="item_notes" placeholder="Special instructions for this item (e.g., 'Chocolate frosting', 'No nuts', etc.)">
+            </div>
+        </div>
+    `;
+}
+
+// Add initial item row
+function initializeItems() {
+    const container = document.getElementById('itemsContainer');
+    if (container.children.length === 0) {
+        container.innerHTML = getItemRowTemplate();
+        updateSummary();
+    }
+}
+
+// Add new item row
+function addItemRow() {
+    const container = document.getElementById('itemsContainer');
+    container.insertAdjacentHTML('beforeend', getItemRowTemplate());
+    updateSummary();
+    // Scroll to new item
+    container.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Remove item row
+function removeItemRow(button) {
+    const itemCard = button.closest('.order-item-card');
+    if (document.querySelectorAll('.order-item-card').length > 1) {
+        itemCard.remove();
+        updateSummary();
+        renumberItems();
+    } else {
+        alert('At least one item is required. Please clear the fields instead.');
+    }
+}
+
+// Renumber items after removal
+function renumberItems() {
+    const items = document.querySelectorAll('.order-item-card');
+    items.forEach((item, index) => {
+        item.querySelector('.order-item-number').textContent = `Item #${index + 1}`;
+    });
+}
+
+// Update item price when catalog item is selected
+function updateItemPrice(select, itemId) {
+    const selectedOption = select.options[select.selectedIndex];
+    const priceInput = select.closest('.order-item-card').querySelector('.item-price');
+    const customNameInput = select.closest('.order-item-card').querySelector('input[name="item_name"]');
+    
+    if (selectedOption.value) {
+        const price = selectedOption.dataset.price || '0';
+        priceInput.value = parseFloat(price).toFixed(2);
+        customNameInput.value = ''; // Clear custom name
+        updateSummary();
+    }
+}
+
+// Clear catalog selection when custom name is entered
+function clearCatalogSelection(input) {
+    if (input.value.trim()) {
+        const select = input.closest('.order-item-card').querySelector('.item-select');
+        select.value = '';
+    }
+}
+
+// Handle client selection
+function handleClientSelect() {
+    const select = document.getElementById('customerSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    const walkInFields = document.getElementById('walkInFields');
+    const walkInToggle = document.getElementById('walkInToggle');
+    
+    if (selectedOption.value) {
+        // Existing client selected
+        walkInToggle.checked = false;
+        walkInFields.style.display = 'none';
+        document.getElementById('customerName').value = '';
+        document.getElementById('customerPhone').value = selectedOption.dataset.phone || '';
+        document.getElementById('customerEmail').value = selectedOption.dataset.email || '';
+    } else {
+        // No client selected
+        walkInFields.style.display = 'none';
+    }
+}
+
+// Toggle walk-in customer fields
+function toggleWalkIn() {
+    const toggle = document.getElementById('walkInToggle');
+    const walkInFields = document.getElementById('walkInFields');
+    const customerSelect = document.getElementById('customerSelect');
+    
+    if (toggle.checked) {
+        walkInFields.style.display = 'grid';
+        customerSelect.value = '';
+        customerSelect.disabled = true;
+        document.getElementById('customerName').required = true;
+    } else {
+        walkInFields.style.display = 'none';
+        customerSelect.disabled = false;
+        document.getElementById('customerName').required = false;
+        document.getElementById('customerName').value = '';
+        document.getElementById('customerPhone').value = '';
+        document.getElementById('customerEmail').value = '';
+    }
+}
+
+// Toggle delivery address
+function toggleDelivery() {
+    const deliveryToggle = document.getElementById('deliveryToggle');
+    const deliveryAddressGroup = document.getElementById('deliveryAddressGroup');
+    
+    if (deliveryToggle.value === 'yes') {
+        deliveryAddressGroup.style.display = 'grid';
+    } else {
+        deliveryAddressGroup.style.display = 'none';
+    }
+}
+
+// Preview uploaded image
+function previewImage(input) {
+    const preview = document.getElementById('imagePreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Update order summary
+function updateSummary() {
+    const itemCards = document.querySelectorAll('.order-item-card');
+    let itemCount = 0;
+    let totalQty = 0;
+    let subtotal = 0;
+    
+    itemCards.forEach(card => {
+        const qtyInput = card.querySelector('input[name="item_qty"]');
+        const priceInput = card.querySelector('input[name="item_price"]');
+        const itemSelect = card.querySelector('select[name="item_id"]');
+        const customName = card.querySelector('input[name="item_name"]');
+        
+        // Check if item is filled (either catalog item or custom name)
+        if ((itemSelect && itemSelect.value) || (customName && customName.value.trim())) {
+            itemCount++;
+            
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            
+            totalQty += qty;
+            subtotal += qty * price;
+        }
+    });
+    
+    // Update summary display
+    document.getElementById('itemCount').textContent = itemCount;
+    document.getElementById('totalQty').textContent = totalQty;
+    document.getElementById('subtotal').textContent = `{{ CURRENCY }}${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('totalAmount').textContent = `{{ CURRENCY }}${subtotal.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+}
+
+// Form validation before submit
+document.getElementById('bakeryOrderForm').addEventListener('submit', function(e) {
+    const itemCards = document.querySelectorAll('.order-item-card');
+    let hasValidItem = false;
+    
+    itemCards.forEach(card => {
+        const qtyInput = card.querySelector('input[name="item_qty"]');
+        const priceInput = card.querySelector('input[name="item_price"]');
+        const itemSelect = card.querySelector('select[name="item_id"]');
+        const customName = card.querySelector('input[name="item_name"]');
+        
+        if ((itemSelect && itemSelect.value) || (customName && customName.value.trim())) {
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            
+            if (qty > 0 && price >= 0) {
+                hasValidItem = true;
+            }
+        }
+    });
+    
+    if (!hasValidItem) {
+        e.preventDefault();
+        alert('Please add at least one valid item to the order.');
+        return false;
+    }
+    
+    // Check customer info
+    const customerId = document.getElementById('customerSelect').value;
+    const walkInToggle = document.getElementById('walkInToggle');
+    const customerName = document.getElementById('customerName').value.trim();
+    
+    if (!customerId && (!walkInToggle.checked || !customerName)) {
+        e.preventDefault();
+        alert('Please select an existing client or provide a customer name for walk-in orders.');
+        return false;
+    }
+});
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    initializeItems();
+    
+    // Set minimum date to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('pickupDate').setAttribute('min', today);
+    
+    // Watch for changes to update summary
+    document.getElementById('itemsContainer').addEventListener('change', updateSummary);
+    document.getElementById('itemsContainer').addEventListener('input', updateSummary);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Operations · Tasks</p>
+        <h1>Task Dashboard</h1>
+        <p class="muted">{% if current_user.is_super_admin() or current_user.has_permission('tasks.*') %}Manage all tasks across events.{% else %}View and update tasks assigned to you.{% endif %}</p>
+    </div>
+    {% if current_user.is_super_admin() or current_user.has_permission('tasks.*') or current_user.get_role_name() in ['Manager', 'SuperAdmin'] %}
+    <a class="btn-primary btn-desktop-only" href="{{ url_for('tasks.task_add') }}">+ New Task</a>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>{% if current_user.is_super_admin() or current_user.has_permission('tasks.*') %}All Tasks{% else %}My Tasks{% endif %}</h3>
+        <span class="badge">{{ pagination.total }} total</span>
+    </div>
+    
+    <!-- Desktop Table View -->
+    <div class="table-wrapper table-desktop">
+        <table class="responsive-table table-enhanced">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Event</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <td data-label="Title">{{ task.title }}</td>
+                    <td data-label="Event">
+                        {% if task.event %}
+                            <a href="{{ url_for('core.events_edit', event_id=task.event.id) }}">{{ task.event.event_name }}</a>
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Assigned To">
+                        {% if task.assigned_user %}
+                            {{ task.assigned_user.email }}
+                        {% else %}
+                            <span class="muted">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Due Date">
+                        {% if task.due_date %}
+                            {{ task.due_date.strftime('%b %d, %Y') }}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Status">
+                        <span class="badge badge-{{ task.status.value.lower().replace(' ', '-') }}">{{ task.status.value }}</span>
+                    </td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('tasks.task_edit', task_id=task.id) }}">View / Edit</a>
+                        {% if current_user.is_super_admin() or current_user.has_permission('tasks.*') %}
+                        <form method="post" action="{{ url_for('tasks.task_delete', task_id=task.id) }}" onsubmit="return confirm('Delete this task?');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6">No tasks found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="card-list card-list-mobile">
+        {% for task in tasks %}
+        <div class="task-card">
+            <div class="task-card__header">
+                <h4>{{ task.title }}</h4>
+                <span class="badge badge-{{ task.status.value.lower().replace(' ', '-') }}">{{ task.status.value }}</span>
+            </div>
+            <div class="task-card__body">
+                <div class="task-card__field">
+                    <span class="task-card__label">Event:</span>
+                    <span class="task-card__value">
+                        {% if task.event %}
+                            <a href="{{ url_for('core.events_edit', event_id=task.event.id) }}">{{ task.event.event_name }}</a>
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="task-card__field">
+                    <span class="task-card__label">Assigned To:</span>
+                    <span class="task-card__value">
+                        {% if task.assigned_user %}
+                            {{ task.assigned_user.email }}
+                        {% else %}
+                            <span class="muted">Unassigned</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="task-card__field">
+                    <span class="task-card__label">Due Date:</span>
+                    <span class="task-card__value">
+                        {% if task.due_date %}
+                            {{ task.due_date.strftime('%b %d, %Y') }}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="task-card__actions">
+                <a class="btn-ghost" href="{{ url_for('tasks.task_edit', task_id=task.id) }}">View / Edit</a>
+                {% if current_user.is_super_admin() or current_user.has_permission('tasks.*') %}
+                <form method="post" action="{{ url_for('tasks.task_delete', task_id=task.id) }}" onsubmit="return confirm('Delete this task?');">
+                    <button type="submit" class="btn-danger">Delete</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">No tasks found.</div>
+        {% endfor %}
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Tasks pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('tasks.task_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('tasks.task_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+
+{% if current_user.is_super_admin() or current_user.has_permission('tasks.*') or current_user.get_role_name() in ['Manager', 'SuperAdmin'] %}
+<a href="{{ url_for('tasks.task_add') }}" class="fab" aria-label="Add New Task">
+    <span class="fab-icon">+</span>
+</a>
+{% endif %}
+{% endblock %}
+

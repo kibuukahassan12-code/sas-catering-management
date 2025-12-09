@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Inventory</p>
+        <h1>Rental Inventory</h1>
+        <p class="muted">Control the availability of every hire asset before it hits the loading bay.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('hire.inventory_add') }}">+ New Item</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>Inventory Items</h3>
+        <span class="badge">{{ pagination.total }} SKUs</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Stock</th>
+                    <th>Rental Price</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td data-label="Item">{{ item.name }}</td>
+                    <td data-label="Stock">{{ item.stock_count }}</td>
+                    <td data-label="Rental Price">{{ CURRENCY }}{{ "{:,.2f}".format(item.rental_price or 0) }}</td>
+                    <td data-label="Status"><span class="status-pill">{{ item.status }}</span></td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('hire.inventory_edit', item_id=item.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('hire.inventory_delete', item_id=item.id) }}" onsubmit="return confirm('Remove this inventory item?');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No inventory items captured yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Inventory pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('hire.inventory_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('hire.inventory_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

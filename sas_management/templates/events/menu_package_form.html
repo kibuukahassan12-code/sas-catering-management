@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.sas-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-left: 4px solid var(--brand);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--brand);
+    font-size: 1.25rem;
+}
+
+.section-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #000;
+    border-radius: 8px;
+    font-size: 1.25rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--brand); /* Official SAS branding color */
+    font-size: 0.9rem;
+}
+
+.form-group label .tooltip {
+    margin-left: 0.5rem;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: help;
+    font-size: 0.85rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px; /* SAS Best Foods branding */
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(242, 104, 34, 0.2);
+}
+
+.btn-primary {
+    background: linear-gradient(120deg, var(--brand), var(--accent));
+    color: #000;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.3);
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text);
+    padding: 0.75rem 2rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--brand);
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 0.5rem;
+    display: block;
+}
+
+.field-hint {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    border-left: 3px solid var(--brand);
+}
+
+.json-editor {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+}
+
+.items-preview {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    display: none;
+}
+
+.items-preview.active {
+    display: block;
+}
+
+.items-preview h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--brand);
+    font-size: 0.9rem;
+}
+
+.items-preview ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.items-preview li {
+    margin: 0.25rem 0;
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Menu Packages</p>
+        <h1>{{ 'Edit Menu Package' if package else 'Create New Menu Package' }}</h1>
+        <p class="muted">{{ 'Update menu package details' if package else 'Create a new menu package for events' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.menu_packages_list') }}">← Back to Packages</a>
+</section>
+
+<div class="sas-card">
+    <div class="section-header">
+        <div class="section-icon">🍽️</div>
+        <h3>Package Details</h3>
+    </div>
+    
+    <form method="POST" id="packageForm">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="name">
+                    Package Name 
+                    <span class="tooltip" title="Select a package name from the list">ℹ️</span> *
+                </label>
+                <select 
+                    id="name" 
+                    name="name" 
+                    required 
+                    class="form-control"
+                    onchange="updatePriceFromPackage()"
+                >
+                    <option value="">Select Package Name</option>
+                    <option value="LABOUR PACKAGE" data-price="150000" {% if package and package.name == 'LABOUR PACKAGE' %}selected{% endif %}>LABOUR PACKAGE</option>
+                    <option value="STANDARD PACKAGE" data-price="35000" {% if package and package.name == 'STANDARD PACKAGE' %}selected{% endif %}>STANDARD PACKAGE</option>
+                    <option value="PREMIUM PACKAGE" data-price="50000" {% if package and package.name == 'PREMIUM PACKAGE' %}selected{% endif %}>PREMIUM PACKAGE</option>
+                    <option value="EXECUTIVE PACKAGE" data-price="100000" {% if package and package.name == 'EXECUTIVE PACKAGE' %}selected{% endif %}>EXECUTIVE PACKAGE</option>
+                    <option value="SET-UP PACKAGE" data-price="1000000" data-special="above" {% if package and package.name == 'SET-UP PACKAGE' %}selected{% endif %}>SET-UP PACKAGE</option>
+                    <option value="CORPORATE PACKAGE" data-price="0" data-special="negotiable" {% if package and package.name == 'CORPORATE PACKAGE' %}selected{% endif %}>CORPORATE PACKAGE</option>
+                    <option value="BBQ PACKAGE" data-price="25000" {% if package and package.name == 'BBQ PACKAGE' %}selected{% endif %}>BBQ PACKAGE</option>
+                    <option value="DESSERT CAKE PACKAGE" data-price="5000" {% if package and package.name == 'DESSERT CAKE PACKAGE' %}selected{% endif %}>DESSERT CAKE PACKAGE</option>
+                    <option value="FRUIT PACKAGE" data-price="5000" {% if package and package.name == 'FRUIT PACKAGE' %}selected{% endif %}>FRUIT PACKAGE</option>
+                    <option value="RAMADAN PACKAGE" data-price="25000" {% if package and package.name == 'RAMADAN PACKAGE' %}selected{% endif %}>RAMADAN PACKAGE</option>
+                </select>
+                <span class="help-text">Select a package name from the list</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="price_per_guest">
+                    Price per Guest (UGX) 
+                    <span class="tooltip" title="Cost per person for this menu package">ℹ️</span> *
+                </label>
+                <input 
+                    type="number" 
+                    id="price_per_guest" 
+                    name="price_per_guest" 
+                    value="{{ package.price_per_guest if package else 0 }}" 
+                    step="0.01" 
+                    min="0" 
+                    required 
+                    class="form-control"
+                    placeholder="0.00"
+                >
+                <span class="help-text" id="priceHelpText">Price will be auto-filled when you select a package</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">
+                Description 
+                <span class="tooltip" title="Describe what's included in this package">ℹ️</span>
+            </label>
+            <textarea 
+                id="description" 
+                name="description" 
+                class="form-control" 
+                rows="4"
+                placeholder="Describe the package, dietary options, and what makes it special..."
+            >{{ package.description if package else '' }}</textarea>
+            <span class="help-text">Help clients understand what's included in this package</span>
+        </div>
+        
+        <div class="form-group">
+            <label for="items">
+                Menu Items 
+                <span class="tooltip" title="List all menu items included in this package as a JSON array">ℹ️</span>
+            </label>
+            <textarea 
+                id="items" 
+                name="items" 
+                class="form-control json-editor" 
+                rows="8"
+                placeholder='["Starter: Soup of the Day", "Main: Grilled Chicken", "Dessert: Fruit Salad", "Beverages: Soft Drinks"]'
+                oninput="previewItems()"
+            >{{ package.items_list|tojson if package and package.items_list else '[]' }}</textarea>
+            <div class="field-hint">
+                💡 <strong>Format:</strong> Enter as JSON array. Example: <code>["Item 1", "Item 2", "Item 3"]</code>
+            </div>
+            <div id="itemsPreview" class="items-preview">
+                <h4>Preview:</h4>
+                <ul id="previewList"></ul>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--sas-light);">
+            <button type="submit" class="btn-primary">
+                {{ 'Update Package' if package else 'Create Package' }}
+            </button>
+            <a href="{{ url_for('events.menu_packages_list') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if not package %}
+<div class="sas-card" style="background: rgba(255, 255, 255, 0.05); border-left-color: var(--brand);">
+    <div style="display: flex; align-items: start; gap: 1rem;">
+        <div style="font-size: 2rem;">💡</div>
+        <div>
+            <h4 style="margin: 0 0 0.5rem 0; color: var(--brand);">Quick Tips</h4>
+            <ul style="margin: 0; padding-left: 1.5rem; color: rgba(255, 255, 255, 0.7);">
+                <li>Select a package name from the dropdown to auto-fill the price</li>
+                <li>Set competitive prices per guest based on your costs</li>
+                <li>List all menu items in the JSON array for transparency</li>
+                <li>Include dietary information in the description (vegetarian, halal, etc.)</li>
+                <li>You can edit this package later to update prices or items</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function updatePriceFromPackage() {
+    const nameSelect = document.getElementById('name');
+    const priceInput = document.getElementById('price_per_guest');
+    const priceHelpText = document.getElementById('priceHelpText');
+    const selectedOption = nameSelect.options[nameSelect.selectedIndex];
+    
+    if (selectedOption.value) {
+        const price = selectedOption.dataset.price;
+        const special = selectedOption.dataset.special;
+        
+        if (special === 'above') {
+            // SET-UP PACKAGE: 1 Million and Above
+            priceInput.value = '1000000';
+            priceInput.min = '1000000';
+            priceHelpText.textContent = 'SET-UP PACKAGE: Minimum 1,000,000 UGX (negotiable above this amount)';
+            priceHelpText.style.color = 'var(--brand)';
+        } else if (special === 'negotiable') {
+            // CORPORATE PACKAGE: Negotiable
+            priceInput.value = '0';
+            priceInput.min = '0';
+            priceHelpText.textContent = 'CORPORATE PACKAGE: Price is negotiable - enter the agreed amount';
+            priceHelpText.style.color = 'var(--brand)';
+        } else if (price) {
+            // Regular packages with fixed prices
+            priceInput.value = price;
+            priceInput.min = '0';
+            priceHelpText.textContent = `Price set to ${parseFloat(price).toLocaleString('en-US')} UGX per guest`;
+            priceHelpText.style.color = 'rgba(255, 255, 255, 0.6)';
+        }
+    } else {
+        priceInput.value = '0';
+        priceInput.min = '0';
+        priceHelpText.textContent = 'Price will be auto-filled when you select a package';
+        priceHelpText.style.color = 'rgba(255, 255, 255, 0.6)';
+    }
+}
+
+function previewItems() {
+    const textarea = document.getElementById('items');
+    const preview = document.getElementById('itemsPreview');
+    const previewList = document.getElementById('previewList');
+    
+    try {
+        const items = JSON.parse(textarea.value || '[]');
+        if (Array.isArray(items) && items.length > 0) {
+            previewList.innerHTML = '';
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                previewList.appendChild(li);
+            });
+            preview.classList.add('active');
+        } else {
+            preview.classList.remove('active');
+        }
+    } catch (e) {
+        preview.classList.remove('active');
+    }
+}
+
+// Validate JSON on form submit
+document.getElementById('packageForm').addEventListener('submit', function(e) {
+    const itemsField = document.getElementById('items');
+    if (itemsField.value.trim()) {
+        try {
+            JSON.parse(itemsField.value);
+        } catch (e) {
+            e.preventDefault();
+            alert('Invalid JSON format in Menu Items field. Please check your syntax.');
+            itemsField.focus();
+            return false;
+        }
+    }
+});
+
+// Show preview on page load if items exist
+document.addEventListener('DOMContentLoaded', function() {
+    const itemsField = document.getElementById('items');
+    if (itemsField && itemsField.value && itemsField.value !== '[]') {
+        previewItems();
+    }
+    
+    // Initialize price if package is already selected (for edit mode)
+    const nameSelect = document.getElementById('name');
+    if (nameSelect && nameSelect.value) {
+        updatePriceFromPackage();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+:root {
+    --sas-primary: #BF360C;
+    --sas-accent: #FF7043;
+    --sas-orange: #FF6E1F;
+    --sas-dark: #121212;
+    --sas-light: #F5F5F5;
+}
+
+.sas-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--sas-primary);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--sas-light);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--sas-primary);
+    font-size: 1.25rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sas-accent);
+    color: white;
+    border-radius: 10px;
+    font-size: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--sas-dark);
+    font-size: 0.95rem;
+}
+
+.form-group label .tooltip {
+    margin-left: 0.5rem;
+    color: #999;
+    cursor: help;
+    font-size: 0.85rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--sas-primary);
+    box-shadow: 0 0 0 3px rgba(191, 54, 12, 0.1);
+}
+
+.form-control:hover {
+    border-color: #ccc;
+}
+
+.btn-primary {
+    background: var(--sas-primary);
+    color: white;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.btn-primary:hover {
+    background: var(--sas-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(191, 54, 12, 0.3);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--sas-primary);
+    padding: 0.75rem 2rem;
+    border: 2px solid var(--sas-primary);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--sas-light);
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    display: block;
+}
+
+.field-hint {
+    background: var(--sas-light);
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+    border-left: 3px solid var(--sas-accent);
+}
+
+.service-type-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.service-type-badge {
+    padding: 0.4rem 0.8rem;
+    background: white;
+    border: 1px solid var(--sas-primary);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--sas-primary);
+}
+
+.service-type-badge:hover {
+    background: var(--sas-primary);
+    color: white;
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Vendors</p>
+        <h1>{{ 'Edit Vendor' if vendor else 'Create New Vendor' }}</h1>
+        <p class="muted">{{ 'Update vendor information' if vendor else 'Add a new vendor or partner to your system' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.vendors_manage') }}">← Back to Vendors</a>
+</section>
+
+<div class="sas-card">
+    <div class="section-header">
+        <div class="section-icon">🤝</div>
+        <h3>Vendor Information</h3>
+    </div>
+    
+    <form method="POST">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="name">
+                    Vendor Name 
+                    <span class="tooltip" title="Enter the business or individual name">ℹ️</span> *
+                </label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    value="{{ vendor.name if vendor else '' }}" 
+                    required 
+                    class="form-control"
+                    placeholder="e.g., ABC Tents & Décor, XYZ Transport Services"
+                >
+                <span class="help-text">The vendor's business or individual name</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="service_type">
+                    Service Type 
+                    <span class="tooltip" title="What type of service does this vendor provide?">ℹ️</span> *
+                </label>
+                <input 
+                    type="text" 
+                    id="service_type" 
+                    name="service_type" 
+                    value="{{ vendor.service_type if vendor else '' }}" 
+                    required 
+                    class="form-control"
+                    placeholder="e.g., tents, décor, transport, sound system"
+                >
+                <span class="help-text">Type of service provided</span>
+                <div class="service-type-suggestions">
+                    <span class="service-type-badge" onclick="setServiceType('tents')">Tents</span>
+                    <span class="service-type-badge" onclick="setServiceType('décor')">Décor</span>
+                    <span class="service-type-badge" onclick="setServiceType('transport')">Transport</span>
+                    <span class="service-type-badge" onclick="setServiceType('sound system')">Sound System</span>
+                    <span class="service-type-badge" onclick="setServiceType('catering')">Catering</span>
+                    <span class="service-type-badge" onclick="setServiceType('photography')">Photography</span>
+                    <span class="service-type-badge" onclick="setServiceType('security')">Security</span>
+                    <span class="service-type-badge" onclick="setServiceType('flowers')">Flowers</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="phone">
+                    Phone Number 
+                    <span class="tooltip" title="Contact phone number for the vendor">ℹ️</span>
+                </label>
+                <input 
+                    type="tel" 
+                    id="phone" 
+                    name="phone" 
+                    value="{{ vendor.phone if vendor else '' }}" 
+                    class="form-control"
+                    placeholder="+256 XXX XXX XXX"
+                >
+                <span class="help-text">Primary contact phone number</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="email">
+                    Email Address 
+                    <span class="tooltip" title="Business email for communication">ℹ️</span>
+                </label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    value="{{ vendor.email if vendor else '' }}" 
+                    class="form-control"
+                    placeholder="vendor@example.com"
+                >
+                <span class="help-text">Business email address</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="notes">
+                Notes 
+                <span class="tooltip" title="Additional information about this vendor">ℹ️</span>
+            </label>
+            <textarea 
+                id="notes" 
+                name="notes" 
+                class="form-control" 
+                rows="4"
+                placeholder="Payment terms, preferred contact method, special arrangements, quality notes, etc."
+            >{{ vendor.notes if vendor else '' }}</textarea>
+            <div class="field-hint">
+                💡 <strong>Tip:</strong> Include payment terms, preferred contact method, reliability notes, or any special arrangements with this vendor.
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--sas-light);">
+            <button type="submit" class="btn-primary">
+                {{ 'Update Vendor' if vendor else 'Create Vendor' }}
+            </button>
+            <a href="{{ url_for('events.vendors_manage') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if not vendor %}
+<div class="sas-card" style="background: var(--sas-light); border-left-color: var(--sas-accent);">
+    <div style="display: flex; align-items: start; gap: 1rem;">
+        <div style="font-size: 2rem;">💡</div>
+        <div>
+            <h4 style="margin: 0 0 0.5rem 0; color: var(--sas-primary);">Quick Tips</h4>
+            <ul style="margin: 0; padding-left: 1.5rem; color: #666;">
+                <li>Add vendors you frequently work with for easy assignment to events</li>
+                <li>Include complete contact information for quick access</li>
+                <li>Use notes to track payment terms, reliability, or special arrangements</li>
+                <li>Service type helps categorize vendors for easy searching</li>
+                <li>You can assign vendors to events after creating them</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function setServiceType(type) {
+    document.getElementById('service_type').value = type;
+    // Visual feedback
+    const badges = document.querySelectorAll('.service-type-badge');
+    badges.forEach(badge => {
+        if (badge.textContent.toLowerCase() === type.toLowerCase()) {
+            badge.style.background = 'var(--sas-primary)';
+            badge.style.color = 'white';
+        } else {
+            badge.style.background = 'white';
+            badge.style.color = 'var(--sas-primary)';
+        }
+    });
+}
+</script>
+{% endblock %}

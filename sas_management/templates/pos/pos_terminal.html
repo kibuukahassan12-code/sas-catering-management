@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Point of Sale</p>
+        <h1>POS Terminal Launcher</h1>
+        <p class="muted">Select a device and start your shift to begin processing sales.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('pos.index') }}">← Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Available Terminals</h3>
+        <span class="badge">{{ devices|length }} active</span>
+    </div>
+    {% if devices %}
+    <div class="device-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; padding: 1.5rem;">
+        {% for device in devices %}
+        <div class="device-card" style="background: white; border: 2px solid #e9ecef; border-radius: 12px; padding: 1.5rem; transition: all 0.3s;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; font-weight: bold;">
+                    {{ device.terminal_code[-1] }}
+                </div>
+                <div style="flex: 1;">
+                    <h4 style="margin: 0; font-size: 1.1rem; color: #212529;">{{ device.name }}</h4>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #6c757d;">{{ device.terminal_code }}</p>
+                </div>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <p style="margin: 0.5rem 0; font-size: 0.875rem; color: #495057;">
+                    <strong>Location:</strong> {{ device.location or 'Not specified' }}
+                </p>
+                <p style="margin: 0.5rem 0; font-size: 0.875rem; color: #495057;">
+                    <strong>Last Seen:</strong> 
+                    {% if device.last_seen %}
+                    {{ device.last_seen.strftime('%H:%M') }} on {{ device.last_seen.strftime('%b %d') }}
+                    {% else %}
+                    <span style="color: #6c757d;">Never</span>
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{{ url_for('pos.terminal', device_code=device.terminal_code) }}" class="btn-primary" style="width: 100%; text-align: center; display: block;">Open Terminal</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+        <p class="muted" style="font-size: 1.1rem; margin-bottom: 1rem;">No active POS devices registered.</p>
+        <p class="muted">Contact administrator to register a device.</p>
+    </div>
+    {% endif %}
+</section>
+
+{% if open_shifts %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Your Open Shifts</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Shift ID</th>
+                    <th>Started At</th>
+                    <th>Starting Cash</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shift in open_shifts %}
+                <tr>
+                    <td>#{{ shift.id }}</td>
+                    <td>{{ shift.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(shift.starting_cash) }}</td>
+                    <td><span class="badge badge-success">{{ shift.status }}</span></td>
+                    <td>
+                        {% if shift.device %}
+                        <a href="{{ url_for('pos.terminal', device_code=shift.device.terminal_code) }}" class="btn-secondary btn-sm">Continue</a>
+                        {% else %}
+                        <span class="muted">No device</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Contract</p>
+        <h1>Contract for {{ contract.event.event_name if contract.event else 'Event' }}</h1>
+        <p class="muted">Client: {{ contract.client.name if contract.client else 'N/A' }} • Status: {{ contract.status|title }}</p>
+    </div>
+    <div class="quick-links">
+        {% if contract.status != 'signed' %}
+        <a class="btn-secondary" href="{{ url_for('contracts.contract_edit', contract_id=contract.id) }}">Edit</a>
+        <a class="btn-secondary" href="{{ url_for('contracts.generate_pdf', contract_id=contract.id) }}" onclick="return confirm('Generate PDF?')">Generate PDF</a>
+        {% endif %}
+        {% if contract.pdf_path %}
+        <a class="btn-primary" href="{{ url_for('contracts.download_pdf', contract_id=contract.id) }}">Download PDF</a>
+        {% endif %}
+        <a class="btn-secondary" href="{{ url_for('contracts.contract_list') }}">← Back to Contracts</a>
+    </div>
+</section>
+
+<!-- Contract Status Actions -->
+{% if contract.status != 'signed' %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Contract Actions</h3>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <form method="POST" action="{{ url_for('contracts.contract_edit', contract_id=contract.id) }}" style="display: inline;">
+            <input type="hidden" name="status" value="sent">
+            <button type="submit" class="btn-primary">Mark as Sent</button>
+        </form>
+        <form method="POST" action="{{ url_for('contracts.mark_signed', contract_id=contract.id) }}" style="display: inline;" onsubmit="return confirm('Mark this contract as signed?');">
+            <input type="text" name="signed_by" placeholder="Signed by (Client name)" required>
+            <button type="submit" class="btn-primary">Mark as Signed</button>
+        </form>
+    </div>
+</section>
+{% endif %}
+
+<!-- Contract Preview -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Contract Preview</h3>
+    </div>
+    <div style="padding: 2rem; background: white; color: black; border-radius: 8px; min-height: 500px;">
+        {{ contract.contract_body|safe }}
+    </div>
+</section>
+{% endblock %}
+

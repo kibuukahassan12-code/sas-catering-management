@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Sales · Proposals</p>
+        <h1>Create New Proposal</h1>
+        <p class="muted">Start building a professional proposal for your client.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('proposals.proposal_list') }}">← Back to Proposals</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid" style="max-width: 600px;">
+        <label class="form-control">
+            <span>Client <span style="color: #F26822;">*</span></span>
+            <select name="client_id" required>
+                <option value="">Select a client</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}">{{ client.name }}{% if client.contact_person %} · {{ client.contact_person }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Event (Optional)</span>
+            <select name="event_id">
+                <option value="">No event linked</option>
+                {% for event in events %}
+                <option value="{{ event.id }}">{{ event.event_name }} · {{ event.event_date.strftime('%b %d, %Y') if event.event_date else 'No date' }}</option>
+                {% endfor %}
+            </select>
+            <small class="muted">Link this proposal to an existing event, or leave blank for standalone proposals</small>
+        </label>
+
+        <div class="form-actions" style="margin-top: 1.5rem;">
+            <button type="submit" class="btn-primary">Create Proposal & Start Building</button>
+            <a href="{{ url_for('proposals.proposal_list') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

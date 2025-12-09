@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Event Messages</p>
+        <h1>{{ event.event_name if event else 'Event Messages' }}</h1>
+        <p class="muted">Communicate with your team about this event.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) if event else url_for('communication.dashboard') }}">← Back to Event</a>
+</section>
+
+<section class="panel">
+    <div id="messages-container" style="max-height: 500px; overflow-y: auto; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 1rem;">
+        {% for message in messages %}
+        <div style="margin-bottom: 1rem;">
+            <div style="padding: 0.75rem 1rem; background: rgba(255,255,255,0.1); border-radius: 12px;">
+                <strong>{{ message.sender.email if message.sender else 'Unknown' }}</strong>
+                <div style="white-space: pre-wrap; margin-top: 0.5rem; word-wrap: break-word;">{{ message.message }}</div>
+                {% if message.attachment %}
+                <div style="margin-top: 0.5rem;">
+                    <a href="{{ url_for('communication.serve_upload', filename=message.attachment.split('/')[-1]) }}" 
+                       target="_blank" 
+                       class="btn-ghost btn-sm">📎 View Attachment</a>
+                </div>
+                {% endif %}
+                <small style="display: block; margin-top: 0.25rem; opacity: 0.7; font-size: 0.8rem;">
+                    {{ message.timestamp.strftime('%Y-%m-%d %H:%M') if message.timestamp else '' }}
+                </small>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <form method="POST" action="{{ url_for('communication.event_send', event_id=event.id) if event else '#' }}" enctype="multipart/form-data">
+        <div style="display: flex; gap: 0.5rem;">
+            <textarea name="message" rows="3" placeholder="Type your message..." required style="flex: 1; padding: 0.75rem; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; resize: vertical;"></textarea>
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <input type="file" name="attachment" accept="image/*,.pdf,.doc,.docx,.txt" style="display: none;" id="attachment-input">
+                <label for="attachment-input" class="btn-ghost" style="cursor: pointer; text-align: center; padding: 0.5rem;">📎</label>
+                <button type="submit" class="btn-primary">Send</button>
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+// Auto-scroll to bottom
+document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight;
+</script>
+{% endblock %}
+

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Floor Plan Builder - SAS Best Foods{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/floorplan_builder.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/konva@9.2.0/konva.min.js"></script>
+
+<div class="floorplan-builder">
+    <!-- Top Action Bar -->
+    <div class="action-bar">
+        <div class="action-group">
+            <button id="btn-undo" class="action-btn" title="Undo (Ctrl+Z)">
+                <span>↶</span> Undo
+            </button>
+            <button id="btn-redo" class="action-btn" title="Redo (Ctrl+Y)">
+                <span>↷</span> Redo
+            </button>
+        </div>
+        <div class="action-group">
+            <button id="btn-zoom-out" class="action-btn" title="Zoom Out">−</button>
+            <span id="zoom-level" class="zoom-display">100%</span>
+            <button id="btn-zoom-in" class="action-btn" title="Zoom In">+</button>
+        </div>
+        <div class="action-group">
+            <button id="btn-save" class="action-btn btn-save" title="Save Layout">
+                <span>💾</span> Save Layout
+            </button>
+            <button id="btn-clear" class="action-btn btn-danger" title="Clear Canvas">
+                <span>🗑️</span> Clear Canvas
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="builder-container">
+        <!-- Left Toolbar -->
+        <div id="toolbar" class="toolbar">
+            <h3>Elements</h3>
+            <button class="tool" data-type="round-table">
+                <span class="tool-icon">⭕</span>
+                <span>Round Table</span>
+            </button>
+            <button class="tool" data-type="rect-table">
+                <span class="tool-icon">▭</span>
+                <span>Rectangle Table</span>
+            </button>
+            <button class="tool" data-type="chair">
+                <span class="tool-icon">🪑</span>
+                <span>Chair</span>
+            </button>
+            <button class="tool" data-type="stage">
+                <span class="tool-icon">🎭</span>
+                <span>Stage</span>
+            </button>
+            <button class="tool" data-type="tent">
+                <span class="tool-icon">⛺</span>
+                <span>Tent</span>
+            </button>
+            <button class="tool" data-type="buffet">
+                <span class="tool-icon">🍽️</span>
+                <span>Buffet Table</span>
+            </button>
+            <button class="tool" data-type="dj-booth">
+                <span class="tool-icon">🎧</span>
+                <span>DJ Booth</span>
+            </button>
+            <button class="tool" data-type="text">
+                <span class="tool-icon">📝</span>
+                <span>Text Label</span>
+            </button>
+        </div>
+
+        <!-- Canvas Area -->
+        <div class="canvas-wrapper">
+            <div id="canvas-container" class="canvas-container">
+                <div id="floorplan-canvas"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Info Bar -->
+    <div class="info-bar">
+        <div class="info-left">
+            <span class="event-info">Editing: <strong>{{ floorplan.name }}</strong></span>
+        </div>
+        <div class="info-right">
+            <input type="text" id="floor-plan-name" class="name-input" placeholder="Floor Plan Name" value="{{ floorplan.name }}">
+        </div>
+    </div>
+</div>
+
+<script>
+    const FLOORPLAN_ID = {{ floorplan.id }};
+    {% if floorplan_json and floorplan_json.strip() %}
+    const EXISTING_JSON = {{ floorplan_json|tojson|safe }};
+    {% else %}
+    const EXISTING_JSON = null;
+    {% endif %}
+    const EVENT_ID = null;
+    const FLOOR_PLAN_ID = {{ floorplan.id }};
+</script>
+<script src="{{ url_for('static', filename='js/floorplan_builder.js') }}"></script>
+{% endblock %}
+

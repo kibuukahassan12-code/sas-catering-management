@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · RBAC</p>
+        <h1>System Permissions</h1>
+        <p class="muted">View all available permissions in the system.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('rbac.roles_list') }}">← Back to Roles</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>All Permissions</h3>
+        <span class="badge">{{ permissions|length }} permissions</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Permission Name</th>
+                    <th>Description</th>
+                    <th>Roles</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for permission in permissions %}
+                <tr>
+                    <td><strong>{{ permission.name }}</strong></td>
+                    <td>{{ permission.description or '—' }}</td>
+                    <td>
+                        <span class="badge">{{ permission.roles|length if permission.roles else 0 }} role{{ 's' if (permission.roles|length if permission.roles else 0) != 1 else '' }}</span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No permissions found. Run seeds/rbac_seed.py to create default permissions.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

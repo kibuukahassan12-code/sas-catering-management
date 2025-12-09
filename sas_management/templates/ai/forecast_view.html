@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Sales Forecast</p>
+        <h1>Forecast: {{ source }}</h1>
+        <p class="muted">AI-powered sales predictions for {{ source }}.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="runForecast()">Run New Forecast</button>
+        <a class="btn-secondary" href="{{ url_for('ai.dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Forecast Results</h3>
+        <span class="badge">{{ forecasts|length }} predictions</span>
+    </div>
+    
+    {% if forecasts %}
+    <div style="padding: 1rem;">
+        <canvas id="forecastChart" style="max-height: 400px;"></canvas>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Predicted</th>
+                    <th>Actual</th>
+                    <th>Model</th>
+                    <th>Variance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for forecast in forecasts %}
+                <tr>
+                    <td>{{ forecast.date.strftime('%Y-%m-%d') if forecast.date else 'N/A' }}</td>
+                    <td><strong>{{ CURRENCY }}{{ "%.2f"|format(forecast.predicted) if forecast.predicted else 'N/A' }}</strong></td>
+                    <td>{{ CURRENCY }}{{ "%.2f"|format(forecast.actual) if forecast.actual else '—' }}</td>
+                    <td><span class="badge">{{ forecast.model_name or 'N/A' }}</span></td>
+                    <td>
+                        {% if forecast.actual %}
+                            {% set variance = ((forecast.predicted - forecast.actual) / forecast.actual * 100) %}
+                            <span style="color: {% if variance|abs < 5 %}#2ecc71{% elif variance|abs < 15 %}#f39c12{% else %}#e74c3c{% endif %};">
+                                {{ "%.1f"|format(variance) }}%
+                            </span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 2rem;">No forecast data yet. Click "Run New Forecast" to generate predictions.</p>
+    {% endif %}
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const forecastData = {{ forecasts|map(attribute='predicted')|list|tojson }};
+const forecastDates = {{ forecasts|map(attribute='date')|map('string')|list|tojson }};
+
+if (forecastData.length > 0) {
+    const ctx = document.getElementById('forecastChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: forecastDates,
+            datasets: [{
+                label: 'Predicted Sales',
+                data: forecastData,
+                borderColor: '#004AAD',
+                backgroundColor: 'rgba(0, 74, 173, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+function runForecast() {
+    fetch('{{ url_for("ai.api_forecast_run") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({source: '{{ source }}', horizon: 14})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+}
+</script>
+
+{% endblock %}
+

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>Available Courses</h1>
+        <p class="muted">Access training materials and resources tailored to your role.</p>
+    </div>
+</section>
+
+<section class="panel">
+    {% if courses %}
+    <div class="course-grid">
+        {% for course in courses %}
+        <article class="course-card">
+            <div class="course-card__header">
+                <h3>{{ course.title }}</h3>
+                {% if course.target_role %}
+                <span class="badge">{{ course.target_role.value if course.target_role else 'All Roles' }}</span>
+                {% else %}
+                <span class="badge">All Roles</span>
+                {% endif %}
+                {% if course.difficulty %}
+                <span class="badge badge-secondary">{{ course.difficulty }}</span>
+                {% endif %}
+            </div>
+            <p class="course-card__description">{{ course.description or 'No description available.' }}</p>
+            <div class="course-card__meta">
+                <span>{{ (course.lessons|length if course.lessons else 0) + (course.materials|length if course.materials else 0) }} items</span>
+                {% if course.duration_minutes %}
+                <span>• {{ course.duration_minutes }} min</span>
+                {% endif %}
+            </div>
+            <div class="course-card__actions">
+                <a class="btn-primary" href="{{ url_for('university.view_course', course_id=course.id) }}">View Course</a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No courses are currently available for your role ({{ current_user.get_role_name() }}).</p>
+        <p class="muted">Contact your administrator to request access to training materials.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

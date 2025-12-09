@@ -1,0 +1,603 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="dashboard">
+    <aside class="sidebar">
+        <div class="sidebar-home">
+            <a href="{{ url_for('core.dashboard') }}" class="home-button" title="Go to Dashboard">
+                <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods" class="home-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <span class="home-logo-text" style="display: none;">SAS</span>
+            </a>
+        </div>
+        <h2>Navigation</h2>
+        <ul class="nav-menu">
+            {% for module in modules %}
+            {% if module.get('permission_module') %}
+                {# ALL PERMISSIONS GRANTED - No restrictions #}
+                {% if True %}
+                    <li class="nav-item">
+                        {% if module.children is defined %}
+                        <div class="nav-parent">
+                            <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
+                            <button class="nav-toggle" aria-label="Toggle submenu">▼</button>
+                        </div>
+                        <ul class="nav-submenu">
+                            {% for child in module.children %}
+                            <li><a href="{{ child.url }}" class="nav-sublink">{{ child.name }}</a></li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
+                        {% endif %}
+                    </li>
+                {% endif %}
+            {% else %}
+            <li class="nav-item">
+                {% if module.children is defined %}
+                <div class="nav-parent">
+                    <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
+                    <button class="nav-toggle" aria-label="Toggle submenu">▼</button>
+                </div>
+                <ul class="nav-submenu">
+                    {% for child in module.children %}
+                    <li><a href="{{ child.url }}" class="nav-sublink">{{ child.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
+                {% endif %}
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </aside>
+    <section class="content">
+        <!-- TOP KPI METRICS BAR -->
+        <div class="panel kpi-bar">
+            <div class="kpi-grid">
+                <article class="kpi-card kpi-primary">
+                    <div class="kpi-icon">📅</div>
+                    <div class="kpi-content">
+                        <p>Upcoming Events (30 days)</p>
+                        <h2>{{ summary.upcoming_events_count }}</h2>
+                    </div>
+                </article>
+                <article class="kpi-card kpi-primary">
+                    <div class="kpi-icon">💰</div>
+                    <div class="kpi-content">
+                        <p>Pipeline Value</p>
+                        <h2>{{ CURRENCY }}{{ "{:,.0f}".format(summary.pipeline_value or 0) }}</h2>
+                    </div>
+                </article>
+                <article class="kpi-card kpi-primary">
+                    <div class="kpi-icon">📄</div>
+                    <div class="kpi-content">
+                        <p>Pending Invoice Amount</p>
+                        <h2>{{ CURRENCY }}{{ "{:,.0f}".format(summary.pending_invoice_amount or 0) }}</h2>
+                    </div>
+                </article>
+                <article class="kpi-card kpi-primary">
+                    <div class="kpi-icon">👥</div>
+                    <div class="kpi-content">
+                        <p>Available Staff Today</p>
+                        <h2>{{ summary.available_staff }}</h2>
+                    </div>
+                </article>
+                <article class="kpi-card kpi-primary">
+                    <div class="kpi-icon">⚠️</div>
+                    <div class="kpi-content">
+                        <p>Low Stock Alerts</p>
+                        <h2 style="color: {% if summary.low_stock_alerts > 0 %}#ff5c5c{% else %}var(--accent){% endif %};">{{ summary.low_stock_alerts }}</h2>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <!-- CHARTS SECTION -->
+        <div class="charts-grid">
+            <div class="panel chart-panel">
+                <div class="panel-header">
+                    <h3>Bookings Over Time</h3>
+                    <span class="badge">Last 6 Months</span>
+                </div>
+                <div class="chart-container chart-container-responsive">
+                    <canvas id="bookingsChart"></canvas>
+                </div>
+            </div>
+            <div class="panel chart-panel">
+                <div class="panel-header">
+                    <h3>Revenue & Payments</h3>
+                    <span class="badge">Last 6 Months</span>
+                </div>
+                <div class="chart-container chart-container-responsive">
+                    <canvas id="revenueChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- UPCOMING EVENTS LIST -->
+        {% if upcoming_events is defined and upcoming_events %}
+        <div class="panel">
+            <div class="panel-header">
+                <h3>Upcoming Events (Next 7 Days)</h3>
+                <a class="btn-secondary btn-sm" href="{{ url_for('core.events_list') }}">View All Events</a>
+            </div>
+            <div class="events-list">
+                {% for event in upcoming_events %}
+                <div class="event-card">
+                    <div class="event-card-header">
+                        <h4>{{ event.event_name }}</h4>
+                        <span class="badge badge-{{ event.status.lower().replace(' ', '-') }}">{{ event.status }}</span>
+                    </div>
+                    <div class="event-card-body">
+                        <div class="event-field">
+                            <span class="event-label">Client:</span>
+                            <span class="event-value">{{ event.client.name }}</span>
+                        </div>
+                        <div class="event-field">
+                            <span class="event-label">Date:</span>
+                            <span class="event-value">{{ event.event_date.strftime('%b %d, %Y') }}</span>
+                        </div>
+                        <div class="event-field">
+                            <span class="event-label">Guests:</span>
+                            <span class="event-value">{{ event.guest_count }}</span>
+                        </div>
+                        <div class="event-field">
+                            <span class="event-label">Value:</span>
+                            <span class="event-value">{{ CURRENCY }}{{ "{:,.0f}".format(event.quoted_value or 0) }}</span>
+                        </div>
+                    </div>
+                    <div class="event-card-actions">
+                        <a href="{{ url_for('core.events_edit', event_id=event.id) }}" class="btn-ghost btn-sm">View Event →</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- MINI SALES PIPELINE PREVIEW -->
+        {% if pipeline_stats is defined %}
+        <div class="panel pipeline-preview">
+            <div class="panel-header">
+                <h3>Sales Pipeline Preview</h3>
+                <a class="btn-secondary btn-sm" href="{{ url_for('crm.pipeline') }}">Open Full Pipeline</a>
+            </div>
+            <div class="pipeline-mini">
+                {% set main_stages = ['New Lead', 'Proposal Sent', 'Awaiting Payment', 'Confirmed'] %}
+                {% for stage in main_stages %}
+                {% set count = pipeline_stats.get(stage, 0) %}
+                <div class="pipeline-column">
+                    <div class="pipeline-header">
+                        <h4>{{ stage }}</h4>
+                        <span class="pipeline-count">{{ count }}</span>
+                    </div>
+                    {% if count > 0 %}
+                    <div class="pipeline-progress">
+                        <div class="pipeline-progress-bar" style="width: {{ (count / (pipeline_stats.values() | max or 1)) * 100 }}%;"></div>
+                    </div>
+                    {% else %}
+                    <div class="pipeline-empty">No items</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- TASKS + ALERTS + NOTIFICATIONS PANEL -->
+        <div class="panel tasks-alerts-panel">
+            <div class="panel-header">
+                <h3>Tasks & Alerts</h3>
+                <a class="btn-secondary btn-sm" href="{{ url_for('tasks.task_list') }}">View All Tasks</a>
+            </div>
+            <div class="tasks-alerts-grid">
+                <div class="tasks-section">
+                    <h4>Tasks Today</h4>
+                    <div class="tasks-count">{{ summary.tasks_today }} pending</div>
+                    {% if recent_tasks is defined and recent_tasks %}
+                    <ul class="tasks-list">
+                        {% for task in recent_tasks[:5] %}
+                        <li class="task-item">
+                            <div class="task-header">
+                                <strong>{{ task.title }}</strong>
+                                <span class="badge badge-{{ task.status.value.lower().replace(' ', '-') }}">{{ task.status.value }}</span>
+                            </div>
+                            {% if task.due_date %}
+                            <p class="task-meta">Due: {{ task.due_date.strftime('%b %d, %Y') }}</p>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <p class="muted">No pending tasks</p>
+                    {% endif %}
+                </div>
+                <div class="alerts-section">
+                    <h4>Alerts</h4>
+                    <ul class="alerts-list">
+                        {% if summary.low_stock_alerts > 0 %}
+                        <li class="alert-item alert-warning">
+                            <strong>⚠️ Low Stock Alert</strong>
+                            <p>{{ summary.low_stock_alerts }} item{{ 's' if summary.low_stock_alerts != 1 else '' }} need restocking</p>
+                            <a href="{{ url_for('hire.inventory_list') }}" class="alert-link">View Inventory →</a>
+                        </li>
+                        {% endif %}
+                        {% if summary.overdue_invoices > 0 %}
+                        <li class="alert-item alert-danger">
+                            <strong>📄 Overdue Invoices</strong>
+                            <p>{{ summary.overdue_invoices }} invoice{{ 's' if summary.overdue_invoices != 1 else '' }} overdue</p>
+                            <a href="{{ url_for('invoices.invoice_list') }}" class="alert-link">View Invoices →</a>
+                        </li>
+                        {% endif %}
+                        {% if upcoming_events is defined and upcoming_events %}
+                        {% set events_today = [] %}
+                        {% for event in upcoming_events %}
+                            {% if event.event_date == today %}
+                                {% set _ = events_today.append(event) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% if events_today | length > 0 %}
+                        <li class="alert-item alert-info">
+                            <strong>📅 Events Today</strong>
+                            <p>{{ events_today | length }} event{{ 's' if events_today | length != 1 else '' }} scheduled today</p>
+                            <a href="{{ url_for('core.events_list') }}" class="alert-link">View Events →</a>
+                        </li>
+                        {% endif %}
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANNOUNCEMENTS SECTION -->
+        {% if announcements is defined and announcements %}
+        <div class="panel announcements-panel">
+            <div class="panel-header">
+                <h3>📢 Company Announcements</h3>
+                <a class="btn-secondary btn-sm" href="{{ url_for('communication.announcements_list') }}">View All</a>
+            </div>
+            <div class="announcements-list">
+                {% for announcement in announcements %}
+                <div class="announcement-card">
+                    {% if announcement.image_url %}
+                    <div class="announcement-image">
+                        <img src="{{ announcement.image_url }}" alt="{{ announcement.title }}" onerror="this.style.display='none';">
+                    </div>
+                    {% endif %}
+                    <div class="announcement-content">
+                        <div class="announcement-header">
+                            <h4>{{ announcement.title }}</h4>
+                            <span class="announcement-date">{{ announcement.created_at.strftime('%b %d, %Y at %I:%M %p') if announcement.created_at else 'Recently' }}</span>
+                        </div>
+                        <div class="announcement-message">
+                            <p>{{ announcement.message }}</p>
+                        </div>
+                        <div class="announcement-footer">
+                            <span class="announcement-author">
+                                {% if announcement.creator %}
+                                    Posted by {{ announcement.creator.email }}
+                                {% else %}
+                                    Posted by Admin
+                                {% endif %}
+                            </span>
+                            <a href="{{ url_for('communication.announcement_view', announcement_id=announcement.id) }}" class="btn-ghost btn-sm">Read More →</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- SUMMARY PANEL -->
+        <div class="panel summary-panel">
+            <div class="panel-header">
+                <h3>Business Snapshot</h3>
+                <span class="badge">Updated {{ clients|length }} clients</span>
+            </div>
+            <div class="summary-grid">
+                <article class="summary-card">
+                    <p>Total Confirmed Quote Value</p>
+                    <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.total_confirmed_quote) }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Active Clients</p>
+                    <h2>{{ summary.active_clients }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Draft Events</p>
+                    <h2>{{ summary.draft_events }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Total Events</p>
+                    <h2>{{ summary.total_events }}</h2>
+                </article>
+                {% if summary.paid_invoices is defined %}
+                <article class="summary-card">
+                    <p>Paid Invoices</p>
+                    <h2>{{ summary.paid_invoices }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Pending Invoices</p>
+                    <h2>{{ summary.pending_invoices }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Overdue Invoices</p>
+                    <h2 style="color: {% if summary.overdue_invoices > 0 %}#dc3545{% else %}#28a745{% endif %};">{{ summary.overdue_invoices }}</h2>
+                </article>
+                {% endif %}
+            </div>
+            <div class="quick-links">
+                <a class="btn-primary" href="{{ url_for('core.clients_add') }}">+ New Client</a>
+                <a class="btn-secondary" href="{{ url_for('events.event_create') }}">+ New Event</a>
+                <a class="btn-secondary" href="{{ url_for('crm.pipeline') }}">Sales Pipeline</a>
+            </div>
+        </div>
+    </section>
+</section>
+
+<!-- Chart.js Library -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Initialize Charts
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch revenue stats data
+    fetch('/api/dashboard/revenue/stats')
+        .then(response => response.json())
+        .then(data => {
+            // Bookings Over Time Chart
+            const bookingsCtx = document.getElementById('bookingsChart');
+            if (bookingsCtx) {
+                new Chart(bookingsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.labels,
+                        datasets: [{
+                            label: 'Bookings',
+                            data: data.bookings,
+                            borderColor: '#F6BC38',
+                            backgroundColor: 'rgba(246, 188, 56, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 5,
+                            pointHoverRadius: 7
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#f5f5f5'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#f5f5f5'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#f5f5f5'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Revenue & Payments Chart
+            const revenueCtx = document.getElementById('revenueChart');
+            if (revenueCtx) {
+                new Chart(revenueCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: [
+                            {
+                                label: 'Income',
+                                data: data.revenue,
+                                backgroundColor: 'rgba(246, 188, 56, 0.6)',
+                                borderColor: '#F6BC38',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Expenses',
+                                data: data.expenses,
+                                backgroundColor: 'rgba(255, 92, 92, 0.6)',
+                                borderColor: '#ff5c5c',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#f5f5f5'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#f5f5f5',
+                                    callback: function(value) {
+                                        return 'UGX ' + value.toLocaleString();
+                                    }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    color: '#f5f5f5'
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching chart data:', error);
+        });
+
+    // Handle nested menu toggle
+    document.querySelectorAll('.nav-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const navItem = this.closest('.nav-item');
+            navItem.classList.toggle('active');
+        });
+    });
+});
+</script>
+
+<style>
+.announcements-panel {
+    margin-bottom: 2rem;
+}
+
+.announcements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.announcement-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    display: flex;
+    gap: 1.25rem;
+}
+
+.announcement-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+    border-color: rgba(102, 126, 234, 0.4);
+}
+
+.announcement-image {
+    flex-shrink: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.announcement-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.announcement-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.announcement-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.announcement-header h4 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    flex: 1;
+}
+
+.announcement-date {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.6);
+    white-space: nowrap;
+}
+
+.announcement-message {
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.6;
+    font-size: 0.9375rem;
+}
+
+.announcement-message p {
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.announcement-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.announcement-author {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .announcement-card {
+        flex-direction: column;
+    }
+    
+    .announcement-image {
+        width: 100%;
+        height: 200px;
+    }
+    
+    .announcement-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .announcement-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+}
+</style>
+{% endblock %}

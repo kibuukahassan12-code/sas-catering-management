@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Costing</p>
+        <h1>{{ event.title }} - Costing & Budgeting</h1>
+        <p class="muted">Track budget vs actual costs</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) }}">← Back to Event</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Budget Summary</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
+        <div style="padding: 1.5rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div class="muted" style="font-size: 0.875rem; margin-bottom: 0.5rem;">Budget Estimate</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: var(--primary);">UGX {{ "{:,.2f}".format(event.budget_estimate) }}</div>
+        </div>
+        <div style="padding: 1.5rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div class="muted" style="font-size: 0.875rem; margin-bottom: 0.5rem;">Actual Cost</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: {% if total_actual > event.budget_estimate %}#e74c3c{% else %}#2ecc71{% endif %};">UGX {{ "{:,.2f}".format(total_actual) }}</div>
+        </div>
+        <div style="padding: 1.5rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div class="muted" style="font-size: 0.875rem; margin-bottom: 0.5rem;">Variance</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: {% if (total_actual - event.budget_estimate) > 0 %}#e74c3c{% else %}#2ecc71{% endif %};">
+                UGX {{ "{:,.2f}".format(total_actual - event.budget_estimate) }}
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Cost Breakdown</h3>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Amount (UGX)</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Menu Package</strong></td>
+                    <td>UGX {{ "{:,.2f}".format(menu_cost) }}</td>
+                    <td>Based on {{ event.guest_count }} guests</td>
+                </tr>
+                <tr>
+                    <td><strong>Staff Costs</strong></td>
+                    <td>UGX {{ "{:,.2f}".format(staff_cost) }}</td>
+                    <td>{{ event.staff_assignments|length }} staff members</td>
+                </tr>
+                <tr>
+                    <td><strong>Vendor Costs</strong></td>
+                    <td>UGX {{ "{:,.2f}".format(vendor_cost) }}</td>
+                    <td>{{ event.vendor_assignments|length }} vendors</td>
+                </tr>
+                <tr>
+                    <td><strong>Other Costs</strong></td>
+                    <td>UGX {{ "{:,.2f}".format(event.actual_cost or 0) }}</td>
+                    <td>Additional expenses</td>
+                </tr>
+                <tr style="background: var(--bg-secondary); font-weight: bold;">
+                    <td>Total Actual Cost</td>
+                    <td>UGX {{ "{:,.2f}".format(total_actual) }}</td>
+                    <td>—</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Update Actual Cost</h3>
+    </div>
+    <form method="POST" action="{{ url_for('events.costing_update', event_id=event.id) }}" style="padding: 1.5rem;">
+        <div class="form-group">
+            <label for="actual_cost">Additional Actual Cost (UGX)</label>
+            <input type="number" id="actual_cost" name="actual_cost" value="{{ event.actual_cost or 0 }}" step="0.01" min="0" class="form-control">
+            <small class="muted">Enter additional costs not covered by menu, staff, or vendors</small>
+        </div>
+        <div style="margin-top: 1rem;">
+            <button type="submit" class="btn-primary">Update Cost</button>
+        </div>
+    </form>
+</section>
+
+<!-- Budget vs Actual Chart -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Budget vs Actual</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="flex: 1; background: rgba(191, 54, 12, 0.1); border-radius: 4px; height: 30px; position: relative;">
+                <div style="background: #BF360C; height: 100%; border-radius: 4px; width: 100%;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 0.875rem;">Budget</div>
+            </div>
+            <div style="min-width: 100px; text-align: right;">
+                <strong>UGX {{ "{:,.2f}".format(event.budget_estimate) }}</strong>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="flex: 1; background: rgba(46, 204, 113, 0.1); border-radius: 4px; height: 30px; position: relative;">
+                <div style="background: {% if total_actual > event.budget_estimate %}#e74c3c{% else %}#2ecc71{% endif %}; height: 100%; border-radius: 4px; width: {{ (total_actual / event.budget_estimate * 100) if event.budget_estimate > 0 else 0 }}%; max-width: 100%;"></div>
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: {% if total_actual > event.budget_estimate %}#fff{% else %}#263238{% endif %}; font-weight: bold; font-size: 0.875rem;">Actual</div>
+            </div>
+            <div style="min-width: 100px; text-align: right;">
+                <strong>UGX {{ "{:,.2f}".format(total_actual) }}</strong>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

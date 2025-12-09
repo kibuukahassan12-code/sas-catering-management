@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Announcement</p>
+        <h1>{{ announcement.title }}</h1>
+        <p class="muted">
+            By {{ announcement.creator.email if announcement.creator else 'Unknown' }} • 
+            {{ announcement.created_at.strftime('%Y-%m-%d %H:%M') if announcement.created_at else '' }}
+        </p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('communication.announcements_list') }}">← Back to Announcements</a>
+    </div>
+</section>
+
+<section class="panel">
+    {% if announcement.image_url %}
+    <img src="{{ url_for('communication.serve_upload', filename=announcement.image_url.split('/')[-1]) }}" 
+         alt="{{ announcement.title }}" 
+         style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 1.5rem;">
+    {% endif %}
+    <div style="white-space: pre-wrap; line-height: 1.6;">{{ announcement.message }}</div>
+</section>
+{% endblock %}
+

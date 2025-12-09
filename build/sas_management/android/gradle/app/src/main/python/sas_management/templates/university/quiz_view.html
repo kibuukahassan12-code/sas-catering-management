@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">{{ course.title }}</p>
+        <h1>{{ quiz.title }}</h1>
+        <p class="muted">{{ quiz.description or 'Answer all questions to complete the quiz.' }}</p>
+    </div>
+    <div class="quick-links">
+        {% if lesson %}
+        <a class="btn-secondary" href="{{ url_for('university.lesson_view', lesson_id=lesson.id) }}">← Back to Lesson</a>
+        {% else %}
+        <a class="btn-secondary" href="{{ url_for('university.course_view_enhanced', course_id=course.id) }}">← Back to Course</a>
+        {% endif %}
+    </div>
+</section>
+
+{% if latest_attempt and latest_attempt.submitted_at %}
+<!-- Previous Attempt Results -->
+<section class="panel" style="background: {% if latest_attempt.passed %}#d4edda{% else %}#f8d7da{% endif %};">
+    <div class="panel-header">
+        <h3>Previous Attempt Results</h3>
+        <span class="badge {% if latest_attempt.passed %}success{% else %}danger{% endif %}">
+            {% if latest_attempt.passed %}✓ Passed{% else %}✗ Failed{% endif %}
+        </span>
+    </div>
+    <div style="padding: 1rem;">
+        <p><strong>Score:</strong> {{ latest_attempt.score }}% (Passing: {{ quiz.passing_score }}%)</p>
+        <p><strong>Submitted:</strong> {{ latest_attempt.submitted_at.strftime('%Y-%m-%d %H:%M') if latest_attempt.submitted_at else 'N/A' }}</p>
+        <p style="margin-top: 1rem;"><em>You can retake this quiz by submitting new answers below.</em></p>
+    </div>
+</section>
+{% endif %}
+
+<!-- Quiz Form -->
+<section class="panel">
+    <form id="quiz-form" method="post" action="{{ url_for('university.api_submit_quiz', quiz_id=quiz.id) }}">
+        <div class="panel-header">
+            <h3>Quiz Questions</h3>
+            <span class="badge">{{ questions|length }} questions • Passing: {{ quiz.passing_score }}%</span>
+        </div>
+        
+        {% if questions %}
+        <div style="display: flex; flex-direction: column; gap: 2rem; padding: 1.5rem;">
+            {% for item in questions %}
+            {% set question = item.question %}
+            <div style="padding: 1.5rem; border: 1px solid #e9ecef; border-radius: 8px; background: white;">
+                <div style="margin-bottom: 1rem;">
+                    <strong style="font-size: 1.125rem;">{{ loop.index }}. {{ question.question }}</strong>
+                    <span class="badge badge-secondary" style="margin-left: 0.5rem;">{{ question.points }} point(s)</span>
+                </div>
+                
+                {% if question.question_type == 'mcq' and item.choices %}
+                <!-- Multiple Choice -->
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    {% for choice in item.choices %}
+                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid #e9ecef; border-radius: 4px; cursor: pointer;">
+                        <input type="radio" name="answers[{{ question.id }}]" value="{{ loop.index0 }}" required>
+                        <span>{{ choice }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                
+                {% elif question.question_type == 'tf' %}
+                <!-- True/False -->
+                <div style="display: flex; gap: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border: 1px solid #e9ecef; border-radius: 4px; cursor: pointer;">
+                        <input type="radio" name="answers[{{ question.id }}]" value="true" required>
+                        <span>True</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.5rem; border: 1px solid #e9ecef; border-radius: 4px; cursor: pointer;">
+                        <input type="radio" name="answers[{{ question.id }}]" value="false" required>
+                        <span>False</span>
+                    </label>
+                </div>
+                
+                {% else %}
+                <!-- Short Answer -->
+                <textarea name="answers[{{ question.id }}]" rows="3" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;" required placeholder="Type your answer here..."></textarea>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div style="padding: 1.5rem; border-top: 1px solid #e9ecef;">
+            <button type="submit" class="btn-primary" style="width: 100%;">Submit Quiz</button>
+        </div>
+        
+        {% else %}
+        <div class="empty-state">
+            <p>No questions have been added to this quiz yet.</p>
+        </div>
+        {% endif %}
+    </form>
+</section>
+
+<script>
+(function() {
+    const quizForm = document.getElementById('quiz-form');
+    if (!quizForm) return;
+    
+    quizForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Collect answers from form
+        const answers = [];
+        const questionIds = [{% for item in questions %}{{ item.question.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+        
+        // Parse answers
+        questionIds.forEach(function(questionId) {
+            const input = quizForm.querySelector('input[name="answers[' + questionId + ']"]:checked, textarea[name="answers[' + questionId + ']"]');
+            if (input) {
+                answers.push({
+                    question_id: questionId,
+                    answer: input.value || ''
+                });
+            }
+        });
+        
+        // Validate all questions answered
+        if (answers.length < questionIds.length) {
+            alert('Please answer all questions before submitting.');
+            return;
+        }
+        
+        // Submit via API
+        try {
+            const response = await fetch("{{ url_for('university.api_submit_quiz', quiz_id=quiz.id) }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ answers: answers })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                if (result.passed) {
+                    alert('✓ Passed! Your score: ' + result.score + '%');
+                } else {
+                    alert('Failed. Your score: ' + result.score + '%. Passing score: ' + result.passing_score + '%');
+                }
+                // Reload page to show results
+                window.location.reload();
+            } else {
+                alert('Error: ' + (result.error || 'Failed to submit quiz'));
+            }
+        } catch (error) {
+            alert('Error submitting quiz: ' + error.message);
+        }
+    });
+})();
+</script>
+{% endblock %}

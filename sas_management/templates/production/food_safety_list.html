@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Food Safety Logs</h1>
+        <p class="muted">Monitor and log food safety compliance.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('production.food_safety_new') }}">+ New Log Entry</a>
+</section>
+
+<!-- Filters -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Filter by Date</span>
+            <input type="date" name="date" value="{{ request.args.get('date', '') }}">
+        </label>
+        <label class="form-control">
+            <span>Filter by Category</span>
+            <select name="category">
+                <option value="">-- All Categories --</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if request.args.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Filter</button>
+            <a href="{{ url_for('production.food_safety_list') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Logs List -->
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Category</th>
+                    <th>Item Description</th>
+                    <th>Temperature</th>
+                    <th>Status</th>
+                    <th>Event</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>
+                        {{ log.log_date.strftime('%Y-%m-%d') }}
+                        {% if log.log_time %}
+                        <br><small>{{ log.log_time.strftime('%H:%M') }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.category }}</td>
+                    <td>{{ log.item_description }}</td>
+                    <td>
+                        {% if log.temperature %}
+                        {{ "{:.1f}".format(log.temperature) }}°C
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {% if log.status == 'Critical' %}danger{% elif log.status == 'Warning' %}warning{% else %}success{% endif %}">
+                            {{ log.status }}
+                        </span>
+                    </td>
+                    <td>{{ log.event.event_name if log.event_id and log.event else 'General' }}</td>
+                    <td>
+                        <a href="{{ url_for('production.food_safety_view', log_id=log.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center muted">No food safety logs found. <a href="{{ url_for('production.food_safety_new') }}">Create your first log entry</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}{% if request.args.get('category') %}&category={{ request.args.get('category') }}{% endif %}" class="btn-ghost">Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}{% if request.args.get('category') %}&category={{ request.args.get('category') }}{% endif %}" class="btn-ghost">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+
+
+

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Menu Item</p>
+        <h1>{{ item.name }}</h1>
+        <p class="muted">{{ item.category.name if item.category else 'No category' }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('menu_builder.menu_edit', item_id=item.id) }}">Edit</a>
+        <a class="btn-secondary" href="{{ url_for('menu_builder.menu_list') }}">← Back to Items</a>
+    </div>
+</section>
+
+<section class="panel">
+    {% if item.image_url %}
+    <img src="{{ url_for('menu_builder.serve_upload', filename=item.image_url.split('/')[-1]) }}" 
+         alt="{{ item.name }}" 
+         style="width: 100%; max-height: 400px; object-fit: cover; border-radius: 8px; margin-bottom: 1.5rem;">
+    {% endif %}
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <strong>Cost per Portion</strong>
+            <p style="font-size: 1.5rem; margin: 0.5rem 0; color: #F26822;">{{ CURRENCY }}{{ "{:,.0f}".format(item.cost_per_portion) }}</p>
+        </div>
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <strong>Selling Price</strong>
+            <p style="font-size: 1.5rem; margin: 0.5rem 0; color: #2d5016;">{{ CURRENCY }}{{ "{:,.0f}".format(item.selling_price) }}</p>
+        </div>
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <strong>Profit Margin</strong>
+            <p style="font-size: 1.5rem; margin: 0.5rem 0; color: {% if item.margin_percent > 50 %}#2d5016{% elif item.margin_percent > 30 %}#F6BC38{% else %}#dc3545{% endif %};">
+                {{ item.margin_percent }}%
+            </p>
+        </div>
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <strong>Profit per Portion</strong>
+            <p style="font-size: 1.5rem; margin: 0.5rem 0; color: #2d5016;">
+                {{ CURRENCY }}{{ "{:,.0f}".format(item.selling_price - item.cost_per_portion) }}
+            </p>
+        </div>
+    </div>
+    
+    {% if item.description %}
+    <div style="white-space: pre-wrap; line-height: 1.6;">{{ item.description }}</div>
+    {% endif %}
+</section>
+{% endblock %}
+

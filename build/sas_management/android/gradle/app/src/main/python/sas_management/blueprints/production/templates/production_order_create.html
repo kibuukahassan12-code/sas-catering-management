@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Create Production Order</h1>
+        <p class="muted">Plan kitchen production for events or standalone orders.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.index') }}">← Back to Production</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid" id="production-order-form">
+        <label class="form-control">
+            <span>Linked Event (Optional)</span>
+            <select name="event_id">
+                <option value="">No event linked</option>
+                {% for event in events %}
+                <option value="{{ event.id }}">{{ event.event_name }} · {{ event.event_date.strftime('%b %d, %Y') }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        
+        <label class="form-control">
+            <span>Scheduled Prep Time</span>
+            <input type="datetime-local" name="scheduled_prep" required>
+        </label>
+        
+        <label class="form-control">
+            <span>Scheduled Cook Time (Optional)</span>
+            <input type="datetime-local" name="scheduled_cook">
+        </label>
+        
+        <label class="form-control">
+            <span>Scheduled Pack Time (Optional)</span>
+            <input type="datetime-local" name="scheduled_pack">
+        </label>
+        
+        <label class="form-control">
+            <span>Scheduled Load Time (Optional)</span>
+            <input type="datetime-local" name="scheduled_load">
+        </label>
+        
+        <div class="form-control form-control--full">
+            <span>Recipes</span>
+            <div class="order-items" id="recipe-items">
+                <div class="order-item-row">
+                    <select name="recipe_id[]" required>
+                        <option value="">Select recipe</option>
+                        {% for recipe in recipes %}
+                        <option value="{{ recipe.id }}" data-name="{{ recipe.name }}">{{ recipe.name }} ({{ recipe.portions }} portions base)</option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="recipe_name[]" class="recipe-name-input">
+                    <input type="number" name="portions[]" min="1" value="1" placeholder="Portions" required>
+                    <button type="button" class="btn-light btn-icon" data-action="remove-item-row">&times;</button>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" data-action="add-item-row">+ Add Recipe</button>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Create Production Order</button>
+            <a class="btn-ghost" href="{{ url_for('production.index') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<template id="recipe-item-template">
+    <div class="order-item-row">
+        <select name="recipe_id[]" required>
+            <option value="">Select recipe</option>
+            {% for recipe in recipes %}
+            <option value="{{ recipe.id }}" data-name="{{ recipe.name }}">{{ recipe.name }} ({{ recipe.portions }} portions base)</option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="recipe_name[]" class="recipe-name-input">
+        <input type="number" name="portions[]" min="1" value="1" placeholder="Portions" required>
+        <button type="button" class="btn-light btn-icon" data-action="remove-item-row">&times;</button>
+    </div>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("recipe-items");
+    const template = document.getElementById("recipe-item-template");
+    const form = document.getElementById("production-order-form");
+    
+    // Update recipe name when recipe is selected
+    container.addEventListener("change", function(e) {
+        if (e.target.matches("select[name='recipe_id[]']")) {
+            const selectedOption = e.target.options[e.target.selectedIndex];
+            const recipeName = selectedOption.getAttribute("data-name");
+            const row = e.target.closest(".order-item-row");
+            const nameInput = row.querySelector(".recipe-name-input");
+            if (nameInput && recipeName) {
+                nameInput.value = recipeName;
+            }
+        }
+    });
+    
+    document.querySelector("[data-action='add-item-row']").addEventListener("click", function (event) {
+        event.preventDefault();
+        const clone = template.content.firstElementChild.cloneNode(true);
+        container.appendChild(clone);
+    });
+    
+    container.addEventListener("click", function (event) {
+        if (event.target.matches("[data-action='remove-item-row']")) {
+            event.preventDefault();
+            if (container.children.length === 1) {
+                return;
+            }
+            event.target.closest(".order-item-row").remove();
+        }
+    });
+});
+</script>
+{% endblock %}
+

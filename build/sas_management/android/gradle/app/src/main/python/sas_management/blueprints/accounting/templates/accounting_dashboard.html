@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Accounting Department</p>
+        <h1>Accounting Dashboard</h1>
+        <p class="muted">Manage finances, invoices, payments, and receipts.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Financial Summary</h3>
+        <span class="badge">Live overview</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Invoices</p>
+            <h2>{{ summary.total_invoices }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Paid Invoices</p>
+            <h2>{{ summary.paid_invoices }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Pending Invoices</p>
+            <h2>{{ summary.pending_invoices }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Receipts</p>
+            <h2>{{ summary.total_receipts }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Payments</p>
+            <h2>{{ summary.total_payments }}</h2>
+        </article>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('quotes.new_quote') }}">Create Quotation</a>
+        <a class="btn-secondary" href="{{ url_for('invoices.invoice_list') }}">View Invoices</a>
+        <a class="btn-secondary" href="{{ url_for('cashbook.index') }}">Cashbook</a>
+        <a class="btn-secondary" href="{{ url_for('reports.reports_index') }}">Financial Reports</a>
+        {% if current_user.role.value == 'Admin' %}
+        <a class="btn-secondary" href="{{ url_for('payroll.payroll_list') }}">Payroll Management</a>
+        <a class="btn-secondary" href="{{ url_for('accounting.journal_view') }}">Journal Entries</a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+

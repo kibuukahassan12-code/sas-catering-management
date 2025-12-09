@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>My Contracts</h1>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('client_portal.dashboard') }}" class="btn-secondary">Back to Dashboard</a>
+    </div>
+</section>
+
+{% if contracts %}
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Contract #</th>
+                    <th>Event ID</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contract in contracts %}
+                <tr>
+                    <td><strong>#{{ contract.id }}</strong></td>
+                    <td>Event #{{ contract.event_id }}</td>
+                    <td><span class="badge badge-{{ contract.status }}">{{ contract.status }}</span></td>
+                    <td>{{ contract.created_at.strftime('%Y-%m-%d') if contract.created_at else '—' }}</td>
+                    <td>
+                        <a href="#" class="btn-ghost btn-sm">View</a>
+                        {% if contract.pdf_path %}
+                        <a href="#" class="btn-ghost btn-sm">Download PDF</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">No contracts found.</p>
+</section>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Menu Builder</p>
+        <h1>Menu Items</h1>
+        <p class="muted">All menu items with cost analysis and margins.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('menu_builder.menu_new') }}">+ New Item</a>
+        <a class="btn-secondary" href="{{ url_for('menu_builder.dashboard') }}">← Dashboard</a>
+    </div>
+</section>
+
+<!-- Filters -->
+<section class="panel">
+    <div style="display: flex; gap: 1rem; align-items: end; padding: 1rem;">
+        <div style="flex: 1;">
+            <label>Filter by Category</label>
+            <select onchange="window.location.href='{{ url_for('menu_builder.menu_list') }}?category=' + this.value" style="width: 100%; padding: 0.5rem;">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if category_filter == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Status</label>
+            <select onchange="window.location.href='{{ url_for('menu_builder.menu_list') }}?status=' + this.value" style="padding: 0.5rem;">
+                <option value="">All</option>
+                <option value="Active" {% if status_filter == 'Active' %}selected{% endif %}>Active</option>
+                <option value="Inactive" {% if status_filter == 'Inactive' %}selected{% endif %}>Inactive</option>
+            </select>
+        </div>
+    </div>
+</section>
+
+<!-- Menu Items Table -->
+{% if items %}
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Cost</th>
+                    <th>Price</th>
+                    <th>Margin %</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>
+                        {% if item.image_url %}
+                        <img src="{{ url_for('menu_builder.serve_upload', filename=item.image_url.split('/')[-1]) }}" 
+                             alt="{{ item.name }}" 
+                             style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 0.5rem; vertical-align: middle;">
+                        {% endif %}
+                        <strong>{{ item.name }}</strong>
+                    </td>
+                    <td>{{ item.category.name if item.category else '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.cost_per_portion) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.selling_price) }}</td>
+                    <td>
+                        <span class="badge {% if item.margin_percent > 50 %}success{% elif item.margin_percent > 30 %}warning{% else %}danger{% endif %}">
+                            {{ item.margin_percent }}%
+                        </span>
+                    </td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>
+                        <a href="{{ url_for('menu_builder.menu_view', item_id=item.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">No menu items found. Create your first item!</p>
+</section>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Condition Report</p>
+        <h1>Equipment Condition Assessment</h1>
+        <p class="muted">Record equipment condition, issues, and recommended actions.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('maintenance.dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>New Condition Report</h3>
+    </div>
+    
+    <form method="POST" action="{{ url_for('maintenance.condition_report') }}">
+        <div style="display: grid; gap: 1.5rem; max-width: 800px;">
+            <div>
+                <label for="hire_item_id"><strong>Equipment Item *</strong></label>
+                <select name="hire_item_id" id="hire_item_id" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">Select Equipment...</option>
+                    {% for item in items %}
+                    <option value="{{ item.id }}">{{ item.name }} {% if item.sku %}(SKU: {{ item.sku }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div>
+                <label for="report_date"><strong>Report Date *</strong></label>
+                <input type="date" name="report_date" id="report_date" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            
+            <div>
+                <label for="condition_rating"><strong>Condition Rating (1-10) *</strong></label>
+                <input type="number" name="condition_rating" id="condition_rating" min="1" max="10" required placeholder="Rate from 1 (Poor) to 10 (Excellent)" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                <small class="muted">1 = Poor, 5 = Fair, 7 = Good, 10 = Excellent</small>
+            </div>
+            
+            <div>
+                <label for="issues_found"><strong>Issues Found</strong></label>
+                <textarea name="issues_found" id="issues_found" rows="4" placeholder="Describe any issues, damages, or problems found..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+            </div>
+            
+            <div>
+                <label for="recommended_action"><strong>Recommended Action</strong></label>
+                <textarea name="recommended_action" id="recommended_action" rows="4" placeholder="Recommendations for repair, maintenance, or replacement..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+            </div>
+            
+            <div>
+                <button type="submit" class="btn-primary">Submit Condition Report</button>
+                <a href="{{ url_for('maintenance.dashboard') }}" class="btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+// Set default date to today
+document.getElementById('report_date').valueAsDate = new Date();
+</script>
+
+{% endblock %}
+

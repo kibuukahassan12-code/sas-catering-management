@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Orders</p>
+        <h1>Hire Orders</h1>
+        <p class="muted">Coordinate client deliveries, pickups, and on-site support.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('hire.create_hire_order') }}">+ New Hire Order</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>Orders Board</h3>
+        <span class="badge">{{ pagination.total }} total</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Client</th>
+                    <th>Event</th>
+                    <th>Hire Window</th>
+                    <th>Items</th>
+                    <th>Total ({{ CURRENCY.rstrip() }})</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td data-label="Client"><a href="{{ url_for('core.clients_edit', client_id=order.client.id) }}">{{ order.client.name }}</a></td>
+                    <td data-label="Event"><a href="{{ url_for('core.events_edit', event_id=order.event.id) }}">{{ order.event.event_name }}</a></td>
+                    <td data-label="Hire Window">{{ order.start_date.strftime('%b %d, %Y') }} → {{ order.end_date.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Items">
+                        <ul class="item-list">
+                            {% for item in order.items %}
+                            <li>{{ item.inventory_item.name }} × {{ item.quantity_rented }}</li>
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td data-label="Total">{{ CURRENCY }}{{ "{:,.2f}".format(order.total_cost or 0) }}</td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('hire.orders_edit', order_id=order.id) }}">View / Edit</a>
+                        <form method="post" action="{{ url_for('hire.orders_delete', order_id=order.id) }}" onsubmit="return confirm('Delete this hire order and restore stock?');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6">No hire orders found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Hire orders pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('hire.orders_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('hire.orders_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

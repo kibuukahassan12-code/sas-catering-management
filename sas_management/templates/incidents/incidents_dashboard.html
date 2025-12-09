@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Incident & Quality Management</h1>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('incidents.incident_report') }}" class="btn-primary">Report Incident</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Open Incidents</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Reported</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for incident in incidents %}
+                <tr>
+                    <td><strong>#{{ incident.id }}</strong></td>
+                    <td>{{ incident.incident_type or '—' }}</td>
+                    <td><span class="badge badge-{{ incident.severity }}">{{ incident.severity }}</span></td>
+                    <td>{{ incident.created_at.strftime('%Y-%m-%d') if incident.created_at else '—' }}</td>
+                    <td><span class="badge badge-{{ incident.status }}">{{ incident.status }}</span></td>
+                    <td><a href="#" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

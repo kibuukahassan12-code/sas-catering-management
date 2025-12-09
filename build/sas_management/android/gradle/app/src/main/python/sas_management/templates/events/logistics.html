@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Logistics</p>
+        <h1>{{ event.title }} - Logistics Sheet</h1>
+        <p class="muted">Printable logistics information</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <button onclick="window.print()" class="btn-primary">Print</button>
+        <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) }}">← Back to Event</a>
+    </div>
+</section>
+
+<div class="logistics-sheet">
+    <div style="text-align: center; margin-bottom: 2rem; border-bottom: 3px solid #BF360C; padding-bottom: 1rem;">
+        <h1 style="color: #BF360C; margin: 0;">SAS Best Foods</h1>
+        <h2 style="margin: 0.5rem 0;">Event Logistics Sheet</h2>
+        <p style="margin: 0;">{{ event.title }}</p>
+    </div>
+
+    <section style="margin-bottom: 2rem;">
+        <h3 style="color: #BF360C; border-bottom: 2px solid #FF7043; padding-bottom: 0.5rem;">Event Information</h3>
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+            <div><strong>Event Title:</strong> {{ event.title }}</div>
+            <div><strong>Client:</strong> {{ event.client_name }}</div>
+            <div><strong>Date:</strong> {{ event.date.strftime('%B %d, %Y') if event.date else 'N/A' }}</div>
+            <div><strong>Time:</strong> {{ event.start_time or 'N/A' }} - {{ event.end_time or 'N/A' }}</div>
+            <div><strong>Guest Count:</strong> {{ event.guest_count }}</div>
+            <div><strong>Event Type:</strong> {{ event.event_type or 'N/A' }}</div>
+        </div>
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+        <h3 style="color: #BF360C; border-bottom: 2px solid #FF7043; padding-bottom: 0.5rem;">Venue Details</h3>
+        {% if event.venue_obj %}
+        <div>
+            <div><strong>Venue Name:</strong> {{ event.venue_obj.name }}</div>
+            <div><strong>Address:</strong> {{ event.venue_obj.address or 'N/A' }}</div>
+            <div><strong>Capacity:</strong> {{ event.venue_obj.capacity or 'N/A' }}</div>
+            {% if event.venue_obj.google_maps_link %}
+            <div><strong>Map Link:</strong> <a href="{{ event.venue_obj.google_maps_link }}" target="_blank">{{ event.venue_obj.google_maps_link }}</a></div>
+            {% endif %}
+            {% if event.venue_obj.layout_description %}
+            <div style="margin-top: 0.5rem;"><strong>Layout:</strong> {{ event.venue_obj.layout_description }}</div>
+            {% endif %}
+        </div>
+        {% else %}
+        <p>Venue not specified</p>
+        {% endif %}
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+        <h3 style="color: #BF360C; border-bottom: 2px solid #FF7043; padding-bottom: 0.5rem;">Staff List</h3>
+        {% if event.staff_assignments %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #F5F5F5;">
+                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Staff Name</th>
+                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Role</th>
+                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Hours</th>
+                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in event.staff_assignments %}
+                <tr>
+                    <td style="padding: 0.75rem; border: 1px solid #ddd;">{{ assignment.staff_name }}</td>
+                    <td style="padding: 0.75rem; border: 1px solid #ddd;">{{ assignment.role|title }}</td>
+                    <td style="padding: 0.75rem; border: 1px solid #ddd;">{{ assignment.assigned_hours or 'N/A' }}</td>
+                    <td style="padding: 0.75rem; border: 1px solid #ddd;">{{ assignment.notes or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No staff assigned</p>
+        {% endif %}
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+        <h3 style="color: #BF360C; border-bottom: 2px solid #FF7043; padding-bottom: 0.5rem;">Menu Items</h3>
+        {% if event.menu_package_obj %}
+        <div>
+            <div><strong>Package:</strong> {{ event.menu_package_obj.name }}</div>
+            {% if event.menu_package_obj.items %}
+            <ul style="margin-top: 0.5rem;">
+                {% for item in event.menu_package_obj.items %}
+                <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+        {% else %}
+        <p>Menu package not specified</p>
+        {% endif %}
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+        <h3 style="color: #BF360C; border-bottom: 2px solid #FF7043; padding-bottom: 0.5rem;">Timeline</h3>
+        {% if event.timelines %}
+        <ul>
+            {% for timeline in event.timelines %}
+            <li>
+                <strong>{{ timeline.phase }}:</strong> {{ timeline.description }}
+                {% if timeline.due_date %} (Due: {{ timeline.due_date.strftime('%b %d, %Y') }}){% endif %}
+                {% if timeline.completed %} ✓{% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p>No timeline items</p>
+        {% endif %}
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+        <h3 style="color: #BF360C; border-bottom: 2px solid #FF7043; padding-bottom: 0.5rem;">Vendors</h3>
+        {% if event.vendor_assignments %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #F5F5F5;">
+                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Vendor</th>
+                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Role</th>
+                    <th style="padding: 0.75rem; text-align: left; border: 1px solid #ddd;">Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in event.vendor_assignments %}
+                <tr>
+                    <td style="padding: 0.75rem; border: 1px solid #ddd;">{{ assignment.vendor.name if assignment.vendor else 'Unknown' }}</td>
+                    <td style="padding: 0.75rem; border: 1px solid #ddd;">{{ assignment.role_in_event or 'N/A' }}</td>
+                    <td style="padding: 0.75rem; border: 1px solid #ddd;">UGX {{ "{:,.2f}".format(assignment.cost or 0) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No vendors assigned</p>
+        {% endif %}
+    </section>
+
+    {% if event.notes %}
+    <section style="margin-bottom: 2rem;">
+        <h3 style="color: #BF360C; border-bottom: 2px solid #FF7043; padding-bottom: 0.5rem;">Notes</h3>
+        <p style="white-space: pre-wrap;">{{ event.notes }}</p>
+    </section>
+    {% endif %}
+</div>
+
+<style>
+@media print {
+    .page-header, .btn-primary, .btn-secondary {
+        display: none !important;
+    }
+    .logistics-sheet {
+        max-width: 100%;
+    }
+    body {
+        background: white;
+    }
+    section {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
+

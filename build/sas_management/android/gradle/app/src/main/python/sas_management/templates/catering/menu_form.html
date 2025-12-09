@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+{% set CURRENCY = CURRENCY or 'UGX ' %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow" style="color: var(--accent);">Catering · Menu</p>
+        <h1 style="background: linear-gradient(120deg, var(--brand), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">{{ action }} Menu Item</h1>
+        <p class="muted">Define a sellable catering product. Add ingredients via the Recipe Builder after creation.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('catering.menu_list') }}">← Back to Menu</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <label class="form-control">
+            <span>Menu Item Name</span>
+            <input type="text" name="name" value="{{ item.name if item else '' }}" required>
+        </label>
+        <label class="form-control">
+            <span>Selling Price ({{ CURRENCY.rstrip() }})</span>
+            <input type="number" name="selling_price" min="0" step="0.01" value="{% if item %}{{ item.get_current_price() if item.get_current_price else (item.selling_price_ugx or item.price_ugx or '') }}{% endif %}" required>
+        </label>
+        <label class="form-control">
+            <span>Estimated COGS ({{ CURRENCY.rstrip() }}) - Optional</span>
+            <input type="number" name="estimated_cogs" min="0" step="0.01" value="{{ item.estimated_cogs_ugx if item and item.estimated_cogs_ugx else '' }}">
+            <small class="form-hint">This will be auto-calculated when you build the recipe.</small>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Menu Item</button>
+            <a class="btn-ghost" href="{{ url_for('catering.menu_list') }}">Cancel</a>
+        </div>
+    </form>
+    {% if item %}
+    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e0e0e0;">
+        <a class="btn-secondary" href="{{ url_for('catering.recipe_builder', item_id=item.id) }}">Manage Recipe →</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

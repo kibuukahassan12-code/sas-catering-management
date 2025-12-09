@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Permission Management</p>
+        <h1>System Permissions</h1>
+        <p class="muted">View all available permissions in the system.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.roles_list') }}">← Back to Roles</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Permissions by Group</h3>
+        <span class="badge">
+            {% set total = 0 %}
+            {% for group, perms in permissions_by_group.items() %}
+                {% set total = total + perms|length %}
+            {% endfor %}
+            {{ total }} permissions
+        </span>
+    </div>
+
+    {% if permissions_by_group %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; padding: 1.5rem;">
+        {% for group, perms in permissions_by_group.items() %}
+        <div style="border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; background: var(--bg-secondary);">
+            <h3 style="margin: 0 0 1rem 0; font-size: 1.1rem; color: var(--text-primary); border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem;">
+                {{ group|title }}
+            </h3>
+            <ul style="list-style: none; padding: 0; margin: 0;">
+                {% for perm in perms %}
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>{{ perm.name or perm.code }}</strong>
+                            {% if perm.description %}
+                            <br>
+                            <small class="muted">{{ perm.description }}</small>
+                            {% endif %}
+                        </div>
+                        <span class="badge" style="font-size: 0.75rem;">{{ perm.code }}</span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem;">
+        <p class="muted">No permissions found. Run seed_rbac.py to create default permissions.</p>
+    </div>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div style="padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{{ url_for('admin.roles_list') }}" class="btn-secondary">Manage Roles</a>
+        <a href="{{ url_for('admin.user_roles') }}" class="btn-secondary">Assign Roles to Users</a>
+    </div>
+</section>
+{% endblock %}
+

@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}PWA Test - SAS Management System{% endblock %}
+
+{% block content %}
+<div class="pwa-test-container">
+    <h1>PWA Test & Debug</h1>
+    
+    <div class="pwa-test-section">
+        <h2>Service Worker Status</h2>
+        <div id="sw-status" class="pwa-status-card">
+            <p>Checking...</p>
+        </div>
+    </div>
+
+    <div class="pwa-test-section">
+        <h2>Installation Status</h2>
+        <div id="install-status" class="pwa-status-card">
+            <p>Checking...</p>
+        </div>
+        <button id="install-btn" class="btn-primary" style="display: none;">Install App</button>
+    </div>
+
+    <div class="pwa-test-section">
+        <h2>Cache Status</h2>
+        <div id="cache-status" class="pwa-status-card">
+            <p>Checking...</p>
+        </div>
+        <button id="clear-cache-btn" class="btn-secondary">Clear Cache</button>
+    </div>
+
+    <div class="pwa-test-section">
+        <h2>Network Status</h2>
+        <div id="network-status" class="pwa-status-card">
+            <p>Checking...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Service Worker Status
+    const swStatusDiv = document.getElementById('sw-status');
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistration().then(registration => {
+            if (registration) {
+                swStatusDiv.innerHTML = `
+                    <p><strong>Status:</strong> <span style="color: #2ecc71;">Registered</span></p>
+                    <p><strong>Scope:</strong> ${registration.scope}</p>
+                    <p><strong>State:</strong> ${registration.active ? 'Active' : 'Installing'}</p>
+                `;
+            } else {
+                swStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #e74c3c;">Not Registered</span></p>';
+            }
+        });
+    } else {
+        swStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #e74c3c;">Not Supported</span></p>';
+    }
+
+    // Installation Status
+    const installStatusDiv = document.getElementById('install-status');
+    const installBtn = document.getElementById('install-btn');
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #f39c12;">Installable</span></p>';
+        installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((choiceResult) => {
+                if (choiceResult.outcome === 'accepted') {
+                    installStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #2ecc71;">Installed</span></p>';
+                }
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+            });
+        }
+    });
+
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        installStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #2ecc71;">Installed (Standalone)</span></p>';
+    }
+
+    // Cache Status
+    const cacheStatusDiv = document.getElementById('cache-status');
+    if ('caches' in window) {
+        caches.keys().then(cacheNames => {
+            cacheStatusDiv.innerHTML = `
+                <p><strong>Caches Found:</strong> ${cacheNames.length}</p>
+                <ul>
+                    ${cacheNames.map(name => `<li>${name}</li>`).join('')}
+                </ul>
+            `;
+        });
+    }
+
+    // Clear Cache
+    document.getElementById('clear-cache-btn').addEventListener('click', () => {
+        if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+                return Promise.all(
+                    cacheNames.map(cacheName => caches.delete(cacheName))
+                );
+            }).then(() => {
+                cacheStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #2ecc71;">Cache Cleared</span></p>';
+                setTimeout(() => location.reload(), 1000);
+            });
+        }
+    });
+
+    // Network Status
+    const networkStatusDiv = document.getElementById('network-status');
+    function updateNetworkStatus() {
+        if (navigator.onLine) {
+            networkStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #2ecc71;">Online</span></p>';
+        } else {
+            networkStatusDiv.innerHTML = '<p><strong>Status:</strong> <span style="color: #e74c3c;">Offline</span></p>';
+        }
+    }
+    updateNetworkStatus();
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+});
+</script>
+
+<style>
+.pwa-test-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.pwa-test-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: rgba(17, 17, 17, 0.9);
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pwa-test-section h2 {
+    margin-bottom: 1rem;
+    color: var(--text);
+}
+
+.pwa-status-card {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.pwa-status-card p {
+    margin: 0.5rem 0;
+}
+
+.pwa-status-card ul {
+    margin: 0.5rem 0;
+    padding-left: 1.5rem;
+}
+</style>
+{% endblock %}
+

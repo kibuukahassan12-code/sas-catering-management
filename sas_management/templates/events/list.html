@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Management{% if floorplan_mode %} · Floor Plan Selection{% endif %}</p>
+        <h1>{% if floorplan_mode %}Select Event for Floor Plan{% else %}All Events{% endif %}</h1>
+        <p class="muted">{% if floorplan_mode %}Choose an existing or upcoming event to create a floor plan{% else %}Manage all your catering events from one place{% endif %}</p>
+    </div>
+    {% if floorplan_mode %}
+    <a class="btn-secondary" href="{{ url_for('floorplanner.dashboard') }}">← Back to Floor Plans</a>
+    {% else %}
+    <a class="btn-primary" href="{{ url_for('events.event_create') }}">+ Create Event</a>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Events</h3>
+        <span class="badge">{{ pagination.total }} events</span>
+    </div>
+    
+    <!-- Filters -->
+    <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
+        <form method="GET" action="{{ url_for('events.events_list') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            {% if floorplan_mode %}
+            <input type="hidden" name="floorplan" value="true">
+            {% endif %}
+            <div>
+                <label for="search" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Search:</label>
+                <input type="text" id="search" name="search" value="{{ search_query }}" placeholder="Title, client, email..." style="padding: 0.5rem;">
+            </div>
+            <div>
+                <label for="status" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Status:</label>
+                <select id="status" name="status" style="padding: 0.5rem;">
+                    <option value="">All Statuses</option>
+                    {% for status in EventStatus %}
+                    <option value="{{ status.name }}" {% if status_filter == status.name %}selected{% endif %}>{{ status.value }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn-primary">Filter</button>
+                <a href="{{ url_for('events.events_list') }}" class="btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event Title</th>
+                    <th>Client</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Guests</th>
+                    <th>Status</th>
+                    <th>Budget</th>
+                    <th>{% if floorplan_mode %}Action{% else %}Actions{% endif %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td><strong>{{ event.title }}</strong></td>
+                    <td>
+                        <div>{{ event.client_name }}</div>
+                        <small class="muted">{{ event.client_email or event.client_phone or '' }}</small>
+                    </td>
+                    <td>{{ event.date.strftime('%b %d, %Y') if event.date else 'N/A' }}</td>
+                    <td>
+                        {% if event.start_time and event.end_time %}
+                        {{ event.start_time }} - {{ event.end_time }}
+                        {% elif event.start_time %}
+                        {{ event.start_time }}
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ event.guest_count }}</td>
+                    <td>
+                        {% if event.status == EventStatus.NotStarted %}
+                        <span class="badge" style="background: rgba(158, 158, 158, 0.2); color: #9e9e9e;">{{ event.status.value }}</span>
+                        {% elif event.status == EventStatus.Planning %}
+                        <span class="badge" style="background: rgba(242, 104, 34, 0.2); color: var(--brand);">{{ event.status.value }}</span>
+                        {% elif event.status == EventStatus.Preparing %}
+                        <span class="badge" style="background: rgba(255, 152, 0, 0.2); color: #ff9800;">{{ event.status.value }}</span>
+                        {% elif event.status == EventStatus.InProgress %}
+                        <span class="badge" style="background: rgba(76, 175, 80, 0.2); color: #4caf50;">{{ event.status.value }}</span>
+                        {% elif event.status == EventStatus.Done %}
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">{{ event.status.value }}</span>
+                        {% else %}
+                        <span class="badge">{{ event.status.value }}</span>
+                        {% endif %}
+                    </td>
+                    <td>UGX {{ "{:,.2f}".format(event.budget_estimate) }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            {% if floorplan_mode %}
+                            <a href="{{ url_for('floorplanner.new_floorplan', event_id=event.id) }}" class="btn-primary btn-sm" title="Create floor plan for this event">📐 Floor Plan</a>
+                            {% else %}
+                            <a href="{{ url_for('events.event_view', event_id=event.id) }}" class="btn-ghost btn-sm">View</a>
+                            <a href="{{ url_for('events.event_edit', event_id=event.id) }}" class="btn-ghost btn-sm">Edit</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem;">
+                        <p class="muted">{% if floorplan_mode %}No existing or upcoming events found.{% else %}No events found.{% endif %}</p>
+                        {% if floorplan_mode %}
+                        <a href="{{ url_for('floorplanner.dashboard') }}" class="btn-secondary" style="margin-top: 1rem;">← Back to Floor Plans</a>
+                        {% else %}
+                        <a href="{{ url_for('events.event_create') }}" class="btn-primary" style="margin-top: 1rem;">Create First Event</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div style="padding: 1rem; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('events.events_list', page=pagination.prev_num, status=status_filter, search=search_query, floorplan='true' if floorplan_mode else '') }}" class="btn-secondary">Previous</a>
+        {% endif %}
+        <span style="padding: 0.5rem 1rem; display: flex; align-items: center;">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('events.events_list', page=pagination.next_num, status=status_filter, search=search_query, floorplan='true' if floorplan_mode else '') }}" class="btn-secondary">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<style>
+:root {
+    --sas-primary: #BF360C;
+    --sas-accent: #FF7043;
+    --sas-light: #F5F5F5;
+    --sas-dark: #263238;
+}
+</style>
+{% endblock %}
+

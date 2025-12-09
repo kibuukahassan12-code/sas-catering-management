@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Sales · Lead Management</p>
+        <h1>Incoming Leads</h1>
+        <p class="muted">Review and convert website inquiries into client accounts and events.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>All Leads</h3>
+        <span class="badge">{{ pagination.total }} records</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Inquiry Type</th>
+                    <th>Message</th>
+                    <th>Received</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td data-label="Name">{{ lead.client_name }}</td>
+                    <td data-label="Email"><a href="mailto:{{ lead.client_email }}">{{ lead.client_email }}</a></td>
+                    <td data-label="Phone">{{ lead.phone or '—' }}</td>
+                    <td data-label="Type">{{ lead.inquiry_type }}</td>
+                    <td data-label="Message">
+                        <span class="text-truncate" title="{{ lead.message }}">
+                            {{ lead.message[:50] }}{% if lead.message|length > 50 %}...{% endif %}
+                        </span>
+                    </td>
+                    <td data-label="Received">{{ lead.timestamp.strftime('%b %d, %Y %H:%M') }}</td>
+                    <td class="table-actions">
+                        <form method="post" action="{{ url_for('leads.convert_lead', lead_id=lead.id) }}" style="display: inline;">
+                            <button type="submit" class="btn-primary">Convert to Client/Event</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7">No leads received yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Leads pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('leads.index', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('leads.index', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

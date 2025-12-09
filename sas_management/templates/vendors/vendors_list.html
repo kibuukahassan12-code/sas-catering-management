@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Vendor Management</h1>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('vendors.create_po') }}" class="btn-primary">Create Purchase Order</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>Rating</th>
+                    <th>Lead Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for supplier in suppliers %}
+                <tr>
+                    <td><strong>{{ supplier.name }}</strong></td>
+                    <td>{{ supplier.email or supplier.phone or '—' }}</td>
+                    <td>{{ "%.1f"|format(supplier.rating) if supplier.rating else '—' }}/5</td>
+                    <td>{{ supplier.lead_time_days or '—' }} days</td>
+                    <td><a href="#" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

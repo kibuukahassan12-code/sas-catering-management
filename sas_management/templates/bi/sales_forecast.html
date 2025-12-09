@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence</p>
+        <h1>Sales Forecasting</h1>
+        <p class="muted">Predict future sales across POS, Catering, and Bakery channels.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="runForecast()">Run Forecast</button>
+        <a class="btn-secondary" href="{{ url_for('bi.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Forecast Generation -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Generate Forecast</h3>
+    </div>
+    <form id="forecast-form" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 1rem; align-items: end; padding: 1rem;">
+        <div>
+            <label>Source</label>
+            <select name="source" id="forecast-source" required>
+                <option value="all">All Sources</option>
+                <option value="POS">POS</option>
+                <option value="Catering">Catering</option>
+                <option value="Bakery">Bakery</option>
+            </select>
+        </div>
+        <div>
+            <label>Model</label>
+            <select name="model" id="forecast-model">
+                <option value="simple" selected>Simple Average</option>
+                <option value="linear">Linear Regression</option>
+                <option value="ml">ML Model</option>
+            </select>
+        </div>
+        <div>
+            <label>Days Ahead</label>
+            <input type="number" name="days" value="14" min="1" max="90" required>
+        </div>
+        <div>
+            <button type="submit" class="btn-primary">Generate</button>
+        </div>
+    </form>
+</section>
+
+<!-- Upcoming Forecasts Chart -->
+{% if upcoming_forecasts %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Sales Forecast Chart</h3>
+    </div>
+    <div style="padding: 2rem;">
+        <canvas id="forecastChart" style="max-height: 400px;"></canvas>
+    </div>
+</section>
+{% endif %}
+
+<!-- Upcoming Forecasts Table -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Upcoming Forecasts</h3>
+        <span class="badge">{{ upcoming_forecasts|length }} forecasts</span>
+    </div>
+    {% if upcoming_forecasts %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Source</th>
+                    <th>Predicted Sales</th>
+                    <th>Model</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for forecast in upcoming_forecasts %}
+                <tr>
+                    <td>{{ forecast.date.strftime('%Y-%m-%d') if forecast.date else '—' }}</td>
+                    <td><span class="badge">{{ forecast.source }}</span></td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(forecast.predicted_sales) }}</strong></td>
+                    <td>{{ forecast.model_name }}</td>
+                    <td>{{ "{:.0%}".format(forecast.confidence) if forecast.confidence else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="padding: 2rem; text-align: center;">No forecasts yet. Generate forecasts using the form above.</p>
+    {% endif %}
+</section>
+
+<!-- Historical Forecasts -->
+{% if historical_forecasts %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Historical Forecasts (Last 30 Days)</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Source</th>
+                    <th>Predicted</th>
+                    <th>Actual</th>
+                    <th>Accuracy</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for forecast in historical_forecasts[:50] %}
+                <tr>
+                    <td>{{ forecast.date.strftime('%Y-%m-%d') if forecast.date else '—' }}</td>
+                    <td><span class="badge">{{ forecast.source }}</span></td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(forecast.predicted_sales) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(forecast.actual_sales) if forecast.actual_sales else '—' }}</td>
+                    <td>
+                        {% if forecast.actual_sales and forecast.predicted_sales %}
+                        {% set accuracy = ((1 - abs(forecast.actual_sales - forecast.predicted_sales) / forecast.predicted_sales) * 100) %}
+                        <span class="badge {% if accuracy > 80 %}success{% elif accuracy > 60 %}warning{% else %}danger{% endif %}">{{ "{:.0f}".format(accuracy) }}%</span>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function runForecast() {
+    document.getElementById('forecast-form').dispatchEvent(new Event('submit'));
+}
+
+document.getElementById('forecast-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        source: formData.get('source'),
+        model: formData.get('model'),
+        days: parseInt(formData.get('days'))
+    };
+    
+    fetch('/bi/api/sales-forecast/run', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Forecast generated for ${data.forecasts.length} days!`);
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error generating forecast');
+    });
+});
+
+// Forecast Chart
+const ctx = document.getElementById('forecastChart');
+if (ctx && {{ upcoming_forecasts|length }} > 0) {
+    const forecasts = {{ upcoming_forecasts|tojson|safe }};
+    
+    // Group by source
+    const posData = forecasts.filter(f => f.source === 'POS').sort((a, b) => new Date(a.date) - new Date(b.date));
+    const cateringData = forecasts.filter(f => f.source === 'Catering').sort((a, b) => new Date(a.date) - new Date(b.date));
+    const bakeryData = forecasts.filter(f => f.source === 'Bakery').sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: posData.map(f => f.date.split('T')[0]),
+            datasets: [
+                {
+                    label: 'POS',
+                    data: posData.map(f => parseFloat(f.predicted_sales)),
+                    borderColor: '#F26822',
+                    backgroundColor: 'rgba(242, 104, 34, 0.1)'
+                },
+                {
+                    label: 'Catering',
+                    data: cateringData.map(f => parseFloat(f.predicted_sales)),
+                    borderColor: '#F26822',
+                    backgroundColor: 'rgba(242, 104, 34, 0.1)'
+                },
+                {
+                    label: 'Bakery',
+                    data: bakeryData.map(f => parseFloat(f.predicted_sales)),
+                    borderColor: '#F6BC38',
+                    backgroundColor: 'rgba(246, 188, 56, 0.1)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {display: true, text: 'Sales Forecast by Source'},
+                legend: {display: true}
+            },
+            scales: {
+                y: {beginAtZero: true, title: {display: true, text: 'Predicted Sales (UGX)'}}
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
+

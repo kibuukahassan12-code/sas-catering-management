@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence · Profitability</p>
+        <h1>Event Profitability Report</h1>
+        <p class="muted">{{ event.event_name }} — {{ event.event_date.strftime('%B %d, %Y') if event.event_date else 'N/A' }}</p>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('profitability.event_report_pdf', event_id=event.id) }}" class="btn-primary" target="_blank">
+            📄 Download PDF
+        </a>
+        <a href="{{ url_for('bi.event_profitability') }}" class="btn-secondary">← Back to Analysis</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Event Information</h3>
+    </div>
+    <div class="event-info-grid">
+        <div>
+            <p><strong>Event Name:</strong> {{ event.event_name }}</p>
+            <p><strong>Event Date:</strong> {{ event.event_date.strftime('%B %d, %Y') if event.event_date else 'N/A' }}</p>
+            <p><strong>Event Type:</strong> {{ event.event_type or 'N/A' }}</p>
+        </div>
+        <div>
+            <p><strong>Client:</strong> {{ event.client.name if event.client else 'N/A' }}</p>
+            <p><strong>Guest Count:</strong> {{ event.guest_count }}</p>
+            <p><strong>Venue:</strong> {{ event.venue or 'N/A' }}</p>
+        </div>
+    </div>
+</section>
+
+<div class="profitability-grid">
+    <!-- Revenue Section -->
+    <section class="panel">
+        <div class="panel-header">
+            <h3 class="text-success">💰 Revenue</h3>
+        </div>
+        {% if revenue %}
+        <div class="table-wrapper">
+            <table class="responsive-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in revenue %}
+                    <tr>
+                        <td>{{ r.description }}</td>
+                        <td><strong>{{ CURRENCY }}{{ "{:,.2f}".format(r.amount) }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>Total Revenue</strong></td>
+                        <td><strong class="text-success">{{ CURRENCY }}{{ "{:,.2f}".format(total_revenue) }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <p class="muted" style="padding: 2rem; text-align: center;">No revenue items recorded.</p>
+        {% endif %}
+    </section>
+
+    <!-- Costs Section -->
+    <section class="panel">
+        <div class="panel-header">
+            <h3 class="text-danger">💸 Costs</h3>
+        </div>
+        {% if costs %}
+        <div class="table-wrapper">
+            <table class="responsive-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in costs %}
+                    <tr>
+                        <td>{{ c.description }}</td>
+                        <td><strong>{{ CURRENCY }}{{ "{:,.2f}".format(c.amount) }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>Total Costs</strong></td>
+                        <td><strong class="text-danger">{{ CURRENCY }}{{ "{:,.2f}".format(total_cost) }}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <p class="muted" style="padding: 2rem; text-align: center;">No cost items recorded.</p>
+        {% endif %}
+    </section>
+</div>
+
+<!-- Profitability Summary -->
+<section class="panel summary-panel">
+    <div class="panel-header">
+        <h3>📊 Profitability Summary</h3>
+    </div>
+    <div class="summary-grid">
+        <div class="summary-card">
+            <p class="summary-label">Total Revenue</p>
+            <h2 class="text-success">{{ CURRENCY }}{{ "{:,.2f}".format(total_revenue) }}</h2>
+        </div>
+        <div class="summary-card">
+            <p class="summary-label">Total Costs</p>
+            <h2 class="text-danger">{{ CURRENCY }}{{ "{:,.2f}".format(total_cost) }}</h2>
+        </div>
+        <div class="summary-card {% if profit >= 0 %}profit-positive{% else %}profit-negative{% endif %}">
+            <p class="summary-label">Profit</p>
+            <h2 class="{% if profit >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ CURRENCY }}{{ "{:,.2f}".format(profit) }}
+            </h2>
+        </div>
+        <div class="summary-card">
+            <p class="summary-label">Margin</p>
+            <h2 class="{% if margin >= 30 %}text-success{% elif margin >= 15 %}text-warning{% else %}text-danger{% endif %}">
+                {{ "{:.2f}".format(margin) }}%
+            </h2>
+        </div>
+    </div>
+</section>
+
+<!-- Cost Breakdown Chart -->
+{% if chart_data %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📈 Cost Breakdown Chart</h3>
+    </div>
+    <div style="padding: 2rem; text-align: center; background: white; border-radius: 8px;">
+        <img src="data:image/png;base64,{{ chart_data }}" alt="Cost Breakdown Chart" style="max-width: 100%; height: auto; border-radius: 8px;">
+    </div>
+</section>
+{% endif %}
+
+<style>
+.profitability-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.event-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.summary-panel {
+    margin-bottom: 1.5rem;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.summary-card {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+}
+
+.summary-card.profit-positive {
+    border-color: rgba(45, 80, 22, 0.3);
+    background: linear-gradient(135deg, rgba(45, 80, 22, 0.1) 0%, rgba(74, 124, 42, 0.1) 100%);
+}
+
+.summary-card.profit-negative {
+    border-color: rgba(220, 53, 69, 0.3);
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(255, 92, 92, 0.1) 100%);
+}
+
+.summary-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.summary-card h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.total-row {
+    background: rgba(255, 255, 255, 0.05);
+    font-weight: 600;
+}
+
+.text-success {
+    color: #2d5016 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+@media (max-width: 768px) {
+    .profitability-grid,
+    .summary-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .event-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+

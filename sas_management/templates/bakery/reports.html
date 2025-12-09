@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Bakery Reports</p>
+        <h1>Bakery Reports</h1>
+        <p class="muted">View sales, productivity, and performance metrics.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('bakery.dashboard') }}">← Back to Dashboard</a>
+</section>
+
+<!-- Date Filter -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Start Date</span>
+            <input type="date" name="start_date" value="{{ start_date.strftime('%Y-%m-%d') }}" required>
+        </label>
+        <label class="form-control">
+            <span>End Date</span>
+            <input type="date" name="end_date" value="{{ end_date.strftime('%Y-%m-%d') }}" required>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Filter</button>
+        </div>
+    </form>
+</section>
+
+<!-- Daily Sales -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Sales Summary</h3>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Sales</p>
+            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(daily_sales.total_sales or 0) }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Order Count</p>
+            <h2>{{ daily_sales.order_count or 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Average Order Value</p>
+            <h2>
+                {% if daily_sales.order_count and daily_sales.order_count > 0 %}
+                {{ CURRENCY }}{{ "{:,.0f}".format((daily_sales.total_sales or 0) / daily_sales.order_count) }}
+                {% else %}
+                {{ CURRENCY }}0
+                {% endif %}
+            </h2>
+        </article>
+    </div>
+</section>
+
+<!-- Top Items -->
+{% if top_items %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Top Selling Items</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Item Name</th>
+                    <th>Quantity Sold</th>
+                    <th>Total Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in top_items %}
+                <tr>
+                    <td>#{{ loop.index }}</td>
+                    <td>{{ item.item_name }}</td>
+                    <td>{{ item.total_qty }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.total_revenue) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Staff Productivity -->
+{% if staff_productivity %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Staff Productivity</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Staff Member</th>
+                    <th>Tasks Completed</th>
+                    <th>Total Hours</th>
+                    <th>Avg Hours per Task</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for staff in staff_productivity %}
+                <tr>
+                    <td>{{ staff.staff_email }}</td>
+                    <td>{{ staff.task_count }}</td>
+                    <td>{{ "{:.1f}".format(staff.total_hours) }} hours</td>
+                    <td>
+                        {% if staff.task_count > 0 %}
+                        {{ "{:.1f}".format(staff.total_hours / staff.task_count) }} hours
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

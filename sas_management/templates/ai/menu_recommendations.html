@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Menu AI</p>
+        <h1>Menu Recommendations</h1>
+        <p class="muted">AI-powered suggestions to optimize your menu for profitability and popularity.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="generateRecommendations()">Generate New Recommendations</button>
+        <a class="btn-secondary" href="{{ url_for('ai.dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recommendations</h3>
+        <span class="badge">{{ recommendations|length }} recommendations</span>
+    </div>
+    
+    {% if recommendations %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Menu Item ID</th>
+                    <th>Recommendation</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in recommendations %}
+                <tr>
+                    <td>#{{ rec.menu_item_id or 'N/A' }}</td>
+                    <td>{{ rec.recommendation }}</td>
+                    <td><span class="badge">{{ "%.2f"|format(rec.score) }}</span></td>
+                    <td><span class="badge badge-{{ rec.status }}">{{ rec.status }}</span></td>
+                    <td>
+                        {% if rec.status == 'pending' %}
+                        <button class="btn-ghost btn-sm" onclick="acceptRecommendation({{ rec.id }})">Accept</button>
+                        <button class="btn-ghost btn-sm" onclick="rejectRecommendation({{ rec.id }})">Reject</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 2rem;">No recommendations yet. Click "Generate New Recommendations" to get started.</p>
+    {% endif %}
+</section>
+
+<script>
+function generateRecommendations() {
+    fetch('{{ url_for("ai.api_menu_recommend") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({top_k: 10})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+}
+
+function acceptRecommendation(id) {
+    // TODO: Implement accept action
+    alert('Accept functionality to be implemented');
+}
+
+function rejectRecommendation(id) {
+    // TODO: Implement reject action
+    alert('Reject functionality to be implemented');
+}
+</script>
+
+{% endblock %}
+

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Sales · Proposals</p>
+        <h1>Proposals</h1>
+        <p class="muted">Create and manage professional proposals for your clients.</p>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('proposals.new_proposal') }}" class="btn-primary">+ Create New Proposal</a>
+    </div>
+</section>
+
+{% if proposals|length == 0 %}
+<section class="panel">
+    <div style="text-align: center; padding: 4rem 2rem; color: #aaa;">
+        <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">📄</div>
+        <h3 style="color: #fff; margin-bottom: 0.5rem;">No Proposals Yet</h3>
+        <p>Get started by creating your first proposal.</p>
+        <a href="{{ url_for('proposals.new_proposal') }}" class="btn-primary" style="margin-top: 1.5rem; display: inline-block;">Create Your First Proposal</a>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Proposal Number</th>
+                    <th>Client</th>
+                    <th>Event</th>
+                    <th>Total Value</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for proposal in proposals %}
+                <tr>
+                    <td><strong>{{ proposal.proposal_number }}</strong></td>
+                    <td>{{ proposal.client.name if proposal.client else 'Client #' + proposal.client_id|string }}</td>
+                    <td>{{ proposal.event.event_name if proposal.event else '—' }}</td>
+                    <td>UGX {{ "{:,.2f}".format(proposal.total_value) if proposal.total_value else '0.00' }}</td>
+                    <td>
+                        <span class="badge {% if proposal.status == 'Draft' %}badge-warning{% elif proposal.status == 'Sent' %}badge-info{% elif proposal.status == 'Accepted' %}badge-success{% else %}badge-secondary{% endif %}">
+                            {{ proposal.status }}
+                        </span>
+                    </td>
+                    <td>{{ proposal.created_at.strftime('%b %d, %Y') if proposal.created_at else '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('proposals.builder', proposal_id=proposal.id) }}" class="btn-ghost btn-sm">Edit</a>
+                        <a href="{{ url_for('proposals.generate_pdf', proposal_id=proposal.id) }}" class="btn-ghost btn-sm" target="_blank">PDF</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

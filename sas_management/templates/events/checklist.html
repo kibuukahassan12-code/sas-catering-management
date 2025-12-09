@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Checklist</p>
+        <h1>{{ event.title }} - Checklist</h1>
+        <p class="muted">Track event preparation tasks</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) }}">← Back to Event</a>
+</section>
+
+<!-- Progress Bar -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Checklist Progress</h3>
+        <span class="badge">{{ progress }}% Complete</span>
+    </div>
+    <div style="padding: 1.5rem;">
+        <div style="background: rgba(191, 54, 12, 0.1); border-radius: 8px; height: 30px; position: relative; overflow: hidden;">
+            <div style="background: #BF360C; height: 100%; border-radius: 8px; width: {{ progress }}%; transition: width 0.3s;"></div>
+            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold;">{{ progress }}%</div>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Add Checklist Item</h3>
+    </div>
+    <form method="POST" action="{{ url_for('events.checklist_add', event_id=event.id) }}" style="padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+                <label for="item_name" style="display: block; margin-bottom: 0.5rem;">Item Name *</label>
+                <input type="text" id="item_name" name="item_name" required class="form-control" placeholder="e.g., Confirm venue booking">
+            </div>
+            <div>
+                <label for="category" style="display: block; margin-bottom: 0.5rem;">Category *</label>
+                <select id="category" name="category" required class="form-control">
+                    <option value="Equipment">Equipment</option>
+                    <option value="Staff">Staff</option>
+                    <option value="Deliverables">Deliverables</option>
+                    <option value="Misc">Misc</option>
+                </select>
+            </div>
+        </div>
+        <div style="margin-top: 1rem;">
+            <button type="submit" class="btn-primary">Add Item</button>
+        </div>
+    </form>
+</section>
+
+<!-- Checklist Items by Category -->
+{% for category, items in items_by_category.items() %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>{{ category }}</h3>
+        <span class="badge">{{ items|length }} items</span>
+    </div>
+    <div style="padding: 1.5rem;">
+        {% for item in items %}
+        <div style="display: flex; align-items: center; gap: 1rem; padding: 1rem; margin-bottom: 0.5rem; background: var(--bg-secondary); border-radius: 8px;">
+            <form method="POST" action="{{ url_for('events.checklist_toggle', event_id=event.id, item_id=item.id) }}" style="display: inline;">
+                <button type="submit" style="width: 24px; height: 24px; border: 2px solid {% if item.completed %}#2ecc71{% else %}#ddd{% endif %}; background: {% if item.completed %}#2ecc71{% else %}transparent{% endif %}; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                    {% if item.completed %}✓{% endif %}
+                </button>
+            </form>
+            <div style="flex: 1;">
+                <div style="{% if item.completed %}text-decoration: line-through; opacity: 0.6;{% endif %}">
+                    {{ item.item_name }}
+                </div>
+                {% if item.completed_at %}
+                <small class="muted">Completed: {{ item.completed_at.strftime('%b %d, %Y %H:%M') }}</small>
+                {% endif %}
+            </div>
+            <form method="POST" action="{{ url_for('events.checklist_delete', event_id=event.id, item_id=item.id) }}" style="display: inline;" onsubmit="return confirm('Delete this item?');">
+                <button type="submit" class="btn-ghost btn-sm" style="color: var(--danger);">Delete</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <div style="padding: 2rem; text-align: center;">
+        <p class="muted">No checklist items yet. Add one above.</p>
+    </div>
+</section>
+{% endfor %}
+{% endblock %}
+

@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Bakery Production</p>
+        <h1>Production Sheet</h1>
+        <p class="muted">Track all active production tasks and orders in progress.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('bakery.dashboard') }}">← Back to Dashboard</a>
+</section>
+
+<!-- Active Orders -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Orders In Production</h3>
+        <span class="badge">{{ orders|length }} active</span>
+    </div>
+    
+    {% if orders %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Pickup Date</th>
+                    <th>Tasks</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    <td>{{ order.customer_name or (order.client.name if order.client else 'N/A') }}</td>
+                    <td>{{ order.items|length }} item{% if order.items|length != 1 %}s{% endif %}</td>
+                    <td>{{ order.pickup_date.strftime('%Y-%m-%d') if order.pickup_date else 'N/A' }}</td>
+                    <td>
+                        {% set active_tasks = order.production_tasks|selectattr('status', 'equalto', 'In Progress')|list %}
+                        {{ active_tasks|length }} active
+                    </td>
+                    <td>
+                        <a href="{{ url_for('bakery.orders_view', order_id=order.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted text-center">No orders currently in production.</p>
+    {% endif %}
+</section>
+
+<!-- Active Tasks -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Active Production Tasks</h3>
+        <span class="badge">{{ tasks|length }} in progress</span>
+    </div>
+    
+    {% if tasks %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Task Type</th>
+                    <th>Assigned To</th>
+                    <th>Started</th>
+                    <th>Duration</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <td>#{{ task.order_id }}</td>
+                    <td>{{ task.task_type }}</td>
+                    <td>{{ task.staff.email if task.staff else 'N/A' }}</td>
+                    <td>{{ task.start_time.strftime('%Y-%m-%d %H:%M') if task.start_time else 'N/A' }}</td>
+                    <td>
+                        {% if task.start_time %}
+                        {{ ((task.start_time|string|length) * 0.1)|round(1) }} hours
+                        {% else %}
+                        Not started
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" action="{{ url_for('bakery.production_task_complete', task_id=task.id) }}" style="display: inline;">
+                            <button type="submit" class="btn-primary btn-sm">Mark Complete</button>
+                        </form>
+                        <a href="{{ url_for('bakery.orders_view', order_id=task.order_id) }}" class="btn-ghost btn-sm">View Order</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted text-center">No active production tasks.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

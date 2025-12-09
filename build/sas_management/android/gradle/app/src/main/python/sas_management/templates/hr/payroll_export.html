@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">HR Department</p>
+        <h1>Payroll Export</h1>
+        <p class="muted">Generate payroll CSV exports for payroll processing.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('hr.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Export Generator -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Generate Payroll Export</h3>
+    </div>
+    <form id="payroll-export-form" class="form-grid">
+        <label class="form-control">
+            <span>Period Start *</span>
+            <input type="date" name="start" id="period-start" required>
+        </label>
+        <label class="form-control">
+            <span>Period End *</span>
+            <input type="date" name="end" id="period-end" required>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Generate Export</button>
+        </div>
+    </form>
+</section>
+
+<!-- Recent Exports -->
+{% if recent_exports %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Exports</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Period Start</th>
+                    <th>Period End</th>
+                    <th>Employees</th>
+                    <th>Total Amount</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for export in recent_exports %}
+                <tr>
+                    <td>{{ export.period_start.strftime('%Y-%m-%d') if export.period_start else 'N/A' }}</td>
+                    <td>{{ export.period_end.strftime('%Y-%m-%d') if export.period_end else 'N/A' }}</td>
+                    <td>{{ export.employee_count or 0 }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(export.total_amount or 0) }}</td>
+                    <td>
+                        {% if export.status == 'completed' %}
+                        <span class="badge success">Completed</span>
+                        {% elif export.status == 'failed' %}
+                        <span class="badge danger">Failed</span>
+                        {% else %}
+                        <span class="badge warning">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ export.created_at.strftime('%Y-%m-%d %H:%M') if export.created_at else 'N/A' }}</td>
+                    <td>
+                        {% if export.file_path %}
+                        <a href="{{ url_for('static', filename=export.file_path) }}" class="btn-ghost btn-sm" download>Download CSV</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<script>
+document.getElementById('payroll-export-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const start = document.getElementById('period-start').value;
+    const end = document.getElementById('period-end').value;
+    
+    try {
+        const response = await fetch(`{{ url_for('hr.api_payroll_export') }}?start=${start}&end=${end}`);
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Payroll export generated successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to generate export'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+</script>
+{% endblock %}
+
+

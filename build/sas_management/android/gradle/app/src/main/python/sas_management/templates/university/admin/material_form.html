@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">University Admin · Materials</p>
+        <h1>{{ action }} Material</h1>
+        <p class="muted">Add training materials and link them to a specific course.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('university.admin_materials_list') }}">← Back to Materials</a>
+</section>
+
+<section class="panel">
+    <form method="post" enctype="multipart/form-data" class="form-grid">
+        <label class="form-control">
+            <span>Material Title</span>
+            <input type="text" name="title" value="{{ material.title if material else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Course</span>
+            <select name="course_id" required>
+                <option value="">Select Course</option>
+                {% for course in courses %}
+                <option value="{{ course.id }}" {% if material and material.course_id == course.id %}selected{% endif %}>{{ course.title }} ({{ course.target_role.value }})</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control form-control--full">
+            <span>Upload File</span>
+            <input type="file" name="file" accept=".txt,.pdf,.png,.jpg,.jpeg,.gif,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
+            <small class="muted">Upload a training material file (PDF, DOC, DOCX, images, etc.). Max 16MB.</small>
+        </label>
+
+        <label class="form-control form-control--full">
+            <span>Or File Path (Alternative)</span>
+            <input type="text" name="file_path" value="{{ material.file_path if material else '' }}" placeholder="e.g., /training/food-safety-checklist.pdf">
+            <small class="muted">If not uploading a file, you can specify a file path or URL.</small>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Material</button>
+            <a class="btn-ghost" href="{{ url_for('university.admin_materials_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

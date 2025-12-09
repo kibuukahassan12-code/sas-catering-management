@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">CRM · Convert Lead</p>
+        <h1>Convert Lead to Client</h1>
+        <p class="muted">Create a client record and optionally an event from this lead.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('crm.pipeline') }}">← Back to Pipeline</a>
+</section>
+
+<section class="panel">
+    <div style="margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(17, 17, 17, 0.9); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); border-left: 4px solid var(--accent);">
+        <h3 style="margin-top: 0; color: var(--accent);">Lead Information</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div><strong style="color: var(--accent);">Name:</strong> <span style="color: var(--text);">{{ lead.client_name }}</span></div>
+            <div><strong style="color: var(--accent);">Email:</strong> <a href="mailto:{{ lead.email or '' }}" style="color: var(--accent);">{{ lead.email or 'N/A' }}</a></div>
+            <div><strong style="color: var(--accent);">Phone:</strong> <a href="tel:{{ lead.phone or '' }}" style="color: var(--accent);">{{ lead.phone or 'N/A' }}</a></div>
+            <div><strong style="color: var(--accent);">Inquiry Type:</strong> <span style="color: var(--text);">{{ lead.inquiry_type or 'N/A' }}</span></div>
+            <div style="grid-column: 1 / -1; margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1);"><strong style="color: var(--accent);">Message:</strong> <span style="color: var(--text);">{{ lead.message or 'N/A' }}</span></div>
+        </div>
+    </div>
+
+    <form method="post" class="form-grid">
+        <div style="grid-column: 1 / -1;">
+            <label class="form-control">
+                <input type="checkbox" name="create_event" value="yes" id="createEventCheck" onchange="toggleEventFields()">
+                <span>Create an event for this client</span>
+            </label>
+        </div>
+
+        <div id="eventFields" style="grid-column: 1 / -1; display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <h4 style="color: var(--accent);">Event Details</h4>
+            <label class="form-control">
+                <span>Event Name</span>
+                <input type="text" name="event_name" placeholder="e.g., Wedding Reception">
+            </label>
+            <label class="form-control">
+                <span>Event Date</span>
+                <input type="date" name="event_date" required>
+            </label>
+            <label class="form-control">
+                <span>Guest Count</span>
+                <input type="number" name="guest_count" min="0" value="0">
+            </label>
+        </div>
+
+        <div class="form-actions" style="grid-column: 1 / -1; margin-top: 1.5rem;">
+            <button type="submit" class="btn-primary">Convert Lead</button>
+            <a class="btn-ghost" href="{{ url_for('crm.pipeline') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<script>
+function toggleEventFields() {
+    const checkbox = document.getElementById('createEventCheck');
+    const fields = document.getElementById('eventFields');
+    if (checkbox.checked) {
+        fields.style.display = 'block';
+        fields.querySelectorAll('input[required]').forEach(input => {
+            input.removeAttribute('required');
+        });
+        fields.querySelector('input[name="event_name"]').setAttribute('required', 'required');
+    } else {
+        fields.style.display = 'none';
+        fields.querySelectorAll('input').forEach(input => {
+            input.removeAttribute('required');
+        });
+    }
+}
+</script>
+{% endblock %}
+

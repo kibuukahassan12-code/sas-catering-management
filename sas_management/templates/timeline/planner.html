@@ -1,0 +1,817 @@
+{% extends "base.html" %}
+{% block title %}Timeline Planner — SAS Management System{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<style>
+  .timeline-planner-page {
+    min-height: calc(100vh - 80px);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    padding: 0;
+  }
+
+  /* Header */
+  .planner-header {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(0, 0, 0, 1) 100%);
+    border-bottom: 2px solid rgba(242, 104, 34, 0.3);
+    padding: 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+  }
+
+  .header-content h1 {
+    color: #F26822;
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .header-content .eyebrow {
+    color: #FFBD4A;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .header-content .muted {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  /* Sample Data Banner */
+  .sample-banner {
+    background: linear-gradient(135deg, rgba(255, 189, 74, 0.2) 0%, rgba(242, 104, 34, 0.2) 100%);
+    border: 1px solid rgba(255, 189, 74, 0.3);
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .sample-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #FFBD4A;
+    font-weight: 500;
+  }
+
+  /* Filters */
+  .planner-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    align-items: end;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .control-group label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+  }
+
+  .control-group input,
+  .control-group select {
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+  }
+
+  .control-group input:focus,
+  .control-group select:focus {
+    outline: none;
+    border-color: #F26822;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(242, 104, 34, 0.1);
+  }
+
+  .view-toggle {
+    display: flex;
+    gap: 0.5rem;
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+
+  .view-btn {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+  }
+
+  .view-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .view-btn.active {
+    background: #F26822;
+    color: #fff;
+    border-color: #F26822;
+  }
+
+  /* Container */
+  .timeline-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* Stats Grid */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .stat-card {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #F26822, #FFBD4A);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(242, 104, 34, 0.2);
+    border-color: rgba(242, 104, 34, 0.3);
+  }
+
+  .stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.9;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #F26822;
+    line-height: 1.2;
+  }
+
+  /* Timeline View */
+  .timeline-view {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+  }
+
+  .timeline-view h2 {
+    color: #F26822;
+    margin: 0 0 1.5rem 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  .timeline-axis {
+    position: relative;
+    margin: 2rem 0;
+    border-left: 3px solid #F26822;
+    padding-left: 2rem;
+  }
+
+  .timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+    padding-left: 1rem;
+  }
+
+  .timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -2.5rem;
+    top: 0.5rem;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #F26822;
+    border: 3px solid #1a1a1a;
+    box-shadow: 0 0 0 2px #F26822;
+  }
+
+  .timeline-item.event::before {
+    background: #F26822;
+    box-shadow: 0 0 0 2px #F26822;
+  }
+
+  .timeline-item.task::before {
+    background: #4A90E2;
+    box-shadow: 0 0 0 2px #4A90E2;
+  }
+
+  .timeline-item.completed::before {
+    background: #2ecc71;
+    box-shadow: 0 0 0 2px #2ecc71;
+  }
+
+  .timeline-date {
+    font-size: 1rem;
+    color: #FFBD4A;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .timeline-card {
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 4px solid #F26822;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+  }
+
+  .timeline-card:hover {
+    background: rgba(242, 104, 34, 0.1);
+    transform: translateX(8px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.2);
+  }
+
+  .timeline-card.event {
+    border-left-color: #F26822;
+  }
+
+  .timeline-card.task {
+    border-left-color: #4A90E2;
+  }
+
+  .timeline-card.completed {
+    border-left-color: #2ecc71;
+    opacity: 0.8;
+  }
+
+  .timeline-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .timeline-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+    flex: 1;
+  }
+
+  .timeline-badges {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .timeline-badge {
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .badge-event {
+    background: rgba(242, 104, 34, 0.2);
+    color: #F26822;
+    border: 1px solid rgba(242, 104, 34, 0.3);
+  }
+
+  .badge-task {
+    background: rgba(74, 144, 226, 0.2);
+    color: #4A90E2;
+    border: 1px solid rgba(74, 144, 226, 0.3);
+  }
+
+  .badge-status {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .badge-status.completed {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border-color: rgba(46, 204, 113, 0.3);
+  }
+
+  .timeline-card-body {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.95rem;
+    line-height: 1.6;
+  }
+
+  .timeline-card-body > div {
+    margin-bottom: 0.5rem;
+  }
+
+  .timeline-card-body strong {
+    color: rgba(255, 255, 255, 0.9);
+    margin-right: 0.5rem;
+  }
+
+  /* Calendar View */
+  .calendar-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .calendar-day {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.25rem;
+    min-height: 150px;
+    transition: all 0.3s ease;
+  }
+
+  .calendar-day:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(242, 104, 34, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .calendar-day-header {
+    font-weight: 600;
+    color: #F26822;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 1rem;
+  }
+
+  .calendar-item {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-left: 3px solid transparent;
+  }
+
+  .calendar-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+  }
+
+  .calendar-item.event {
+    background: rgba(242, 104, 34, 0.15);
+    border-left-color: #F26822;
+  }
+
+  .calendar-item.task {
+    background: rgba(74, 144, 226, 0.15);
+    border-left-color: #4A90E2;
+  }
+
+  .calendar-item.completed {
+    opacity: 0.6;
+    text-decoration: line-through;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+  }
+
+  .empty-state h3 {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: #F26822;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #E55A1A;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.3);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .timeline-container {
+      padding: 1rem;
+    }
+
+    .planner-header {
+      padding: 1.5rem 1rem;
+    }
+
+    .header-top {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .planner-controls {
+      grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .calendar-view {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="timeline-planner-page">
+  <div class="planner-header">
+    <div class="header-top">
+      <div class="header-content">
+        <p class="eyebrow">Event Planning</p>
+        <h1>📅 Timeline Planner</h1>
+        <p class="muted">Visualize and manage all events and tasks in one timeline</p>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('timeline.planner', sample='true', start_date=start_date, end_date=end_date, view=view_mode, event_type=selected_event_type, status=selected_status) }}" 
+           class="btn btn-secondary btn-sm">
+          🔄 Sample Data
+        </a>
+        <a href="{{ url_for('timeline.planner', sample='false', start_date=start_date, end_date=end_date, view=view_mode, event_type=selected_event_type, status=selected_status) }}" 
+           class="btn btn-secondary btn-sm">
+          📊 Real Data
+        </a>
+      </div>
+    </div>
+
+    {% if use_sample %}
+    <div class="sample-banner">
+      <div class="sample-banner-content">
+        <span>📌</span>
+        <span><strong>Sample Data Mode:</strong> Currently displaying sample/demo data. Click "Real Data" to see actual events and tasks.</span>
+      </div>
+    </div>
+    {% endif %}
+
+    <form method="get" action="{{ url_for('timeline.planner') }}" class="planner-controls">
+      <div class="control-group">
+        <label>Start Date</label>
+        <input type="date" name="start_date" value="{{ start_date }}" required>
+      </div>
+      <div class="control-group">
+        <label>End Date</label>
+        <input type="date" name="end_date" value="{{ end_date }}" required>
+      </div>
+      <div class="control-group">
+        <label>Event Type</label>
+        <select name="event_type">
+          <option value="">All Types</option>
+          {% for et in event_types %}
+          <option value="{{ et }}" {% if selected_event_type == et %}selected{% endif %}>{{ et }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="">All Statuses</option>
+          {% for es in event_statuses %}
+          <option value="{{ es }}" {% if selected_status == es %}selected{% endif %}>{{ es }}</option>
+          {% endfor %}
+          <option value="Pending" {% if selected_status == 'Pending' %}selected{% endif %}>Pending Tasks</option>
+          <option value="In Progress" {% if selected_status == 'In Progress' %}selected{% endif %}>In Progress Tasks</option>
+          <option value="Complete" {% if selected_status == 'Complete' %}selected{% endif %}>Complete Tasks</option>
+        </select>
+      </div>
+      <input type="hidden" name="view" value="{{ view_mode }}">
+      <input type="hidden" name="sample" value="{{ 'true' if use_sample else 'false' }}">
+      <button type="submit" class="btn btn-primary" style="height: fit-content; align-self: end;">🔍 Apply Filters</button>
+      <div class="view-toggle">
+        <a href="{{ url_for('timeline.planner', start_date=start_date, end_date=end_date, event_type=selected_event_type, status=selected_status, view='timeline', sample='true' if use_sample else 'false') }}" 
+           class="view-btn {% if view_mode == 'timeline' %}active{% endif %}">
+          📅 Timeline View
+        </a>
+        <a href="{{ url_for('timeline.planner', start_date=start_date, end_date=end_date, event_type=selected_event_type, status=selected_status, view='calendar', sample='true' if use_sample else 'false') }}" 
+           class="view-btn {% if view_mode == 'calendar' %}active{% endif %}">
+          📆 Calendar View
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <div class="timeline-container">
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">🎉</div>
+        <div class="stat-label">Total Events</div>
+        <div class="stat-value">{{ events|length }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✓</div>
+        <div class="stat-label">Total Tasks</div>
+        <div class="stat-value">{{ tasks|length }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-label">Date Range</div>
+        <div class="stat-value" style="font-size: 1.1rem; line-height: 1.4;">
+          {{ start_date }}<br>
+          <span style="font-size: 0.9rem; color: rgba(255,255,255,0.6);">to {{ end_date }}</span>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Completed Tasks</div>
+        <div class="stat-value">
+          {% set completed = tasks|selectattr('status.value', 'equalto', 'Complete')|list|length %}
+          {{ completed }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Timeline View -->
+    {% if view_mode == 'timeline' %}
+    <div class="timeline-view">
+      <h2>📅 Timeline View</h2>
+      <div class="timeline-axis">
+        {% set all_items = [] %}
+        {% for event in events %}
+          {% set _ = all_items.append({'type': 'event', 'item': event, 'date': event.event_date}) %}
+        {% endfor %}
+        {% for task in tasks %}
+          {% if task.due_date %}
+            {% set _ = all_items.append({'type': 'task', 'item': task, 'date': task.due_date}) %}
+          {% endif %}
+        {% endfor %}
+        {% set sorted_items = all_items|sort(attribute='date') %}
+        
+        {% set current_date = None %}
+        {% for item_data in sorted_items %}
+          {% if item_data.date != current_date %}
+            {% set current_date = item_data.date %}
+            <div class="timeline-date">{{ current_date.strftime('%B %d, %Y') }}</div>
+          {% endif %}
+          
+          <div class="timeline-item {{ item_data.type }} {% if item_data.type == 'task' and (item_data.item.status.value == 'Complete' if item_data.item.status.value is defined else item_data.item.status == 'Complete') %}completed{% endif %}">
+            <div class="timeline-card {{ item_data.type }} {% if item_data.type == 'task' and (item_data.item.status.value == 'Complete' if item_data.item.status.value is defined else item_data.item.status == 'Complete') %}completed{% endif %}">
+              <div class="timeline-card-header">
+                <h3 class="timeline-card-title">
+                  {% if item_data.type == 'event' %}
+                    🎉 {{ item_data.item.event_name }}
+                  {% else %}
+                    ✓ {{ item_data.item.title }}
+                  {% endif %}
+                </h3>
+                <div class="timeline-badges">
+                  <span class="timeline-badge badge-{{ item_data.type }}">{{ item_data.type|title }}</span>
+                  <span class="timeline-badge badge-status {% if item_data.type == 'task' and (item_data.item.status.value == 'Complete' if item_data.item.status.value is defined else item_data.item.status == 'Complete') %}completed{% endif %}">
+                    {% if item_data.type == 'event' %}
+                      {{ item_data.item.status }}
+                    {% else %}
+                      {{ item_data.item.status.value if item_data.item.status.value is defined else item_data.item.status }}
+                    {% endif %}
+                  </span>
+                </div>
+              </div>
+              <div class="timeline-card-body">
+                {% if item_data.type == 'event' %}
+                  {% if item_data.item.client %}
+                    <div><strong>Client:</strong> {{ item_data.item.client.name }}</div>
+                  {% endif %}
+                  {% if item_data.item.venue %}
+                    <div><strong>Venue:</strong> {{ item_data.item.venue }}</div>
+                  {% endif %}
+                  <div><strong>Guests:</strong> {{ item_data.item.guest_count }}</div>
+                  {% if item_data.item.event_type %}
+                    <div><strong>Type:</strong> {{ item_data.item.event_type }}</div>
+                  {% endif %}
+                  {% if item_data.item.event_time %}
+                    <div><strong>Time:</strong> {{ item_data.item.event_time }}</div>
+                  {% endif %}
+                {% else %}
+                  {% if item_data.item.description %}
+                    <div>{{ item_data.item.description[:150] }}{% if item_data.item.description|length > 150 %}...{% endif %}</div>
+                  {% endif %}
+                  {% if item_data.item.assigned_user %}
+                    <div><strong>Assigned to:</strong> {{ item_data.item.assigned_user.email }}</div>
+                  {% endif %}
+                  {% if item_data.item.event %}
+                    <div><strong>Related Event:</strong> {{ item_data.item.event.event_name }}</div>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+        
+        {% if sorted_items|length == 0 %}
+          <div class="empty-state">
+            <div class="empty-state-icon">📅</div>
+            <h3>No Items Found</h3>
+            <p>No events or tasks found in this date range.</p>
+            <p style="margin-top: 1rem;">
+              <a href="{{ url_for('timeline.planner', sample='true') }}" class="btn btn-secondary btn-sm">Load Sample Data</a>
+            </p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Calendar View -->
+    {% else %}
+    <div class="timeline-view">
+      <h2>📆 Calendar View</h2>
+      <div class="calendar-view">
+        {% set all_items = [] %}
+        {% for event in events %}
+          {% set _ = all_items.append({'type': 'event', 'item': event, 'date': event.event_date}) %}
+        {% endfor %}
+        {% for task in tasks %}
+          {% if task.due_date %}
+            {% set _ = all_items.append({'type': 'task', 'item': task, 'date': task.due_date}) %}
+          {% endif %}
+        {% endfor %}
+        {% set sorted_items = all_items|sort(attribute='date') %}
+        
+        {% set current_date = None %}
+        {% for item_data in sorted_items %}
+          {% if item_data.date != current_date %}
+            {% if current_date is not none %}
+              </div>
+            {% endif %}
+            {% set current_date = item_data.date %}
+            <div class="calendar-day">
+              <div class="calendar-day-header">{{ current_date.strftime('%B %d, %Y') }}</div>
+          {% endif %}
+          <div class="calendar-item {{ item_data.type }} {% if item_data.type == 'task' and (item_data.item.status.value == 'Complete' if item_data.item.status.value is defined else item_data.item.status == 'Complete') %}completed{% endif %}" 
+               title="{% if item_data.type == 'event' %}{{ item_data.item.event_name }}{% else %}{{ item_data.item.title }}{% endif %}">
+            {% if item_data.type == 'event' %}
+              🎉 <strong>{{ item_data.item.event_name[:40] }}{% if item_data.item.event_name|length > 40 %}...{% endif %}</strong>
+              {% if item_data.item.event_time %}
+                <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-top: 0.25rem;">{{ item_data.item.event_time }}</div>
+              {% endif %}
+            {% else %}
+              ✓ <strong>{{ item_data.item.title[:40] }}{% if item_data.item.title|length > 40 %}...{% endif %}</strong>
+            {% endif %}
+          </div>
+        {% endfor %}
+        {% if current_date is not none %}
+          </div>
+        {% endif %}
+        
+        {% if sorted_items|length == 0 %}
+          <div class="empty-state" style="grid-column: 1 / -1;">
+            <div class="empty-state-icon">📆</div>
+            <h3>No Items Found</h3>
+            <p>No events or tasks found in this date range.</p>
+            <p style="margin-top: 1rem;">
+              <a href="{{ url_for('timeline.planner', sample='true') }}" class="btn btn-secondary btn-sm">Load Sample Data</a>
+            </p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+// Prevent dashboard redirects - make timeline planner standalone
+document.addEventListener('DOMContentLoaded', function() {
+  // Disable header logo link to dashboard
+  const headerLogo = document.querySelector('header.topbar .brand');
+  if (headerLogo) {
+    headerLogo.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    headerLogo.style.cursor = 'default';
+    headerLogo.title = 'Timeline Planner';
+  }
+  
+  // Remove any dashboard links from navigation if present
+  const dashboardLinks = document.querySelectorAll('a[href*="dashboard"], a[href*="Dashboard"]');
+  dashboardLinks.forEach(link => {
+    if (link.href.includes('dashboard') && !link.href.includes('timeline')) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      link.style.pointerEvents = 'none';
+      link.style.opacity = '0.5';
+    }
+  });
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+    e.preventDefault();
+    window.location.reload();
+  }
+});
+</script>
+{% endblock %}

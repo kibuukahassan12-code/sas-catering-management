@@ -1,0 +1,452 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.sas-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-left: 4px solid var(--brand);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--brand);
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #000;
+    border-radius: 10px;
+    font-size: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--sas-dark);
+    font-size: 0.95rem;
+}
+
+.form-group label .tooltip {
+    margin-left: 0.5rem;
+    color: #999;
+    cursor: help;
+    font-size: 0.85rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(242, 104, 34, 0.2);
+}
+
+.form-control:hover {
+    border-color: #ccc;
+}
+
+.permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.permission-group-card {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 1.25rem;
+    background: var(--surface);
+    transition: all 0.2s;
+}
+
+.permission-group-card:hover {
+    border-color: var(--brand);
+    box-shadow: 0 2px 8px rgba(242, 104, 34, 0.2);
+}
+
+.permission-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.permission-group-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--brand);
+    margin: 0;
+    text-transform: capitalize;
+}
+
+.permission-count {
+    background: var(--sas-light);
+    color: var(--brand);
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.permission-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.permission-item:hover {
+    background: var(--sas-light);
+}
+
+.permission-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    cursor: pointer;
+    accent-color: var(--brand);
+}
+
+.permission-item-content {
+    flex: 1;
+}
+
+.permission-item-name {
+    font-weight: 500;
+    color: var(--sas-dark);
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.permission-item-code {
+    font-size: 0.75rem;
+    color: #666;
+    font-family: 'Courier New', monospace;
+}
+
+.select-all-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: var(--sas-light);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.select-all-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.select-all-btn {
+    padding: 0.5rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--brand);
+    color: var(--brand);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.select-all-btn:hover {
+    background: var(--brand);
+    color: white;
+}
+
+.permissions-summary {
+    background: var(--sas-light);
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.btn-primary {
+    background: var(--brand);
+    color: white;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.btn-primary:hover {
+    background: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(191, 54, 12, 0.3);
+}
+
+.btn-secondary {
+    background: var(--surface);
+    color: var(--brand);
+    padding: 0.75rem 2rem;
+    border: 2px solid var(--brand);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--sas-light);
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    display: block;
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Role Management</p>
+        <h1>{{ 'Create Role' if not role else 'Edit Role' }}</h1>
+        <p class="muted">{{ 'Create a new role with specific permissions' if not role else 'Update role details and permissions' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.roles_list') }}">← Back to Roles</a>
+</section>
+
+<form method="POST" action="{{ url_for('admin.role_create') if not role else url_for('admin.role_edit', role_id=role.id) }}" id="roleForm">
+    <!-- Role Information Section -->
+    <div class="sas-card">
+        <div class="section-header">
+            <div class="section-icon">👤</div>
+            <h3>Role Information</h3>
+        </div>
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="name">
+                    Role Name 
+                    <span class="tooltip" title="Enter a unique name for this role">ℹ️</span> *
+                </label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    value="{{ role.name if role else '' }}" 
+                    required 
+                    class="form-control" 
+                    placeholder="e.g., Manager, Chef, Waiter, Admin"
+                >
+                <span class="help-text">This name will be used to identify the role throughout the system</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">
+                Description 
+                <span class="tooltip" title="Describe what this role is responsible for">ℹ️</span>
+            </label>
+            <textarea 
+                id="description" 
+                name="description" 
+                class="form-control" 
+                rows="4" 
+                placeholder="Describe the role's responsibilities, access level, and purpose..."
+            >{{ role.description if role else '' }}</textarea>
+            <span class="help-text">Help users understand what this role entails</span>
+        </div>
+    </div>
+
+    <!-- Permissions Section -->
+    <div class="sas-card">
+        <div class="section-header">
+            <div class="section-icon">🔐</div>
+            <h3>Permissions</h3>
+        </div>
+        
+        <p class="muted" style="margin-bottom: 1rem;">Select the permissions this role should have. Permissions are grouped by module for easy selection.</p>
+        
+        {% set permissions_by_group = {} %}
+        {% for perm in permissions %}
+            {% set group_name = perm.group or 'Uncategorized' %}
+            {% if group_name not in permissions_by_group %}
+                {% set _ = permissions_by_group.update({group_name: []}) %}
+            {% endif %}
+            {% set _ = permissions_by_group[group_name].append(perm) %}
+        {% endfor %}
+        
+        <div class="select-all-section">
+            <div>
+                <strong style="color: var(--brand);">Quick Actions:</strong>
+                <span class="muted" style="margin-left: 0.5rem;">Select permissions by group</span>
+            </div>
+            <div class="select-all-buttons">
+                <button type="button" class="select-all-btn" onclick="selectAllPermissions()">Select All</button>
+                <button type="button" class="select-all-btn" onclick="deselectAllPermissions()">Deselect All</button>
+            </div>
+        </div>
+        
+        <div class="permissions-grid">
+            {% for group, group_perms in permissions_by_group.items() %}
+            <div class="permission-group-card">
+                <div class="permission-group-header">
+                    <h4 class="permission-group-title">{{ group|title }}</h4>
+                    <span class="permission-count" id="count-{{ group|replace(' ', '-')|lower }}">0 selected</span>
+                </div>
+                <div class="permission-items">
+                    {% for perm in group_perms %}
+                    <label class="permission-item">
+                        <input 
+                            type="checkbox" 
+                            name="permission_ids" 
+                            value="{{ perm.id }}"
+                            {% if role and role_permission_ids and perm.id in role_permission_ids %}checked{% endif %}
+                            onchange="updateGroupCount('{{ group|replace(' ', '-')|lower }}')"
+                        >
+                        <div class="permission-item-content">
+                            <span class="permission-item-name">{{ perm.name or perm.code }}</span>
+                            <span class="permission-item-code">{{ perm.code }}</span>
+                            {% if perm.description %}
+                            <div style="font-size: 0.75rem; color: #999; margin-top: 0.25rem;">{{ perm.description }}</div>
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="permissions-summary" id="permissionsSummary">
+            <strong>Selected:</strong> <span id="totalSelected">0</span> permission(s) across <span id="totalGroups">{{ permissions_by_group|length }}</span> group(s)
+        </div>
+    </div>
+
+    <!-- Submit Section -->
+    <div class="sas-card" style="background: var(--sas-light); border-left-color: var(--accent);">
+        <div style="display: flex; gap: 1rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <div>
+                <strong style="color: var(--brand);">{{ 'Ready to create' if not role else 'Ready to update' }} this role?</strong>
+                <p class="muted" style="margin: 0.25rem 0 0 0; font-size: 0.9rem;">Review the permissions before {{ 'creating' if not role else 'updating' }}.</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">
+                    {{ 'Create Role' if not role else 'Update Role' }}
+                </button>
+                <a href="{{ url_for('admin.roles_list') }}" class="btn-secondary">Cancel</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% if not role %}
+<div class="sas-card" style="background: var(--sas-light); border-left-color: var(--accent);">
+    <div style="display: flex; align-items: start; gap: 1rem;">
+        <div style="font-size: 2rem;">💡</div>
+        <div>
+            <h4 style="margin: 0 0 0.5rem 0; color: var(--brand);">Quick Tips</h4>
+            <ul style="margin: 0; padding-left: 1.5rem; color: #666;">
+                <li>Give roles descriptive names that clearly indicate their purpose</li>
+                <li>Only grant permissions that are necessary for the role's responsibilities</li>
+                <li>Use the "Select All" button to quickly select all permissions, then deselect what's not needed</li>
+                <li>Review permissions carefully - users with this role will have access to all selected features</li>
+                <li>You can edit permissions later if access requirements change</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function updateGroupCount(groupName) {
+    const groupCard = document.querySelector(`#count-${groupName}`).closest('.permission-group-card');
+    const checkboxes = groupCard.querySelectorAll('input[type="checkbox"]');
+    const checked = groupCard.querySelectorAll('input[type="checkbox"]:checked').length;
+    const total = checkboxes.length;
+    
+    document.getElementById(`count-${groupName}`).textContent = `${checked} of ${total}`;
+    updateTotalCount();
+}
+
+function updateTotalCount() {
+    const allCheckboxes = document.querySelectorAll('input[name="permission_ids"]');
+    const checked = document.querySelectorAll('input[name="permission_ids"]:checked').length;
+    document.getElementById('totalSelected').textContent = checked;
+    
+    // Update all group counts
+    const groups = document.querySelectorAll('.permission-group-card');
+    groups.forEach(group => {
+        const checkboxes = group.querySelectorAll('input[type="checkbox"]');
+        const checked = group.querySelectorAll('input[type="checkbox"]:checked').length;
+        const total = checkboxes.length;
+        const groupName = group.querySelector('.permission-group-title').textContent.toLowerCase().replace(/\s+/g, '-');
+        const countElement = document.getElementById(`count-${groupName}`);
+        if (countElement) {
+            countElement.textContent = `${checked} of ${total}`;
+        }
+    });
+}
+
+function selectAllPermissions() {
+    document.querySelectorAll('input[name="permission_ids"]').forEach(cb => cb.checked = true);
+    updateTotalCount();
+}
+
+function deselectAllPermissions() {
+    document.querySelectorAll('input[name="permission_ids"]').forEach(cb => cb.checked = false);
+    updateTotalCount();
+}
+
+// Initialize counts on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateTotalCount();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>New Hygiene Report</h1>
+        <p class="muted">Complete sanitation and hygiene inspection report.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.hygiene_reports_list') }}">← Back to Reports</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <h3>Report Information</h3>
+        
+        <label class="form-control">
+            <span>Report Date</span>
+            <input type="date" name="report_date" value="{{ report.report_date.strftime('%Y-%m-%d') if report else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Report Time</span>
+            <input type="time" name="report_time" value="{{ report.report_time.strftime('%H:%M') if report and report.report_time else '' }}">
+        </label>
+
+        <label class="form-control">
+            <span>Event (Optional)</span>
+            <select name="event_id">
+                <option value="">-- No Event --</option>
+                {% for event in events %}
+                <option value="{{ event.id }}">{{ event.event_name }} - {{ event.event_date.strftime('%Y-%m-%d') }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Area *</span>
+            <select name="area" required>
+                <option value="">-- Select Area --</option>
+                {% for area in areas %}
+                <option value="{{ area }}" {% if report and report.area == area %}selected{% endif %}>{{ area }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Overall Rating</span>
+            <select name="overall_rating" required>
+                <option value="Excellent" {% if report and report.overall_rating == 'Excellent' %}selected{% endif %}>Excellent</option>
+                <option value="Good" {% if report and report.overall_rating == 'Good' %}selected{% endif %}>Good</option>
+                <option value="Fair" {% if report and report.overall_rating == 'Fair' %}selected{% endif %}>Fair</option>
+                <option value="Poor" {% if report and report.overall_rating == 'Poor' %}selected{% endif %}>Poor</option>
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Status</span>
+            <select name="status" required>
+                <option value="In Progress" {% if report and report.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Completed" {% if report and report.status == 'Completed' %}selected{% endif %}>Completed</option>
+                <option value="Action Required" {% if report and report.status == 'Action Required' %}selected{% endif %}>Action Required</option>
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Follow-up Date (Optional)</span>
+            <input type="date" name="follow_up_date" value="{{ report.follow_up_date.strftime('%Y-%m-%d') if report and report.follow_up_date else '' }}">
+        </label>
+
+        <h3>Checklist Items</h3>
+        <div id="items-container">
+            {% for default_item in default_items %}
+            <div class="checklist-item-row" style="margin-bottom: 0.5rem; padding: 0.5rem; border: 1px solid #e9ecef; border-radius: 4px;">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" name="item_checked[]" checked>
+                    <input type="hidden" name="item_name[]" value="{{ default_item }}">
+                    <span>{{ default_item }}</span>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn-ghost" onclick="addHygieneItem()">+ Add Custom Item</button>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Issues Found</span>
+            <textarea name="issues_found" rows="3" placeholder="Any issues or non-compliance found">{{ report.issues_found if report else '' }}</textarea>
+        </label>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Corrective Actions</span>
+            <textarea name="corrective_actions" rows="3" placeholder="Actions taken or required to address issues">{{ report.corrective_actions if report else '' }}</textarea>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Report</button>
+            <a class="btn-ghost" href="{{ url_for('production.hygiene_reports_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<script>
+function addHygieneItem() {
+    const container = document.getElementById('items-container');
+    const newRow = document.createElement('div');
+    newRow.className = 'checklist-item-row';
+    newRow.style.cssText = 'margin-bottom: 0.5rem; padding: 0.5rem; border: 1px solid #e9ecef; border-radius: 4px;';
+    newRow.innerHTML = `
+        <label style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" name="item_checked[]">
+            <input type="text" name="item_name[]" placeholder="Custom checklist item" style="flex: 1;">
+            <button type="button" class="btn-ghost btn-sm" onclick="this.closest('.checklist-item-row').remove()">Remove</button>
+        </label>
+    `;
+    container.appendChild(newRow);
+}
+</script>
+{% endblock %}
+

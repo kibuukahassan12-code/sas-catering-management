@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Assign User Roles</h3>
+
+<form method="POST">
+    <label>User:</label>
+    <select name="user_id" required>
+        {% for u in users %}
+        <option value="{{ u.id }}">{{ u.email }}</option>
+        {% endfor %}
+    </select>
+
+    <label>Role:</label>
+    <select name="role_id" required>
+        {% for r in roles %}
+        <option value="{{ r.id }}">{{ r.name }}</option>
+        {% endfor %}
+    </select>
+
+    <button type="submit">Assign Role</button>
+</form>
+{% endblock %}

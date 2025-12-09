@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Hygiene Reports</h1>
+        <p class="muted">Sanitation and hygiene inspection reports.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('production.hygiene_reports_new') }}">+ New Report</a>
+</section>
+
+<!-- Filters -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Filter by Date</span>
+            <input type="date" name="date" value="{{ request.args.get('date', '') }}">
+        </label>
+        <label class="form-control">
+            <span>Filter by Area</span>
+            <select name="area">
+                <option value="">-- All Areas --</option>
+                {% for area in areas %}
+                <option value="{{ area }}" {% if request.args.get('area') == area %}selected{% endif %}>{{ area }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Filter</button>
+            <a href="{{ url_for('production.hygiene_reports_list') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Reports List -->
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Area</th>
+                    <th>Overall Rating</th>
+                    <th>Status</th>
+                    <th>Event</th>
+                    <th>Inspected By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td>
+                        {{ report.report_date.strftime('%Y-%m-%d') }}
+                        {% if report.report_time %}
+                        <br><small>{{ report.report_time.strftime('%H:%M') }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ report.area }}</td>
+                    <td><span class="badge">{{ report.overall_rating }}</span></td>
+                    <td><span class="badge">{{ report.status }}</span></td>
+                    <td>{{ report.event.event_name if report.event_id and report.event else 'General' }}</td>
+                    <td>{{ report.inspector.email if report.inspected_by and report.inspector else 'N/A' }}</td>
+                    <td>
+                        <a href="{{ url_for('production.hygiene_reports_view', report_id=report.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center muted">No hygiene reports found. <a href="{{ url_for('production.hygiene_reports_new') }}">Create your first report</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}{% if request.args.get('area') %}&area={{ request.args.get('area') }}{% endif %}" class="btn-ghost">Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}{% if request.args.get('area') %}&area={{ request.args.get('area') }}{% endif %}" class="btn-ghost">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+
+
+

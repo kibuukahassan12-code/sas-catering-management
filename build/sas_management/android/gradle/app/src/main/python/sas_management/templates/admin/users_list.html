@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · User Management</p>
+        <h1>Users</h1>
+        <p class="muted">Manage system users and their access.</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a class="btn-secondary" href="{{ url_for('admin.dashboard') }}">← Dashboard</a>
+        <a class="btn-primary" href="{{ url_for('admin.users_add') }}">+ Add User</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>System Users</h3>
+        <span class="badge">{{ users|length }} users</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Legacy Role</th>
+                    <th>Password Status</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.email }}</strong></td>
+                    <td>
+                        {% if user.role_obj %}
+                        <span class="badge" style="background: rgba(246, 188, 56, 0.2); color: var(--accent);">
+                            {{ user.role_obj.name }}
+                        </span>
+                        {% else %}
+                        <span class="muted">No role assigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge" style="background: rgba(255, 255, 255, 0.1);">
+                            {{ user.role.value if user.role else 'N/A' }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if user.force_password_change %}
+                        <span class="badge" style="background: rgba(255, 92, 92, 0.2); color: #ff5c5c;">
+                            Must Change
+                        </span>
+                        {% else %}
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">
+                            Active
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{{ url_for('admin.users_edit', user_id=user.id) }}" class="btn-ghost btn-sm">Edit</a>
+                            <form method="post" action="{{ url_for('admin.users_reset_password', user_id=user.id) }}" 
+                                  onsubmit="return confirm('Reset password for {{ user.email }}? A new temporary password will be generated.');" 
+                                  style="display: inline;">
+                                <button type="submit" class="btn-secondary btn-sm">Reset Password</button>
+                            </form>
+                            {% if user.id != current_user.id and not (user.role_obj and user.role_obj.name.lower() == 'superadmin') %}
+                            <form method="post" action="{{ url_for('admin.users_delete', user_id=user.id) }}" 
+                                  onsubmit="return confirm('Are you sure you want to delete user {{ user.email }}? This action cannot be undone.');" 
+                                  style="display: inline;">
+                                <button type="submit" class="btn-ghost btn-sm" style="color: #e74c3c;">Delete</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No users found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

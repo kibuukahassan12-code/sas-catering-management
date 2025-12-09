@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Menu Builder</p>
+        <h1>{% if item %}Edit{% else %}New{% endif %} Menu Item</h1>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('menu_builder.menu_list') }}">← Back to Items</a>
+</section>
+
+<section class="panel">
+    <form method="POST" enctype="multipart/form-data">
+        <div class="form-grid">
+            <label class="form-control">
+                <span>Item Name *</span>
+                <input type="text" name="name" value="{{ item.name if item else '' }}" required>
+            </label>
+            <label class="form-control">
+                <span>Category *</span>
+                <select name="category_id" required>
+                    <option value="">Select Category</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if item and item.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="form-control">
+                <span>New Category (if creating new)</span>
+                <input type="text" name="new_category" placeholder="Leave empty if using existing">
+            </label>
+            <label class="form-control">
+                <span>Cost per Portion ({{ CURRENCY.rstrip() }}) *</span>
+                <input type="number" name="cost_per_portion" step="0.01" value="{{ item.cost_per_portion if item else '' }}" required>
+            </label>
+            <label class="form-control">
+                <span>Selling Price ({{ CURRENCY.rstrip() }}) *</span>
+                <input type="number" name="selling_price" step="0.01" value="{{ item.selling_price if item else '' }}" required>
+            </label>
+            <label class="form-control">
+                <span>Status</span>
+                <select name="status">
+                    <option value="Active" {% if item and item.status == 'Active' or not item %}selected{% endif %}>Active</option>
+                    <option value="Inactive" {% if item and item.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </label>
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Description</span>
+                <textarea name="description" rows="4">{{ item.description if item else '' }}</textarea>
+            </label>
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Image</span>
+                <input type="file" name="image" accept="image/*">
+                {% if item and item.image_url %}
+                <small class="muted">Current: {{ item.image_url.split('/')[-1] }}</small>
+                {% endif %}
+            </label>
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn-primary">{% if item %}Update{% else %}Create{% endif %} Item</button>
+                <a class="btn-ghost" href="{{ url_for('menu_builder.menu_list') }}">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

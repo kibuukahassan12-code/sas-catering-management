@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>Course Catalog</h1>
+        <p class="muted">Browse and enroll in courses to enhance your skills.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('university.index') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Search and Filters -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Search Courses</span>
+            <input type="text" name="search" value="{{ search }}" placeholder="Search by title or description">
+        </label>
+        <label class="form-control">
+            <span>Category</span>
+            <select name="category">
+                <option value="">-- All Categories --</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-control">
+            <span>Difficulty</span>
+            <select name="difficulty">
+                <option value="">-- All Levels --</option>
+                <option value="Beginner" {% if difficulty == 'Beginner' %}selected{% endif %}>Beginner</option>
+                <option value="Intermediate" {% if difficulty == 'Intermediate' %}selected{% endif %}>Intermediate</option>
+                <option value="Advanced" {% if difficulty == 'Advanced' %}selected{% endif %}>Advanced</option>
+            </select>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Search</button>
+            <a href="{{ url_for('university.courses_list') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Courses Grid -->
+<section class="panel">
+    {% if courses %}
+    <div class="course-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+        {% for course in courses %}
+        <article class="course-card" style="border: 1px solid #e9ecef; border-radius: 8px; padding: 1.5rem; background: white; display: flex; flex-direction: column;">
+            <div style="margin-bottom: 1rem;">
+                <h3 style="margin: 0 0 0.5rem 0; font-size: 1.25rem;">{{ course.title }}</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    {% if course.target_role %}
+                    <span class="badge">{{ course.target_role.value }}</span>
+                    {% else %}
+                    <span class="badge">All Roles</span>
+                    {% endif %}
+                    {% if course.difficulty %}
+                    <span class="badge badge-secondary">{{ course.difficulty }}</span>
+                    {% endif %}
+                    {% if course.category %}
+                    <span class="badge badge-info">{{ course.category }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            <p class="muted" style="flex: 1; margin-bottom: 1rem; font-size: 0.875rem;">
+                {{ course.description[:150] if course.description else 'No description available.' }}
+                {% if course.description and course.description|length > 150 %}...{% endif %}
+            </p>
+            <div style="margin-bottom: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.875rem; color: #6c757d;">
+                    <span>{{ course.lessons|length if course.lessons else 0 }} lessons</span>
+                    {% if course.duration_minutes %}
+                    <span>{{ course.duration_minutes }} min</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <a href="{{ url_for('university.course_view_enhanced', course_id=course.id) }}" class="btn-primary btn-sm" style="flex: 1; text-align: center;">View Details</a>
+                {% if course.id not in enrolled_course_ids %}
+                <form method="post" action="{{ url_for('university.enroll_in_course', course_id=course.id) }}" style="display: inline;">
+                    <button type="submit" class="btn-ghost btn-sm">Enroll</button>
+                </form>
+                {% else %}
+                <span class="badge success" style="align-self: center;">Enrolled</span>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    
+    {% if pagination and pagination.pages > 1 %}
+    <div class="pagination" style="margin-top: 2rem; display: flex; justify-content: center; align-items: center; gap: 1rem;">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if search %}&search={{ search }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if difficulty %}&difficulty={{ difficulty }}{% endif %}" class="btn-ghost">Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if search %}&search={{ search }}{% endif %}{% if category %}&category={{ category }}{% endif %}{% if difficulty %}&difficulty={{ difficulty }}{% endif %}" class="btn-ghost">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="empty-state" style="text-align: center; padding: 3rem;">
+        <p>No courses found matching your criteria.</p>
+        <a href="{{ url_for('university.courses_list') }}" class="btn-primary">View All Courses</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

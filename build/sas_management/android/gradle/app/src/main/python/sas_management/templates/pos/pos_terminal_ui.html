@@ -1,0 +1,1456 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="pos-terminal">
+     <div class="pos-header">
+         <div>
+             <h1>POS Terminal: {{ device.name }}</h1>
+             <p class="muted">{{ device.location }}</p>
+             <p class="muted" id="current-datetime" style="font-size: 0.9rem; margin-top: 0.25rem;"></p>
+         </div>
+         <div class="shift-controls">
+            {% if open_shift %}
+            <div class="shift-info">
+                <span class="badge badge-success">Shift Open</span>
+                <span>Started: {{ open_shift.started_at.strftime('%H:%M') }}</span>
+                <span>Cash: {{ CURRENCY }}{{ "{:,.2f}".format(open_shift.starting_cash) }}</span>
+                <button id="close-shift-btn" class="btn-secondary btn-sm">Close Shift</button>
+            </div>
+            {% else %}
+            <div class="shift-start">
+                <input type="number" id="starting-cash" placeholder="Starting Cash" step="0.01" min="0" value="0" style="width: 150px; padding: 0.5rem; margin-right: 0.5rem;">
+                <button id="start-shift-btn" class="btn-primary">Start Shift</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="pos-layout">
+        <div class="pos-products-section">
+            <div class="products-header">
+                <h3>Products</h3>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <div class="product-filters">
+                        <input type="text" id="product-search" placeholder="Search products..." style="padding: 0.5rem; width: 200px;">
+                        <select id="category-filter" style="padding: 0.5rem;">
+                            <option value="">All Categories</option>
+                            <option value="Catering">Catering</option>
+                            <option value="Cake">Cake</option>
+                            <option value="Dessert">Dessert</option>
+                            <option value="Custom">Custom</option>
+                        </select>
+                    </div>
+                    <button id="add-product-btn" class="btn-primary btn-sm" onclick="openAddProductModal()" title="Add New Product">
+                        + Add Item
+                    </button>
+                </div>
+            </div>
+            <div class="product-grid" id="product-grid">
+                <div class="loading">Loading products...</div>
+            </div>
+        </div>
+        
+        <div class="pos-cart-section">
+            <div class="cart-header">
+                <h3>Order Cart</h3>
+                <button id="clear-cart-btn" class="btn-light btn-sm">Clear</button>
+            </div>
+            <div class="cart-items" id="cart-items">
+                <p class="empty-cart">Cart is empty</p>
+            </div>
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="cart-subtotal">{{ CURRENCY }}0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax (18%):</span>
+                    <span id="cart-tax">{{ CURRENCY }}0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Discount:</span>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="number" id="discount-amount" placeholder="0" step="0.01" min="0" style="width: 100px; padding: 0.25rem;">
+                        <span id="cart-discount">{{ CURRENCY }}0.00</span>
+                    </div>
+                </div>
+                <div class="summary-row total">
+                    <span>Total:</span>
+                    <span id="cart-total">{{ CURRENCY }}0.00</span>
+                </div>
+            </div>
+            <div class="cart-actions">
+                <button id="checkout-btn" class="btn-primary" disabled>Checkout</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+ <!-- Payment Modal -->
+ <div id="payment-modal" class="modal" style="display: none;">
+     <div class="modal-content">
+         <div class="modal-header">
+             <h2>Process Payment</h2>
+             <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+         </div>
+         <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 1.5rem; min-height: 0;">
+            <div class="payment-summary">
+                <p><strong>Total Amount:</strong> <span id="payment-total">{{ CURRENCY }}0.00</span></p>
+            </div>
+            <div class="payment-methods">
+                <h4>Payment Method</h4>
+                <div class="method-buttons">
+                    <button class="payment-method-btn active" data-method="cash">Cash</button>
+                    <button class="payment-method-btn" data-method="mobile_money">Mobile Money</button>
+                    <button class="payment-method-btn" data-method="pos">POS/Card</button>
+                    <button class="payment-method-btn" data-method="bank_transfer">Bank Transfer</button>
+                </div>
+                <div id="payment-ref-section" style="display: none; margin-top: 1rem;">
+                    <label>Reference Number:</label>
+                    <input type="text" id="payment-ref" placeholder="Enter reference" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button id="process-payment-btn" class="btn-primary" style="min-width: 120px;">Process Payment</button>
+            <button onclick="closePaymentModal()" class="btn-secondary" style="min-width: 120px;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.pos-terminal {
+    padding: 1.5rem;
+    min-height: 100vh;
+}
+
+.pos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: rgba(17, 17, 17, 0.9);
+    border-radius: 0.5rem;
+}
+
+.shift-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.shift-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.shift-start {
+    display: flex;
+    align-items: center;
+}
+
+.pos-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1.5rem;
+    height: calc(100vh - 200px);
+}
+
+.pos-products-section {
+    background: rgba(17, 17, 17, 0.9);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+}
+
+.products-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.product-filters {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.product-card {
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.product-card:hover {
+    background: rgba(242, 104, 34, 0.2);
+    border-color: var(--brand);
+    transform: translateY(-2px);
+}
+
+.product-card-image {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.product-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0.25rem;
+}
+
+.product-card-image-placeholder {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+}
+
+.product-card .product-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    min-height: 2.4em;
+}
+
+.product-card .product-price {
+    color: var(--brand);
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.product-card .product-category {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 0.25rem;
+}
+
+.product-card-actions {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.product-card:hover .product-card-actions {
+    opacity: 1;
+}
+
+.product-card-actions button {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.product-card-actions button:hover {
+    background: var(--brand);
+    border-color: var(--brand);
+}
+
+.pos-cart-section {
+    background: rgba(17, 17, 17, 0.9);
+    padding: 1.5rem;
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.cart-items {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    min-height: 200px;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.cart-item-info {
+    flex: 1;
+}
+
+.cart-item-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.cart-item-details {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.cart-item-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cart-item-qty {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.qty-btn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+
+.qty-btn:hover {
+    background: var(--brand);
+}
+
+.cart-item-total {
+    font-weight: bold;
+    min-width: 100px;
+    text-align: right;
+}
+
+.cart-summary {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.summary-row.total {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(255, 255, 255, 0.2);
+    color: var(--brand);
+}
+
+.cart-actions {
+    margin-top: 1.5rem;
+}
+
+.cart-actions button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+}
+
+.empty-cart {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.5);
+    padding: 2rem;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+ .modal-content {
+     background: #1a1a1a;
+     border-radius: 1rem;
+     padding: 0;
+     max-width: 500px;
+     width: 90%;
+     border: 1px solid rgba(255, 255, 255, 0.1);
+     display: flex;
+     flex-direction: column;
+     max-height: 90vh;
+     overflow: hidden;
+ }
+
+ .modal-header {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     padding: 1.5rem;
+     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+     flex-shrink: 0;
+ }
+ 
+ .modal-close {
+     background: none;
+     border: none;
+     color: white;
+     font-size: 2rem;
+     cursor: pointer;
+     padding: 0;
+     width: 40px;
+     height: 40px;
+ }
+ 
+ .modal-body {
+     flex: 1;
+     overflow-y: auto;
+     padding: 1.5rem;
+     min-height: 0;
+ }
+ 
+ .modal-footer {
+     flex-shrink: 0;
+     padding: 1rem 1.5rem;
+     border-top: 1px solid rgba(255, 255, 255, 0.1);
+     display: flex;
+     gap: 1rem;
+     justify-content: center;
+     background: rgba(17, 17, 17, 0.95);
+ }
+
+.payment-methods {
+    margin: 1.5rem 0;
+}
+
+.method-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.payment-method-btn {
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.payment-method-btn:hover {
+    background: rgba(242, 104, 34, 0.3);
+    border-color: var(--brand);
+}
+
+.payment-method-btn.active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #000;
+}
+
+.payment-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.payment-actions button {
+    flex: 1;
+}
+
+@media (max-width: 768px) {
+    .pos-layout {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+}
+</style>
+
+<script>
+// POS Terminal JavaScript
+const CURRENCY = '{{ CURRENCY }}';
+const DEVICE_CODE = '{{ device.terminal_code }}';
+const SHIFT_ID = {{ open_shift.id if open_shift else 'null' }};
+const PRINTER_SETTINGS = {{ printer_settings|tojson if printer_settings else '{}' }};
+
+let products = [];
+let cart = [];
+let currentShiftId = SHIFT_ID;
+
+// Load products on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    setupEventListeners();
+    updateDateTime();
+    // Update date/time every second
+    setInterval(updateDateTime, 1000);
+});
+
+// Update current date and time display
+function updateDateTime() {
+    const now = new Date();
+    const options = { 
+        weekday: 'short', 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+    };
+    const dateTimeStr = now.toLocaleString('en-US', options);
+    const dateTimeElement = document.getElementById('current-datetime');
+    if (dateTimeElement) {
+        dateTimeElement.textContent = dateTimeStr;
+    }
+}
+
+function setupEventListeners() {
+    // Start shift
+    const startShiftBtn = document.getElementById('start-shift-btn');
+    if (startShiftBtn) {
+        startShiftBtn.addEventListener('click', startShift);
+    }
+    
+    // Close shift
+    const closeShiftBtn = document.getElementById('close-shift-btn');
+    if (closeShiftBtn) {
+        closeShiftBtn.addEventListener('click', closeShift);
+    }
+    
+    // Cart actions
+    document.getElementById('clear-cart-btn').addEventListener('click', clearCart);
+    document.getElementById('checkout-btn').addEventListener('click', openPaymentModal);
+    document.getElementById('process-payment-btn').addEventListener('click', processPayment);
+    
+    // Discount
+    document.getElementById('discount-amount').addEventListener('input', updateCartSummary);
+    
+    // Product search
+    document.getElementById('product-search').addEventListener('input', filterProducts);
+    document.getElementById('category-filter').addEventListener('change', filterProducts);
+    
+    // Payment method selection
+    document.querySelectorAll('.payment-method-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.payment-method-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            const method = this.dataset.method;
+            const refSection = document.getElementById('payment-ref-section');
+            if (method !== 'cash') {
+                refSection.style.display = 'block';
+            } else {
+                refSection.style.display = 'none';
+            }
+        });
+    });
+}
+
+function loadProducts() {
+    fetch('/api/pos/products')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                products = data.products;
+                renderProducts(products);
+            } else {
+                showError('Failed to load products');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading products:', error);
+            showError('Error loading products');
+        });
+}
+
+function renderProducts(productsToRender) {
+    const grid = document.getElementById('product-grid');
+    if (productsToRender.length === 0) {
+        grid.innerHTML = '<div class="loading">No products available. Click "Add Item" to add products.</div>';
+        return;
+    }
+    
+    grid.innerHTML = productsToRender.map(product => {
+        let productId = product.id;
+        const isPosProduct = typeof product.id === 'string' && product.id.startsWith('POS-');
+        if (isPosProduct) {
+            productId = parseInt(product.id.replace('POS-', ''));
+        }
+        const imageUrl = product.image_url || '/static/images/product-placeholder.svg';
+        const escapedName = product.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        
+        return `<div class="product-card" onclick="addToCart('${product.id}', '${escapedName}', ${product.price}, '${product.type}')">
+            ${isPosProduct ? `<div class="product-card-actions" onclick="event.stopPropagation();">
+                <button onclick="event.stopPropagation(); removeProduct(${productId}, '${escapedName}')" title="Remove Product">×</button>
+            </div>` : ''}
+            <div class="product-card-image">
+                <img src="${imageUrl}" alt="${escapedName}" 
+                     onerror="this.onerror=null; this.src='/static/images/product-placeholder.svg';"
+                     loading="lazy">
+            </div>
+            <div class="product-name">${escapedName}</div>
+            <div class="product-price">${CURRENCY}${product.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            <div class="product-category">${product.category || 'Product'}</div>
+        </div>`;
+    }).join('');
+}
+
+function filterProducts() {
+    const search = document.getElementById('product-search').value.toLowerCase();
+    const category = document.getElementById('category-filter').value;
+    
+    let filtered = products.filter(p => {
+        const matchSearch = p.name.toLowerCase().includes(search);
+        const matchCategory = !category || p.category === category;
+        return matchSearch && matchCategory;
+    });
+    
+    renderProducts(filtered);
+}
+
+function addToCart(productId, productName, price, productType) {
+    // Handle both string (POS-123) and numeric IDs
+    const existing = cart.find(item => String(item.productId) === String(productId));
+    if (existing) {
+        existing.qty += 1;
+        existing.total = existing.qty * existing.price;
+    } else {
+        cart.push({
+            productId: productId,
+            name: productName,
+            price: price,
+            type: productType,
+            qty: 1,
+            total: price
+        });
+    }
+    renderCart();
+    updateCartSummary();
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    renderCart();
+    updateCartSummary();
+}
+
+function updateQuantity(index, change) {
+    cart[index].qty += change;
+    if (cart[index].qty < 1) {
+        removeFromCart(index);
+        return;
+    }
+    cart[index].total = cart[index].qty * cart[index].price;
+    renderCart();
+    updateCartSummary();
+}
+
+function renderCart() {
+    const container = document.getElementById('cart-items');
+    if (cart.length === 0) {
+        container.innerHTML = '<p class="empty-cart">Cart is empty</p>';
+        document.getElementById('checkout-btn').disabled = true;
+        return;
+    }
+    
+    document.getElementById('checkout-btn').disabled = false;
+    container.innerHTML = cart.map((item, index) => `
+        <div class="cart-item">
+            <div class="cart-item-info">
+                <div class="cart-item-name">${item.name}</div>
+                <div class="cart-item-details">${CURRENCY}${item.price.toLocaleString('en-US', {minimumFractionDigits: 2})} × ${item.qty}</div>
+            </div>
+            <div class="cart-item-controls">
+                <div class="cart-item-qty">
+                    <button class="qty-btn" onclick="updateQuantity(${index}, -1)">-</button>
+                    <span>${item.qty}</span>
+                    <button class="qty-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                </div>
+                <div class="cart-item-total">${CURRENCY}${item.total.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                <button class="qty-btn" onclick="removeFromCart(${index})" style="margin-left: 0.5rem;">×</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateCartSummary() {
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const taxRate = 0.18; // 18% VAT
+    const tax = subtotal * taxRate;
+    const discount = parseFloat(document.getElementById('discount-amount').value) || 0;
+    const total = subtotal + tax - discount;
+    
+    document.getElementById('cart-subtotal').textContent = CURRENCY + subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('cart-tax').textContent = CURRENCY + tax.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('cart-discount').textContent = CURRENCY + discount.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('cart-total').textContent = CURRENCY + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+}
+
+function clearCart() {
+    if (confirm('Clear cart?')) {
+        cart = [];
+        renderCart();
+        updateCartSummary();
+    }
+}
+
+function startShift() {
+    const startingCashInput = document.getElementById('starting-cash');
+    const startingCash = parseFloat(startingCashInput.value) || 0;
+    
+    // Validate starting cash
+    if (startingCash < 0) {
+        alert('Starting cash cannot be negative. Please enter a valid amount.');
+        startingCashInput.focus();
+        return;
+    }
+    
+    // Disable button during request
+    const startBtn = document.getElementById('start-shift-btn');
+    if (startBtn) {
+        startBtn.disabled = true;
+        startBtn.textContent = 'Starting...';
+    }
+    
+    fetch('/api/pos/shifts/start', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            device_code: DEVICE_CODE,
+            starting_cash: startingCash
+        })
+    })
+    .then(async response => {
+        // Check content type before parsing
+        const contentType = response.headers.get('content-type');
+        
+        if (!response.ok) {
+            // Try to parse JSON error response
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const err = await response.json();
+                    throw new Error(err.message || `Server error: ${response.status}`);
+                } catch (parseError) {
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                }
+            } else {
+                // Non-JSON error response (like HTML redirect or plain text)
+                const text = await response.text();
+                throw new Error(`Server error: ${response.status} ${response.statusText}. Please check your permissions.`);
+            }
+        }
+        
+        // Parse JSON response
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            throw new Error('Server returned non-JSON response. Please try again.');
+        }
+    })
+    .then(data => {
+        if (data && data.status === 'success') {
+            currentShiftId = data.shift_id;
+            // Show success message briefly before reload
+            alert('Shift started successfully!');
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Failed to start shift');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting shift:', error);
+        let errorMessage = error.message || 'Unknown error occurred. Please try again.';
+        
+        // Provide user-friendly messages
+        if (errorMessage.includes('403') || errorMessage.includes('permission')) {
+            errorMessage = 'You do not have permission to start a shift. Please contact an administrator.';
+        } else if (errorMessage.includes('401') || errorMessage.includes('Authentication')) {
+            errorMessage = 'Your session has expired. Please refresh the page and log in again.';
+        }
+        
+        alert('Error starting shift: ' + errorMessage);
+    })
+    .finally(() => {
+        // Re-enable button
+        if (startBtn) {
+            startBtn.disabled = false;
+            startBtn.textContent = 'Start Shift';
+        }
+    });
+}
+
+function closeShift() {
+    const endingCash = prompt('Enter ending cash amount:');
+    if (endingCash === null) return;
+    
+    fetch(`/api/pos/shifts/${currentShiftId}/close`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            ending_cash: parseFloat(endingCash),
+            cash_count: parseFloat(endingCash)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Shift closed successfully!');
+            location.reload();
+        } else {
+            alert('Error closing shift: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error closing shift');
+    });
+}
+
+function openPaymentModal() {
+    if (cart.length === 0) return;
+    
+    const total = parseFloat(document.getElementById('cart-total').textContent.replace(CURRENCY, '').replace(/,/g, ''));
+    document.getElementById('payment-total').textContent = CURRENCY + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('payment-modal').style.display = 'flex';
+}
+
+function closePaymentModal() {
+    document.getElementById('payment-modal').style.display = 'none';
+}
+
+function processPayment() {
+    if (cart.length === 0) {
+        alert('Cart is empty');
+        return;
+    }
+    
+    const activeMethod = document.querySelector('.payment-method-btn.active');
+    const method = activeMethod ? activeMethod.dataset.method : 'cash';
+    const ref = document.getElementById('payment-ref').value || null;
+    
+    const total = parseFloat(document.getElementById('cart-total').textContent.replace(CURRENCY, '').replace(/,/g, ''));
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const tax = subtotal * 0.18;
+    const discount = parseFloat(document.getElementById('discount-amount').value) || 0;
+    
+    // Create order
+    const orderData = {
+        items: cart.map(item => ({
+            product_id: item.productId,
+            product_name: item.name,
+            qty: item.qty,
+            unit_price: item.price,
+            product_type: item.type
+        })),
+        discount_amount: discount,
+        tax_rate: 18,
+        shift_id: currentShiftId,
+        device_code: DEVICE_CODE
+    };
+    
+    // Disable button during processing
+    const processBtn = document.getElementById('process-payment-btn');
+    processBtn.disabled = true;
+    processBtn.textContent = 'Processing...';
+    
+    fetch('/api/pos/orders', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(orderData)
+    })
+    .then(async response => {
+        // Check content type before parsing
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+            try {
+                data = await response.json();
+            } catch (parseError) {
+                throw new Error(`Failed to parse server response: ${parseError.message}`);
+            }
+        } else {
+            const text = await response.text();
+            throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`);
+        }
+        
+        if (!response.ok) {
+            throw new Error(data.message || `Server error: ${response.status} ${response.statusText}`);
+        }
+        
+        return data;
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            const orderId = data.order_id;
+            // Add payment
+            return fetch(`/api/pos/orders/${orderId}/payments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    amount: total,
+                    method: method,
+                    ref: ref || null
+                })
+            })
+            .then(async paymentResponse => {
+                const contentType = paymentResponse.headers.get('content-type');
+                let paymentData;
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        paymentData = await paymentResponse.json();
+                    } catch (parseError) {
+                        throw new Error(`Failed to parse payment response: ${parseError.message}`);
+                    }
+                } else {
+                    const text = await paymentResponse.text();
+                    throw new Error(`Server returned non-JSON response: ${paymentResponse.status} ${paymentResponse.statusText}`);
+                }
+                
+                if (!paymentResponse.ok) {
+                    throw new Error(paymentData.message || `Server error: ${paymentResponse.status} ${paymentResponse.statusText}`);
+                }
+                
+                return { orderId, paymentData };
+            });
+        } else {
+            throw new Error(data.message || 'Failed to create order');
+        }
+    })
+    .then(({ orderId, paymentData }) => {
+        if (paymentData.status === 'success') {
+            // Receipt is now generated immediately, show receipt information
+            const receipt = paymentData.receipt || {};
+            const payment = paymentData.payment || {};
+            const order = paymentData.order || {};
+            const summary = paymentData.payment_summary || {};
+            
+            // Display receipt information immediately
+            let receiptMessage = `Payment processed successfully!\n\n`;
+            receiptMessage += `Order: ${order.reference || 'N/A'}\n`;
+            receiptMessage += `Receipt: ${receipt.receipt_ref || 'N/A'}\n`;
+            receiptMessage += `Amount Paid: ${CURRENCY}${payment.amount ? payment.amount.toLocaleString('en-US', {minimumFractionDigits: 2}) : '0.00'}\n`;
+            receiptMessage += `Payment Method: ${payment.method || 'cash'}\n`;
+            
+            if (summary.total_paid && summary.total_amount) {
+                receiptMessage += `\nTotal: ${CURRENCY}${summary.total_amount.toLocaleString('en-US', {minimumFractionDigits: 2})}\n`;
+                receiptMessage += `Paid: ${CURRENCY}${summary.total_paid.toLocaleString('en-US', {minimumFractionDigits: 2})}\n`;
+                if (summary.remaining > 0) {
+                    receiptMessage += `Remaining: ${CURRENCY}${summary.remaining.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+                } else {
+                    receiptMessage += `Status: Fully Paid ✓`;
+                }
+            }
+            
+            // Show receipt alert
+            alert(receiptMessage);
+            
+            // Clear cart and reset UI
+            cart = [];
+            renderCart();
+            updateCartSummary();
+            closePaymentModal();
+            
+            // Handle receipt printing with preview
+            if (receipt.id || receipt.receipt_ref) {
+                const receiptId = receipt.id || paymentData.receipt_id;
+                const receiptPrintUrl = `/pos/receipts/${receiptId}/print`;
+                
+                // Check if auto-print is enabled
+                const autoPrint = PRINTER_SETTINGS && PRINTER_SETTINGS.auto_print;
+                const printerEnabled = PRINTER_SETTINGS && PRINTER_SETTINGS.enabled;
+                
+                if (autoPrint && printerEnabled) {
+                    // Auto-print: Open print preview with auto-print flag
+                    const printWindow = window.open(receiptPrintUrl + '?autoprint=true', '_blank', 'width=400,height=600');
+                    if (!printWindow) {
+                        alert('Please allow pop-ups to enable automatic receipt printing.');
+                    }
+                } else {
+                    // Show print preview first
+                    showReceiptPreview(receiptId, receiptPrintUrl, receiptMessage);
+                }
+            }
+        } else {
+            throw new Error(paymentData.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error processing payment:', error);
+        let errorMessage = error.message || 'Unknown error occurred. Please try again.';
+        
+        // Provide user-friendly messages
+        if (errorMessage.includes('JSON')) {
+            errorMessage = 'Server communication error. Please refresh the page and try again.';
+        } else if (errorMessage.includes('404')) {
+            errorMessage = 'Resource not found. Please refresh the page and try again.';
+        } else if (errorMessage.includes('403') || errorMessage.includes('permission')) {
+            errorMessage = 'You do not have permission to process payments. Please contact an administrator.';
+        } else if (errorMessage.includes('401') || errorMessage.includes('Authentication')) {
+            errorMessage = 'Your session has expired. Please refresh the page and log in again.';
+        }
+        
+        alert('Error processing payment: ' + errorMessage);
+    })
+    .finally(() => {
+        processBtn.disabled = false;
+        processBtn.textContent = 'Process Payment';
+    });
+}
+
+function showError(message) {
+    alert(message);
+}
+
+function showReceiptPreview(receiptId, receiptPrintUrl, receiptInfo) {
+    // Create receipt preview modal
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'receipt-preview-modal';
+    modal.style.display = 'flex';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 600px; width: 90%;">
+            <div class="modal-header">
+                <h2>Receipt Preview</h2>
+                <button class="modal-close" onclick="closeReceiptPreview()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #f9f9f9; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                    <pre style="white-space: pre-wrap; font-family: monospace; font-size: 12px;">${receiptInfo}</pre>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                    <button class="btn-primary" onclick="printReceipt('${receiptPrintUrl}')">
+                        Print Receipt
+                    </button>
+                    <button class="btn-secondary" onclick="openReceiptPreview('${receiptPrintUrl}')">
+                        View Full Receipt
+                    </button>
+                    <button class="btn-secondary" onclick="closeReceiptPreview()">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function closeReceiptPreview() {
+    const modal = document.getElementById('receipt-preview-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function printReceipt(receiptPrintUrl) {
+    const printWindow = window.open(receiptPrintUrl, '_blank', 'width=400,height=600');
+    if (!printWindow) {
+        alert('Please allow pop-ups to print receipts.');
+    }
+    closeReceiptPreview();
+}
+
+function openReceiptPreview(receiptPrintUrl) {
+    window.open(receiptPrintUrl, '_blank', 'width=400,height=600');
+    closeReceiptPreview();
+}
+
+function openPrinterSettings() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'printer-settings-modal';
+    modal.style.display = 'flex';
+    
+    const currentSettings = PRINTER_SETTINGS || {};
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>Printer Settings</h2>
+                <button class="modal-close" onclick="closePrinterSettings()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="printer-enabled" ${currentSettings.enabled ? 'checked' : ''}>
+                        <span>Enable Printer</span>
+                    </label>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="auto-print-receipts" ${currentSettings.auto_print ? 'checked' : ''}>
+                        <span>Auto-print Receipts for Every Transaction</span>
+                    </label>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label>Printer Name (optional):</label>
+                    <input type="text" id="printer-name" value="${currentSettings.printer_name || ''}" 
+                           placeholder="Default printer" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label>Paper Width (mm):</label>
+                    <input type="number" id="paper-width" value="${currentSettings.paper_width || 80}" 
+                           min="58" max="120" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label>Copies:</label>
+                    <input type="number" id="printer-copies" value="${currentSettings.copies || 1}" 
+                           min="1" max="5" style="width: 100%; padding: 0.5rem; margin-top: 0.5rem;">
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem;">
+                    <button class="btn-primary" onclick="savePrinterSettings()">Save Settings</button>
+                    <button class="btn-secondary" onclick="closePrinterSettings()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function closePrinterSettings() {
+    const modal = document.getElementById('printer-settings-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+ function savePrinterSettings() {
+     const settings = {
+         enabled: document.getElementById('printer-enabled').checked,
+         auto_print: document.getElementById('auto-print-receipts').checked,
+         printer_name: document.getElementById('printer-name').value,
+         paper_width: parseInt(document.getElementById('paper-width').value),
+         copies: parseInt(document.getElementById('printer-copies').value),
+     };
+     
+     // Get device ID from current device
+     fetch('/api/pos/devices')
+         .then(response => response.json())
+         .then(data => {
+             if (data.status === 'success' && data.devices) {
+                 const device = data.devices.find(d => d.terminal_code === DEVICE_CODE);
+                 if (device) {
+                     return fetch(`/api/pos/devices/${device.id}/printer`, {
+                         method: 'PUT',
+                         headers: {'Content-Type': 'application/json'},
+                         body: JSON.stringify(settings)
+                     });
+                 }
+             }
+             throw new Error('Device not found');
+         })
+         .then(response => response.json())
+         .then(data => {
+             if (data.status === 'success') {
+                 alert('Printer settings saved successfully!');
+                 // Update local settings
+                 Object.assign(PRINTER_SETTINGS, data.printer_settings);
+                 closePrinterSettings();
+                 // Reload to apply settings
+                 location.reload();
+             } else {
+                 throw new Error(data.message || 'Failed to save settings');
+             }
+         })
+         .catch(error => {
+             console.error('Error saving printer settings:', error);
+             alert('Error saving printer settings: ' + error.message);
+         });
+ }
+
+ // Add Product Modal Functions
+ function openAddProductModal() {
+     const modal = document.createElement('div');
+     modal.className = 'modal';
+     modal.id = 'add-product-modal';
+     modal.style.display = 'flex';
+     
+     modal.innerHTML = `
+         <div class="modal-content" style="max-width: 500px; max-height: 90vh; display: flex; flex-direction: column;">
+             <div class="modal-header" style="flex-shrink: 0;">
+                 <h2>Add New Product</h2>
+                 <button class="modal-close" onclick="closeAddProductModal()">&times;</button>
+             </div>
+             <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 1.5rem; min-height: 0;">
+                 <div style="margin-bottom: 1rem;">
+                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Product Name *</label>
+                     <input type="text" id="product-name" placeholder="Enter product name" 
+                            style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;" required>
+                 </div>
+                 <div style="margin-bottom: 1rem;">
+                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Description</label>
+                     <textarea id="product-description" placeholder="Product description (optional)" 
+                               style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; min-height: 60px; box-sizing: border-box; resize: vertical;"></textarea>
+                 </div>
+                 <div style="margin-bottom: 1rem;">
+                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Category</label>
+                     <input type="text" id="product-category" placeholder="e.g., Custom, Beverage, Snack" 
+                            style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;">
+                 </div>
+                 <div style="margin-bottom: 1rem;">
+                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Price (UGX) *</label>
+                     <input type="number" id="product-price" placeholder="0.00" step="0.01" min="0" 
+                            style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;" required>
+                 </div>
+                 <div style="margin-bottom: 1rem;">
+                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Product Image</label>
+                     <div style="border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 0.5rem; padding: 1rem; margin-top: 0.5rem; text-align: center;">
+                         <div id="image-preview-container" style="margin-bottom: 0.5rem;">
+                             <img id="image-preview" src="/static/images/product-placeholder.svg" 
+                                  alt="Product Image Preview" 
+                                  style="max-width: 200px; max-height: 200px; border-radius: 0.25rem; display: none;">
+                         </div>
+                         <input type="file" id="product-image-upload" accept="image/*" 
+                                style="display: none;" onchange="previewProductImage(this)">
+                         <button type="button" class="btn-secondary btn-sm" onclick="document.getElementById('product-image-upload').click()">
+                             Choose Image
+                         </button>
+                         <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.5rem;">
+                             Click to upload product image (JPG, PNG, max 5MB)
+                         </p>
+                     </div>
+                 </div>
+                 <div style="margin-bottom: 1rem;">
+                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Barcode (optional)</label>
+                     <input type="text" id="product-barcode" placeholder="Barcode" 
+                            style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;">
+                 </div>
+                 <div style="margin-bottom: 1rem;">
+                     <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">SKU (optional)</label>
+                     <input type="text" id="product-sku" placeholder="SKU" 
+                            style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;">
+                 </div>
+             </div>
+             <div class="modal-footer" style="flex-shrink: 0; padding: 1rem 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 1rem; justify-content: center; background: rgba(17, 17, 17, 0.95);">
+                 <button class="btn-primary" onclick="saveNewProduct()" style="min-width: 120px;">Save</button>
+                 <button class="btn-secondary" onclick="closeAddProductModal()" style="min-width: 120px;">Cancel</button>
+             </div>
+         </div>
+     `;
+     document.body.appendChild(modal);
+ }
+
+ function closeAddProductModal() {
+     const modal = document.getElementById('add-product-modal');
+     if (modal) {
+         modal.remove();
+     }
+ }
+
+ function previewProductImage(input) {
+     const preview = document.getElementById('image-preview');
+     if (input.files && input.files[0]) {
+         const reader = new FileReader();
+         reader.onload = function(e) {
+             preview.src = e.target.result;
+             preview.style.display = 'block';
+         };
+         reader.readAsDataURL(input.files[0]);
+     }
+ }
+
+ function saveNewProduct() {
+     const name = document.getElementById('product-name').value.trim();
+     const price = parseFloat(document.getElementById('product-price').value);
+     const description = document.getElementById('product-description').value.trim();
+     const category = document.getElementById('product-category').value.trim() || 'Custom';
+     const barcode = document.getElementById('product-barcode').value.trim() || null;
+     const sku = document.getElementById('product-sku').value.trim() || null;
+     const imageFile = document.getElementById('product-image-upload').files[0];
+     
+     // Validation
+     if (!name) {
+         alert('Product name is required');
+         return;
+     }
+     
+     if (!price || price < 0) {
+         alert('Please enter a valid price');
+         return;
+     }
+     
+     // First, upload image if provided
+     const uploadImage = (imageUrl) => {
+         const productData = {
+             name: name,
+             price: price,
+             description: description || null,
+             category: category,
+             barcode: barcode,
+             sku: sku,
+             image_url: imageUrl || null,
+         };
+         
+         fetch('/api/pos/products', {
+             method: 'POST',
+             headers: {
+                 'Content-Type': 'application/json',
+                 'X-Requested-With': 'XMLHttpRequest'
+             },
+             body: JSON.stringify(productData)
+         })
+         .then(async response => {
+             const contentType = response.headers.get('content-type');
+             if (contentType && contentType.includes('application/json')) {
+                 return response.json();
+             } else {
+                 throw new Error(`Server error: ${response.status}`);
+             }
+         })
+         .then(data => {
+             if (data.status === 'success') {
+                 alert('Product added successfully!');
+                 closeAddProductModal();
+                 loadProducts(); // Reload products list
+             } else {
+                 throw new Error(data.message || 'Failed to add product');
+             }
+         })
+         .catch(error => {
+             console.error('Error adding product:', error);
+             alert('Error adding product: ' + error.message);
+         });
+     };
+     
+     // Upload image first if provided
+     if (imageFile) {
+         const formData = new FormData();
+         formData.append('image', imageFile);
+         
+         fetch('/api/pos/products/upload-image', {
+             method: 'POST',
+             body: formData
+         })
+         .then(async response => {
+             const contentType = response.headers.get('content-type');
+             if (contentType && contentType.includes('application/json')) {
+                 return response.json();
+             } else {
+                 throw new Error(`Failed to upload image: ${response.status}`);
+             }
+         })
+         .then(data => {
+             if (data.status === 'success') {
+                 uploadImage(data.image_url);
+             } else {
+                 throw new Error(data.message || 'Failed to upload image');
+             }
+         })
+         .catch(error => {
+             console.error('Error uploading image:', error);
+             // Continue without image if upload fails
+             alert('Image upload failed, but continuing without image. Error: ' + error.message);
+             uploadImage(null);
+         });
+     } else {
+         uploadImage(null);
+     }
+ }
+
+ function removeProduct(productId, productName) {
+     if (!confirm(`Are you sure you want to remove "${productName}" from POS?\n\nNote: This will hide the product from POS, but it won't delete sales records.`)) {
+         return;
+     }
+     
+     fetch(`/api/pos/products/${productId}`, {
+         method: 'DELETE',
+         headers: {
+             'Content-Type': 'application/json',
+             'X-Requested-With': 'XMLHttpRequest'
+         }
+     })
+     .then(async response => {
+         const contentType = response.headers.get('content-type');
+         if (contentType && contentType.includes('application/json')) {
+             return response.json();
+         } else {
+             throw new Error(`Server error: ${response.status}`);
+         }
+     })
+     .then(data => {
+         if (data.status === 'success') {
+             alert('Product removed successfully!');
+             loadProducts(); // Reload products list
+         } else {
+             throw new Error(data.message || 'Failed to remove product');
+         }
+     })
+     .catch(error => {
+         console.error('Error removing product:', error);
+         alert('Error removing product: ' + error.message);
+     });
+ }
+ </script>
+ {% endblock %}

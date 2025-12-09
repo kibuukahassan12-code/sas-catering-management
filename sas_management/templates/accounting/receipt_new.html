@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Accounting Department</p>
+        <h1>Create New Receipt</h1>
+        <p class="muted">Generate a receipt for a client payment. Enter client details or select an existing client.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('accounting.receipts_list') }}">← Back to Receipts</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Receipt Information</h3>
+    </div>
+    
+    <form method="POST" action="{{ url_for('accounting.receipt_new') }}" id="receiptForm">
+        <!-- Client Selection Toggle -->
+        <div class="client-selection-toggle" style="margin-bottom: 2rem;">
+            <div class="toggle-buttons">
+                <button type="button" class="toggle-btn active" onclick="switchClientMode('existing')" id="toggleExisting">
+                    <span>📋</span> Select Existing Client
+                </button>
+                <button type="button" class="toggle-btn" onclick="switchClientMode('new')" id="toggleNew">
+                    <span>➕</span> Enter New Client Details
+                </button>
+            </div>
+        </div>
+        
+        <div class="form-grid">
+            <!-- Existing Client Selection -->
+            <div id="existingClientSection" class="client-section active">
+                <label class="form-control" style="grid-column: 1 / -1;">
+                    <span>Select Client *</span>
+                    <select name="client_id" id="clientSelect" onchange="updateInvoices()">
+                        <option value="">-- Select Client --</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}">{{ client.name }} {% if client.email %}({{ client.email }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            
+            <!-- New Client Details -->
+            <div id="newClientSection" class="client-section" style="display: none;">
+                <div class="client-details-card">
+                    <h4 style="margin: 0 0 1rem 0; color: rgba(255,255,255,0.9); font-size: 1rem;">Client Information</h4>
+                    
+                    <label class="form-control">
+                        <span>Client Name *</span>
+                        <input type="text" name="client_name" id="clientName" placeholder="Enter client name">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Contact Person *</span>
+                        <input type="text" name="contact_person" id="contactPerson" placeholder="Contact person name">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Phone Number *</span>
+                        <input type="tel" name="client_phone" id="clientPhone" placeholder="+256 700 000 000">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Email Address *</span>
+                        <input type="email" name="client_email" id="clientEmail" placeholder="client@example.com">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Company (Optional)</span>
+                        <input type="text" name="client_company" id="clientCompany" placeholder="Company name">
+                    </label>
+                    
+                    <label class="form-control" style="grid-column: 1 / -1;">
+                        <span>Address (Optional)</span>
+                        <textarea name="client_address" id="clientAddress" rows="2" placeholder="Physical address"></textarea>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Receipt Details -->
+            <div class="receipt-details-section" style="grid-column: 1 / -1; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid rgba(255,255,255,0.1);">
+                <h4 style="margin: 0 0 1rem 0; color: rgba(255,255,255,0.9); font-size: 1rem;">Payment Details</h4>
+                
+                <label class="form-control">
+                    <span>Amount (UGX) *</span>
+                    <input type="number" name="amount" step="0.01" min="0.01" required placeholder="0.00" id="amountInput">
+                </label>
+                
+                <label class="form-control">
+                    <span>Payment Method *</span>
+                    <select name="method" required>
+                        <option value="cash">💵 Cash</option>
+                        <option value="bank">🏦 Bank Transfer</option>
+                        <option value="mobile_money">📱 Mobile Money</option>
+                        <option value="pos">💳 POS</option>
+                        <option value="cheque">📄 Cheque</option>
+                        <option value="other">🔷 Other</option>
+                    </select>
+                </label>
+                
+                <label class="form-control">
+                    <span>Payment Date *</span>
+                    <input type="date" name="payment_date" value="{{ default_date }}" required>
+                </label>
+                
+                <label class="form-control" style="grid-column: 1 / -1;">
+                    <span>Link to Invoice (Optional)</span>
+                    <select name="invoice_id" id="invoiceSelect">
+                        <option value="">-- No Invoice (Standalone Receipt) --</option>
+                        {% for invoice in invoices %}
+                        <option value="{{ invoice.id }}" data-client-id="{{ invoice.event.client_id if invoice.event else '' }}">
+                            Invoice {{ invoice.invoice_number }} - {{ invoice.event.event_name if invoice.event else 'N/A' }} - {{ CURRENCY }}{{ "{:,.2f}".format(invoice.total_amount_ugx) if invoice.total_amount_ugx else '0.00' }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small style="color: rgba(255,255,255,0.7); margin-top: 0.25rem; display: block;">
+                        💡 If you select an invoice, a payment will be automatically recorded and linked to the receipt.
+                    </small>
+                </label>
+                
+                <div class="form-control" style="grid-column: 1 / -1; padding: 1rem; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%); border-radius: 8px; border: 1px solid rgba(102, 126, 234, 0.3);">
+                    <p style="margin: 0; color: rgba(255,255,255,0.9); font-size: 0.875rem; line-height: 1.6;">
+                        <strong>ℹ️ Information:</strong> If no invoice is selected, a payment record will be automatically created and linked to this receipt. The receipt will be generated immediately upon submission.
+                    </p>
+                </div>
+                
+                <label class="form-control" style="grid-column: 1 / -1;">
+                    <span>Notes (Optional)</span>
+                    <textarea name="notes" rows="3" placeholder="Additional notes or description for this receipt..."></textarea>
+                </label>
+            </div>
+            
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn-primary" id="submitBtn" style="font-size: 1rem; padding: 0.875rem 2rem;">
+                    <span id="submitText">💾 Create Receipt</span>
+                </button>
+                <a href="{{ url_for('accounting.receipts_list') }}" class="btn-ghost">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<style>
+.client-selection-toggle {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.toggle-buttons {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.05);
+    padding: 0.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.toggle-btn:hover {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+}
+
+.toggle-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.client-section {
+    animation: fadeIn 0.3s ease;
+}
+
+.client-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.client-details-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.client-details-card h4 {
+    color: rgba(255,255,255,0.9);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+
+.receipt-details-section h4 {
+    color: rgba(255,255,255,0.9);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+.form-control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-control span {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+}
+
+.form-control input,
+.form-control select,
+.form-control textarea {
+    padding: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9375rem;
+    transition: all 0.3s ease;
+}
+
+.form-control input:focus,
+.form-control select:focus,
+.form-control textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control input::placeholder,
+.form-control textarea::placeholder {
+    color: rgba(255,255,255,0.4);
+}
+
+.form-control small {
+    font-size: 0.8125rem;
+    color: rgba(255,255,255,0.6);
+    margin-top: 0.25rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid rgba(255,255,255,0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-ghost {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.btn-ghost:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .toggle-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+let currentClientMode = 'existing';
+
+function switchClientMode(mode) {
+    currentClientMode = mode;
+    const existingSection = document.getElementById('existingClientSection');
+    const newSection = document.getElementById('newClientSection');
+    const toggleExisting = document.getElementById('toggleExisting');
+    const toggleNew = document.getElementById('toggleNew');
+    const clientSelect = document.getElementById('clientSelect');
+    
+    if (mode === 'existing') {
+        existingSection.style.display = 'block';
+        newSection.style.display = 'none';
+        toggleExisting.classList.add('active');
+        toggleNew.classList.remove('active');
+        clientSelect.required = true;
+        // Clear new client fields
+        document.getElementById('clientName').required = false;
+        document.getElementById('contactPerson').required = false;
+        document.getElementById('clientPhone').required = false;
+        document.getElementById('clientEmail').required = false;
+    } else {
+        existingSection.style.display = 'none';
+        newSection.style.display = 'block';
+        toggleExisting.classList.remove('active');
+        toggleNew.classList.add('active');
+        clientSelect.required = false;
+        // Require new client fields
+        document.getElementById('clientName').required = true;
+        document.getElementById('contactPerson').required = true;
+        document.getElementById('clientPhone').required = true;
+        document.getElementById('clientEmail').required = true;
+    }
+}
+
+function updateInvoices() {
+    const clientId = document.getElementById('clientSelect').value;
+    const invoiceSelect = document.getElementById('invoiceSelect');
+    const options = invoiceSelect.querySelectorAll('option');
+    
+    // Show all invoices, but highlight matching client
+    options.forEach(option => {
+        if (option.value === '') {
+            option.style.display = 'block';
+        } else {
+            const optionClientId = option.getAttribute('data-client-id');
+            if (clientId && optionClientId && optionClientId !== clientId) {
+                option.style.opacity = '0.5';
+            } else {
+                option.style.opacity = '1';
+            }
+        }
+    });
+}
+
+// Form validation with better error messages
+document.getElementById('receiptForm').addEventListener('submit', function(e) {
+    let errors = [];
+    
+    if (currentClientMode === 'existing') {
+        const clientSelect = document.getElementById('clientSelect');
+        if (!clientSelect.value) {
+            errors.push('Please select a client or switch to "Enter New Client Details"');
+        }
+    } else {
+        const name = document.getElementById('clientName').value.trim();
+        const contact = document.getElementById('contactPerson').value.trim();
+        const phone = document.getElementById('clientPhone').value.trim();
+        const email = document.getElementById('clientEmail').value.trim();
+        
+        if (!name) errors.push('Client name is required');
+        if (!contact) errors.push('Contact person is required');
+        if (!phone) errors.push('Phone number is required');
+        if (!email) errors.push('Email address is required');
+        
+        // Basic email validation
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            errors.push('Please enter a valid email address');
+        }
+    }
+    
+    const amount = document.getElementById('amountInput').value;
+    if (!amount || parseFloat(amount) <= 0) {
+        errors.push('Please enter a valid amount greater than 0');
+    }
+    
+    if (errors.length > 0) {
+        e.preventDefault();
+        // Show errors in a nice way
+        const errorMsg = errors.join('\\n');
+        alert('Please fix the following errors:\\n\\n' + errorMsg);
+        return false;
+    }
+    
+    // Show loading state
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    if (submitBtn && submitText) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.7';
+        submitBtn.style.cursor = 'not-allowed';
+        submitText.textContent = '⏳ Creating Receipt...';
+    }
+});
+</script>
+{% endblock %}

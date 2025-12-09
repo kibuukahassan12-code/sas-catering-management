@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="access-denied">
+    <div class="card">
+        <h1>Access Restricted</h1>
+        <p>Your current role does not grant access to this feature.</p>
+        <a class="btn-light" href="{{ url_for('core.logout') }}">Return to login</a>
+    </div>
+</section>
+{% endblock %}
+

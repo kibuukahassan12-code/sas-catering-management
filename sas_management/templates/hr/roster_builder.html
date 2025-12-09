@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">HR Department</p>
+        <h1>Roster Builder</h1>
+        <p class="muted">Assign shifts to employees for the week.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('hr.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Week Selector -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Start Date</span>
+            <input type="date" name="start_date" value="{{ start_date.isoformat() if start_date else '' }}">
+        </label>
+        <label class="form-control">
+            <span>End Date</span>
+            <input type="date" name="end_date" value="{{ end_date.isoformat() if end_date else '' }}">
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Load Week</button>
+        </div>
+    </form>
+</section>
+
+<!-- Roster Grid -->
+{% if start_date and end_date %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Weekly Roster: {{ start_date.strftime('%B %d') }} - {{ end_date.strftime('%B %d, %Y') }}</h3>
+    </div>
+    
+    <div class="table-wrapper" style="overflow-x: auto;">
+        <table style="min-width: 800px;">
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    {% if start_date and end_date %}
+                    {% for day in range(7) %}
+                    {% set current_date = date_range[day] if day < date_range|length else start_date %}
+                    <th>{{ current_date.strftime('%a %d') }}</th>
+                    {% endfor %}
+                    {% else %}
+                    <th>No dates selected</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr>
+                    <td><strong>{{ employee.full_name }}</strong></td>
+                    {% if start_date and end_date and date_range %}
+                    {% for day in range(7) %}
+                    <td>
+                        {% if day < date_range|length %}
+                        {% set current_date = date_range[day] %}
+                        {% set assignment = assignments|selectattr('employee_id', 'equalto', employee.id)|selectattr('date', 'equalto', current_date)|first %}
+                        {% if assignment %}
+                        <span class="badge">{{ assignment.shift.name if assignment.shift else 'N/A' }}</span>
+                        {% else %}
+                        <button class="btn-ghost btn-sm" onclick="assignShift({{ employee.id }}, '{{ current_date.isoformat() }}')">Assign</button>
+                        {% endif %}
+                        {% else %}
+                        <td>-</td>
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    {% else %}
+                    <td colspan="7">Select date range to view roster</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<script>
+function assignShift(employeeId, date) {
+    // Simple shift assignment - would need shift selection modal in production
+    const shiftId = prompt('Enter Shift ID:');
+    if (shiftId) {
+        fetch("{{ url_for('hr.api_assign_shift') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({shift_id: parseInt(shiftId), employee_id: employeeId, date: date})
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+}
+</script>
+{% endblock %}
+

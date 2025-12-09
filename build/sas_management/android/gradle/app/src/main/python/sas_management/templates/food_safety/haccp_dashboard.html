@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Food Safety & HACCP</h1>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('food_safety.reports') }}" class="btn-secondary">View Reports</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Temperature Logs</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Temperature (°C)</th>
+                    <th>Location</th>
+                    <th>Recorded</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_logs %}
+                <tr>
+                    <td><strong>{{ log.item }}</strong></td>
+                    <td>{{ "%.1f"|format(log.temp_c) if log.temp_c else '—' }}°C</td>
+                    <td>{{ log.location or '—' }}</td>
+                    <td>{{ log.recorded_at.strftime('%Y-%m-%d %H:%M') if log.recorded_at else '—' }}</td>
+                    <td>
+                        {% if log.temp_c %}
+                            {% if 0 <= float(log.temp_c) <= 10 %}
+                                <span class="badge badge-success">Safe</span>
+                            {% else %}
+                                <span class="badge badge-danger">Alert</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

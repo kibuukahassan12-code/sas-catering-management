@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Equipment Depreciation</p>
+        <h1>Depreciation Tracking: {{ item.name }}</h1>
+        <p class="muted">Calculate and track equipment depreciation using straight-line method.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('maintenance.dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Depreciation Information</h3>
+    </div>
+    
+    {% if depreciation %}
+    <div style="padding: 1.5rem;">
+        <h4>Current Depreciation</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0;">
+            <div>
+                <strong>Purchase Price:</strong><br>
+                {{ CURRENCY }}{{ "%.2f"|format(depreciation.purchase_price) }}
+            </div>
+            <div>
+                <strong>Salvage Value:</strong><br>
+                {{ CURRENCY }}{{ "%.2f"|format(depreciation.salvage_value) }}
+            </div>
+            <div>
+                <strong>Useful Life:</strong><br>
+                {{ depreciation.useful_life_years }} years
+            </div>
+            <div>
+                <strong>Current Value:</strong><br>
+                <span style="font-size: 1.2em; font-weight: bold; color: #2ecc71;">
+                    {{ CURRENCY }}{{ "%.2f"|format(depreciation.calculated_value) if depreciation.calculated_value else '0.00' }}
+                </span>
+            </div>
+        </div>
+        <p><strong>Last Updated:</strong> {{ depreciation.last_updated.strftime('%Y-%m-%d') if depreciation.last_updated else '—' }}</p>
+    </div>
+    {% endif %}
+    
+    <div style="padding: 1.5rem; border-top: 1px solid #dee2e6;">
+        <h4>{% if depreciation %}Update{% else %}Calculate{% endif %} Depreciation</h4>
+        <form method="POST" action="{{ url_for('maintenance.depreciation', item_id=item.id) }}">
+            <div style="display: grid; gap: 1.5rem; max-width: 600px;">
+                <div>
+                    <label for="purchase_price"><strong>Purchase Price *</strong></label>
+                    <input type="number" name="purchase_price" id="purchase_price" step="0.01" min="0" required 
+                           value="{{ depreciation.purchase_price if depreciation else '' }}" 
+                           placeholder="0.00" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div>
+                    <label for="salvage_value"><strong>Salvage Value</strong></label>
+                    <input type="number" name="salvage_value" id="salvage_value" step="0.01" min="0" 
+                           value="{{ depreciation.salvage_value if depreciation else '0' }}" 
+                           placeholder="0.00" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div>
+                    <label for="life_years"><strong>Useful Life (Years) *</strong></label>
+                    <input type="number" name="life_years" id="life_years" min="1" required 
+                           value="{{ depreciation.useful_life_years if depreciation else '' }}" 
+                           placeholder="5" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div>
+                    <label for="purchase_date"><strong>Purchase Date</strong></label>
+                    <input type="date" name="purchase_date" id="purchase_date" 
+                           value="{{ depreciation.purchase_date.isoformat() if depreciation and depreciation.purchase_date else '' }}" 
+                           style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+                
+                <div>
+                    <button type="submit" class="btn-primary">{% if depreciation %}Update{% else %}Calculate{% endif %} Depreciation</button>
+                    <a href="{{ url_for('maintenance.dashboard') }}" class="btn-secondary">Cancel</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+{% endblock %}
+

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>Certificate of Completion</h1>
+        <p class="muted">{{ course.title }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('university.index') }}">← Back to Dashboard</a>
+        <a href="{{ url_for('university.api_certificate_download', certificate_id=certificate.id) }}" class="btn-primary">Download PDF</a>
+    </div>
+</section>
+
+<!-- Certificate Preview -->
+<section class="panel" style="max-width: 800px; margin: 0 auto; padding: 3rem; background: white; border: 2px solid #000;">
+    <div style="text-align: center; padding: 2rem;">
+        <h1 style="font-size: 2.5rem; margin-bottom: 1rem; color: #1a5490;">CERTIFICATE OF COMPLETION</h1>
+        <p style="font-size: 1.125rem; margin-bottom: 2rem; color: #6c757d;">This is to certify that</p>
+        
+        <div style="border-bottom: 2px solid #1a5490; padding: 1rem; margin: 2rem 0; display: inline-block; min-width: 400px;">
+            <h2 style="font-size: 2rem; margin: 0; color: #1a5490;">{{ user.email }}</h2>
+        </div>
+        
+        <p style="font-size: 1.125rem; margin-bottom: 1rem; color: #6c757d;">
+            has successfully completed the course
+        </p>
+        
+        <h3 style="font-size: 1.75rem; margin: 1rem 0; color: #1a5490;">{{ course.title }}</h3>
+        
+        <div style="margin: 3rem 0;">
+            <p style="font-size: 0.875rem; color: #6c757d;">
+                Issued on {{ certificate.issued_at.strftime('%B %d, %Y') if certificate.issued_at else 'N/A' }}
+            </p>
+            <p style="font-size: 0.875rem; color: #6c757d; margin-top: 0.5rem;">
+                Certificate Reference: <strong>{{ certificate.certificate_ref }}</strong>
+            </p>
+            {% if certificate.verification_code %}
+            <p style="font-size: 0.875rem; color: #6c757d; margin-top: 0.5rem;">
+                Verification Code: <code>{{ certificate.verification_code }}</code>
+            </p>
+            {% endif %}
+        </div>
+        
+        <div style="margin-top: 3rem; display: flex; justify-content: space-around;">
+            <div>
+                <div style="border-top: 1px solid #000; width: 200px; margin-top: 4rem; padding-top: 0.5rem;">
+                    <p style="margin: 0; font-weight: 600;">SAS Best Foods</p>
+                    <p style="margin: 0; font-size: 0.875rem;">Authorized Signature</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Certificate Details -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Certificate Details</h3>
+    </div>
+    <div class="form-grid">
+        <div>
+            <strong>Certificate Reference:</strong>
+            <p>{{ certificate.certificate_ref }}</p>
+        </div>
+        <div>
+            <strong>Course:</strong>
+            <p>{{ course.title }}</p>
+        </div>
+        <div>
+            <strong>Issued To:</strong>
+            <p>{{ user.email }}</p>
+        </div>
+        <div>
+            <strong>Issued Date:</strong>
+            <p>{{ certificate.issued_at.strftime('%Y-%m-%d %H:%M') if certificate.issued_at else 'N/A' }}</p>
+        </div>
+        {% if certificate.verification_code %}
+        <div>
+            <strong>Verification Code:</strong>
+            <p><code>{{ certificate.verification_code }}</code></p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}
+

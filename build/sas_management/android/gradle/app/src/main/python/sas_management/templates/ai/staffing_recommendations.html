@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Predictive Staffing</p>
+        <h1>Staffing Recommendations</h1>
+        <p class="muted">AI-powered staffing suggestions for Event #{{ event_id }}.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="generateStaffing()">Generate Recommendations</button>
+        <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event_id) }}">View Event</a>
+    </div>
+</section>
+
+{% if suggestions %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Staffing Suggestions</h3>
+        <span class="badge">{{ suggestions|length }} suggestions</span>
+    </div>
+    
+    {% for suggestion in suggestions %}
+    <div class="card" style="margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div>
+                <h4>Date: {{ suggestion.date.strftime('%Y-%m-%d') if suggestion.date else 'N/A' }}</h4>
+                <p><strong>Suggested Staff Count:</strong> {{ suggestion.suggested_staff_count }}</p>
+                <p><strong>Confidence:</strong> <span class="badge">{{ "%.0f"|format(suggestion.confidence * 100) }}%</span></p>
+                {% if suggestion.roles_breakdown %}
+                    {% set roles = suggestion.roles_breakdown|fromjson %}
+                    <div style="margin-top: 0.5rem;">
+                        <strong>Role Breakdown:</strong>
+                        <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                            {% for role, count in roles.items() %}
+                            <li>{{ role|title }}: {{ count }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <span class="badge badge-{{ suggestion.status }}">{{ suggestion.status }}</span>
+                {% if suggestion.status == 'pending' %}
+                <button class="btn-ghost btn-sm" onclick="acceptSuggestion({{ suggestion.id }})" style="margin-top: 0.5rem; display: block; width: 100%;">Accept</button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% else %}
+<section class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">No staffing suggestions yet. Click "Generate Recommendations" to get AI-powered suggestions.</p>
+</section>
+{% endif %}
+
+<script>
+function generateStaffing() {
+    fetch('{{ url_for("ai.api_staffing_run") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({event_id: {{ event_id }}})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+}
+
+function acceptSuggestion(id) {
+    // TODO: Implement accept action
+    alert('Accept functionality to be implemented');
+}
+</script>
+
+{% endblock %}
+

@@ -1,0 +1,60 @@
+IMPORTANT: The models.py file was accidentally overwritten during implementation.
+
+TO RESTORE:
+1. Restore models.py from your backup or git repository
+2. Add the following two model classes at the end of models.py (before configure_relationship_ordering if it exists):
+
+===========================================
+ADD THESE MODELS TO models.py:
+===========================================
+
+class EventCostItem(db.Model):
+    """Cost items for event profitability analysis."""
+    __tablename__ = "event_cost_item"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    category = db.Column(db.String(100), nullable=True)  # Food, Labor, Equipment, Transport, etc.
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Relationships
+    event = db.relationship("Event", backref="cost_items")
+    
+    def __repr__(self):
+        return f'<EventCostItem {self.description} - {self.amount}>'
+
+
+class EventRevenueItem(db.Model):
+    """Revenue items for event profitability analysis."""
+    __tablename__ = "event_revenue_item"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    category = db.Column(db.String(100), nullable=True)  # Catering, Equipment Hire, Additional Services, etc.
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Relationships
+    event = db.relationship("Event", backref="revenue_items")
+    
+    def __repr__(self):
+        return f'<EventRevenueItem {self.description} - {self.amount}>'
+
+===========================================
+
+WHAT WAS CREATED:
+- blueprints/profitability/__init__.py ✓
+- blueprints/profitability/routes.py ✓
+- templates/profitability/event_report.html ✓
+- Blueprint registered in app.py ✓
+- "Generate Report" button added to BI profitability page ✓
+
+WHAT NEEDS TO BE DONE:
+1. Restore models.py from backup
+2. Add the two model classes above to models.py
+3. Run database migration: db.create_all() or flask db migrate
+4. Install matplotlib if not installed: pip install matplotlib
+

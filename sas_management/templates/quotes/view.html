@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Sales · Quotations</p>
+        <h1>Quote #{{ quotation.id }}</h1>
+        <p class="muted">Share this polished breakdown with the client directly from your browser.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="window.print()">Print Quote</button>
+        {% if quotation.event_id and not existing_invoice %}
+        <form method="post" action="{{ url_for('quotes.convert_to_invoice', quotation_id=quotation.id) }}" style="display: inline;">
+            <button type="submit" class="btn-secondary">Convert to Invoice</button>
+        </form>
+        {% elif existing_invoice %}
+        <a class="btn-secondary" href="{{ url_for('invoices.invoice_view', invoice_id=existing_invoice.id) }}">View Invoice</a>
+        {% endif %}
+        <a class="btn-secondary" href="{{ url_for('quotes.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel quote-print">
+    <header class="quote-header">
+        <div>
+            <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods" class="quote-logo" onerror="this.style.display='none';">
+            <h2>SAS Best Foods</h2>
+            <p>Specialists in luxury catering & bakery experiences</p>
+            <p>Contact · +256 700 000 001 · sales@sasbestfoods.com</p>
+        </div>
+        <div class="quote-meta">
+            <p><strong>Quote Date:</strong> {{ quotation.quote_date.strftime('%b %d, %Y') }}</p>
+            <p><strong>Valid Until:</strong> {{ quotation.expiry_date.strftime('%b %d, %Y') }}</p>
+            <p><strong>Status:</strong> Pending Approval</p>
+        </div>
+    </header>
+
+    <section class="quote-party">
+        <div>
+            <h4>Prepared For</h4>
+            <p><strong>{{ quotation.client.name }}</strong></p>
+            <p>{{ quotation.client.contact_person }}</p>
+            <p>{{ quotation.client.phone }}</p>
+            <p>{{ quotation.client.email }}</p>
+        </div>
+        <div>
+            <h4>Event Details</h4>
+            {% if quotation.event %}
+            <p><strong>{{ quotation.event.event_name }}</strong></p>
+            <p>{{ quotation.event.event_date.strftime('%b %d, %Y') }}</p>
+            <p>{{ quotation.event.guest_count }} guests · {{ quotation.event.status }}</p>
+            {% else %}
+            <p class="muted">No event linked</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="table-wrapper">
+        <table class="quote-table">
+            <thead>
+                <tr>
+                    <th>Line Item</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th>Unit Price</th>
+                    <th>Line Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in quotation.lines %}
+                <tr>
+                    <td>{{ line.item_name }}</td>
+                    <td>{{ line.source_type.value }}</td>
+                    <td>{{ line.quantity }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(line.unit_price or 0) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(line.line_total or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No line items found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="quote-totals">
+        <div>
+            <p class="muted">Subtotal</p>
+            <h3>{{ CURRENCY }}{{ "{:,.2f}".format(quotation.subtotal or 0) }}</h3>
+        </div>
+        <div>
+            <p class="muted">Tax (Inclusive)</p>
+            <h4>0% — All figures in UGX</h4>
+        </div>
+    </div>
+
+    <footer class="quote-footer">
+        <p>We appreciate the opportunity to create unforgettable moments with SAS Best Foods. Please confirm acceptance before the expiry date so production can begin.</p>
+    </footer>
+</section>
+{% endblock %}
+

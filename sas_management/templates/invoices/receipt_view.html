@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Finance · Receipts</p>
+        <h1>Receipt {{ receipt.receipt_number }}</h1>
+        <p class="muted">Official payment receipt for invoice {{ receipt.invoice.invoice_number }}.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="window.print()">Print Receipt</button>
+        <a class="btn-secondary" href="{{ url_for('invoices.invoice_view', invoice_id=receipt.invoice.id) }}">← Back to Invoice</a>
+    </div>
+</section>
+
+<section class="panel receipt-print">
+    <header class="receipt-header">
+        <div>
+            <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods" class="receipt-logo" onerror="this.style.display='none';">
+            <h2>SAS Best Foods</h2>
+            <p>Specialists in luxury catering & bakery experiences</p>
+            <p>Near Akamwesi Mall, Gayaza Rd, Opp Electoral Commission Kawempe Offices</p>
+            <p>Kawempe, Kampala, Uganda</p>
+            <p>Tel: 0702060778 / 0745705088</p>
+            <p>Website: www.sasbestfoods.com</p>
+        </div>
+        <div class="receipt-meta">
+            <p><strong>Receipt Number:</strong> {{ receipt.receipt_number }}</p>
+            <p><strong>Payment Date:</strong> {{ receipt.payment_date.strftime('%b %d, %Y') }}</p>
+            <p><strong>Payment Method:</strong> {{ receipt.payment_method }}</p>
+        </div>
+    </header>
+
+    <section class="receipt-party">
+        <div>
+            <h4>Received From</h4>
+            {% if receipt.invoice.event and receipt.invoice.event.client %}
+            <p><strong>{{ receipt.invoice.event.client.name }}</strong></p>
+            <p>{{ receipt.invoice.event.client.contact_person }}</p>
+            <p>{{ receipt.invoice.event.client.phone }}</p>
+            <p>{{ receipt.invoice.event.client.email }}</p>
+            {% else %}
+            <p class="muted">No client information available</p>
+            {% endif %}
+        </div>
+        <div>
+            <h4>For Invoice</h4>
+            <p><strong>{{ receipt.invoice.invoice_number }}</strong></p>
+            <p>Issue Date: {{ receipt.invoice.issue_date.strftime('%b %d, %Y') }}</p>
+            {% if receipt.invoice.event %}
+            <p>Event: {{ receipt.invoice.event.event_name }}</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="receipt-summary">
+        <div class="receipt-totals">
+            <div>
+                <p class="muted">Amount Received</p>
+                <h3>{{ CURRENCY }}{{ "{:,.2f}".format(receipt.amount_received_ugx or 0) }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <footer class="receipt-footer">
+        <p>This receipt confirms payment has been received and recorded in our accounting system. Thank you for your business!</p>
+    </footer>
+</section>
+{% endblock %}
+

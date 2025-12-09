@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">New Task</p>
+        <h1>Create Task</h1>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('communication.staff_tasks') }}">← Cancel</a>
+</section>
+
+<section class="panel">
+    <form method="POST">
+        <div class="form-grid">
+            <label class="form-control">
+                <span>Title *</span>
+                <input type="text" name="title" required>
+            </label>
+            <label class="form-control">
+                <span>Assign To *</span>
+                <select name="assigned_to" required>
+                    <option value="">Select User</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.email }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="form-control">
+                <span>Priority</span>
+                <select name="priority">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                </select>
+            </label>
+            <label class="form-control">
+                <span>Due Date</span>
+                <input type="date" name="due_date">
+            </label>
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Details</span>
+                <textarea name="details" rows="5"></textarea>
+            </label>
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn-primary">Create Task</button>
+                <a class="btn-ghost" href="{{ url_for('communication.staff_tasks') }}">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

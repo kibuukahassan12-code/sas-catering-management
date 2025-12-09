@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events</p>
+        <h1>{{ action }} Event</h1>
+        <p class="muted">Tie every event to a client account and keep the status current.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('core.events_list') }}">← Back to Events</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <label class="form-control">
+            <span>Event Name</span>
+            <input type="text" name="event_name" value="{{ event.event_name if event else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Client</span>
+            <select name="client_id" required>
+                <option value="">Select Client</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if event and event.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Event Type</span>
+            <select name="event_type">
+                <option value="">Select Type</option>
+                <option value="Wedding" {% if event and event.event_type == 'Wedding' %}selected{% endif %}>Wedding</option>
+                <option value="Corporate" {% if event and event.event_type == 'Corporate' %}selected{% endif %}>Corporate</option>
+                <option value="Birthday" {% if event and event.event_type == 'Birthday' %}selected{% endif %}>Birthday</option>
+                <option value="Anniversary" {% if event and event.event_type == 'Anniversary' %}selected{% endif %}>Anniversary</option>
+                <option value="Conference" {% if event and event.event_type == 'Conference' %}selected{% endif %}>Conference</option>
+                <option value="Other" {% if event and event.event_type == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Event Date</span>
+            <input type="date" name="event_date" value="{{ event.event_date.isoformat() if event else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Event Time</span>
+            <input type="text" name="event_time" value="{{ event.event_time if event else '' }}" placeholder="e.g., 14:00 or 2:00 PM">
+        </label>
+
+        <label class="form-control">
+            <span>Guest Count</span>
+            <input type="number" min="0" name="guest_count" value="{{ event.guest_count if event else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Venue</span>
+            <input type="text" name="venue" value="{{ event.venue if event else '' }}" placeholder="Event venue location">
+        </label>
+
+        <label class="form-control">
+            <span>Venue Map Link</span>
+            <input type="url" name="venue_map_link" value="{{ event.venue_map_link if event else '' }}" placeholder="Google Maps or other map URL">
+        </label>
+
+        <label class="form-control">
+            <span>Status</span>
+            <select name="status" required>
+                {% set all_statuses = ['Draft', 'Quotation Sent', 'Awaiting Payment', 'Confirmed', 'Preparation', 'In Progress', 'Completed', 'Cancelled'] %}
+                {% for option in all_statuses %}
+                <option value="{{ option }}" {% if event and event.status == option %}selected{% endif %}>{{ option }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Quoted Value ({{ CURRENCY.rstrip() }})</span>
+            <input type="number" min="0" step="0.01" name="quoted_value" value="{{ event.quoted_value if event else '' }}" required>
+        </label>
+
+        <label class="form-control form-control-full">
+            <span>Notes</span>
+            <textarea name="notes" rows="4" placeholder="Additional event notes, special requirements, dietary restrictions, etc.">{{ event.notes if event else '' }}</textarea>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Event</button>
+            <a class="btn-ghost" href="{{ url_for('core.events_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

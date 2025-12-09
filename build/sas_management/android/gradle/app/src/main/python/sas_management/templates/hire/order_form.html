@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Orders</p>
+        <h1>{{ action }} Hire Order</h1>
+        <p class="muted">Reserve equipment, align with the event schedule, and notify logistics.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('hire.orders_list') }}">← Back to Orders</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid" id="hire-order-form">
+        <label class="form-control">
+            <span>Client</span>
+            <select name="client_id" required>
+                <option value="">Select client</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if (order and order.client_id == client.id) or (not order and prefill_client_id and prefill_client_id == client.id) %}selected{% endif %}>{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Linked Event (Optional)</span>
+            <select name="event_id">
+                <option value="">No event linked</option>
+                {% for event in events %}
+                <option value="{{ event.id }}" {% if (order and order.event_id == event.id) or (not order and prefill_event_id and prefill_event_id == event.id) %}selected{% endif %}>{{ event.event_name }} · {{ event.event_date.strftime('%b %d, %Y') }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        
+        {% if order and order.reference %}
+        <label class="form-control">
+            <span>Booking Reference</span>
+            <input type="text" value="{{ order.reference }}" disabled readonly>
+        </label>
+        {% endif %}
+        
+        <label class="form-control">
+            <span>Status</span>
+            <select name="status" required>
+                <option value="Draft" {% if order and order.status == 'Draft' %}selected{% endif %}>Draft</option>
+                <option value="Quotation" {% if order and order.status == 'Quotation' %}selected{% endif %}>Quotation</option>
+                <option value="Confirmed" {% if order and order.status == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                <option value="Out" {% if order and order.status == 'Out' %}selected{% endif %}>Out</option>
+                <option value="Returned" {% if order and order.status == 'Returned' %}selected{% endif %}>Returned</option>
+                <option value="Completed" {% if order and order.status == 'Completed' %}selected{% endif %}>Completed</option>
+                <option value="Cancelled" {% if order and order.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+        </label>
+        
+        <label class="form-control">
+            <span>Deposit Amount ({{ CURRENCY.rstrip() }})</span>
+            <input type="number" name="deposit_amount" min="0" step="0.01" value="{{ order.deposit_amount if order and order.deposit_amount else '0' }}" placeholder="0.00">
+        </label>
+
+        <label class="form-control">
+            <span>Start Date</span>
+            <input type="date" name="start_date" value="{{ order.start_date.isoformat() if order else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>End Date</span>
+            <input type="date" name="end_date" value="{{ order.end_date.isoformat() if order else '' }}" required>
+        </label>
+
+        <label class="form-control form-control--full">
+            <span>Delivery Address</span>
+            <textarea name="delivery_address" rows="3" required>{{ order.delivery_address if order else '' }}</textarea>
+        </label>
+
+        <div class="form-control form-control--full">
+            <span>Inventory Items</span>
+            <div class="order-items" id="order-items">
+                {% if order and order.items %}
+                    {% for line in order.items %}
+                    <div class="order-item-row">
+                        <select name="item_id[]" required>
+                            <option value="">Select item</option>
+                            {% for item in inventory_items %}
+                            <option value="{{ item.id }}" {% if line.inventory_item_id == item.id %}selected{% endif %}>
+                                {{ item.name }} · {{ item.stock_count }} in stock
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <input type="number" name="quantity[]" min="1" value="{{ line.quantity_rented }}" required>
+                        <button type="button" class="btn-light btn-icon" data-action="remove-item-row">&times;</button>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="order-item-row">
+                    <select name="item_id[]" required>
+                        <option value="">Select item</option>
+                        {% for item in inventory_items %}
+                        <option value="{{ item.id }}">{{ item.name }} · {{ item.stock_count }} in stock</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="quantity[]" min="1" value="1" required>
+                    <button type="button" class="btn-light btn-icon" data-action="remove-item-row">&times;</button>
+                </div>
+                {% endif %}
+            </div>
+            <button type="button" class="btn-secondary" data-action="add-item-row">+ Add Item</button>
+            <p class="muted small">Quantities entered here will be deducted from live stock once the order is saved.</p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Order</button>
+            <a class="btn-ghost" href="{{ url_for('hire.orders_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<template id="order-item-template">
+    <div class="order-item-row">
+        <select name="item_id[]" required>
+            <option value="">Select item</option>
+            {% for item in inventory_items %}
+            <option value="{{ item.id }}">{{ item.name }} · {{ item.stock_count }} in stock</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="quantity[]" min="1" value="1" required>
+        <button type="button" class="btn-light btn-icon" data-action="remove-item-row">&times;</button>
+    </div>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("order-items");
+    const template = document.getElementById("order-item-template");
+
+    document.querySelector("[data-action='add-item-row']").addEventListener("click", function (event) {
+        event.preventDefault();
+        const clone = template.content.firstElementChild.cloneNode(true);
+        container.appendChild(clone);
+    });
+
+    container.addEventListener("click", function (event) {
+        if (event.target.matches("[data-action='remove-item-row']")) {
+            event.preventDefault();
+            if (container.children.length === 1) {
+                return;
+            }
+            event.target.closest(".order-item-row").remove();
+        }
+    });
+});
+</script>
+{% endblock %}
+

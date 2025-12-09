@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Approval</p>
+        <h1>{{ event.title }} - Client Approval</h1>
+        <p class="muted">Get client approval and signature</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) }}">← Back to Event</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Event Brief</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+            <div><strong>Event Title:</strong> {{ event.title }}</div>
+            <div><strong>Client:</strong> {{ event.client_name }}</div>
+            <div><strong>Date:</strong> {{ event.date.strftime('%B %d, %Y') if event.date else 'N/A' }}</div>
+            <div><strong>Time:</strong> {{ event.start_time or 'N/A' }} - {{ event.end_time or 'N/A' }}</div>
+            <div><strong>Guest Count:</strong> {{ event.guest_count }}</div>
+            <div><strong>Venue:</strong> {{ event.venue_obj.name if event.venue_obj else 'Not specified' }}</div>
+            <div><strong>Menu Package:</strong> {{ event.menu_package_obj.name if event.menu_package_obj else 'Not specified' }}</div>
+            <div><strong>Budget Estimate:</strong> UGX {{ "{:,.2f}".format(event.budget_estimate) }}</div>
+        </div>
+        
+        {% if event.notes %}
+        <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+            <strong>Notes:</strong>
+            <p style="white-space: pre-wrap; margin: 0.5rem 0 0 0;">{{ event.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% if event.signature_path %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Approval Status</h3>
+    </div>
+    <div style="padding: 1.5rem; text-align: center;">
+        <div style="margin-bottom: 1rem;">
+            <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; font-size: 1rem; padding: 0.5rem 1rem;">✓ Approved</span>
+        </div>
+        <div>
+            <strong>Approved on:</strong> {{ event.approved_at.strftime('%B %d, %Y at %I:%M %p') if event.approved_at else 'N/A' }}
+        </div>
+        <div style="margin-top: 1rem;">
+            <img src="{{ url_for('static', filename=event.signature_path) }}" alt="Client Signature" style="max-width: 400px; border: 2px solid #ddd; border-radius: 8px; padding: 1rem; background: white;">
+        </div>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Client Signature</h3>
+    </div>
+    <form method="POST" action="{{ url_for('events.approval_submit', event_id=event.id) }}" style="padding: 1.5rem;">
+        <div style="margin-bottom: 1.5rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Please sign below to approve this event:</label>
+            <div style="border: 2px solid #ddd; border-radius: 8px; background: white; padding: 1rem;">
+                <canvas id="signatureCanvas" width="600" height="200" style="border: 1px solid #ccc; cursor: crosshair; width: 100%; max-width: 600px; height: 200px;"></canvas>
+            </div>
+            <div style="margin-top: 0.5rem;">
+                <button type="button" onclick="clearSignature()" class="btn-secondary btn-sm">Clear</button>
+            </div>
+        </div>
+        
+        <input type="hidden" id="signature" name="signature">
+        
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+            <button type="submit" class="btn-primary" onclick="return submitSignature()">Approve Event</button>
+            <a href="{{ url_for('events.event_view', event_id=event.id) }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endif %}
+
+<script>
+let canvas = document.getElementById('signatureCanvas');
+let ctx = canvas.getContext('2d');
+let isDrawing = false;
+
+if (canvas) {
+    ctx.strokeStyle = '#263238';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+
+    // Touch events for mobile
+    canvas.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        let touch = e.touches[0];
+        let mouseEvent = new MouseEvent('mousedown', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+    });
+
+    canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        let touch = e.touches[0];
+        let mouseEvent = new MouseEvent('mousemove', {
+            clientX: touch.clientX,
+            clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+    });
+
+    canvas.addEventListener('touchend', function(e) {
+        e.preventDefault();
+        let mouseEvent = new MouseEvent('mouseup', {});
+        canvas.dispatchEvent(mouseEvent);
+    });
+}
+
+function startDrawing(e) {
+    isDrawing = true;
+    let rect = canvas.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+}
+
+function draw(e) {
+    if (!isDrawing) return;
+    let rect = canvas.getBoundingClientRect();
+    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+    ctx.stroke();
+}
+
+function stopDrawing() {
+    isDrawing = false;
+}
+
+function clearSignature() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function submitSignature() {
+    let signatureData = canvas.toDataURL('image/png');
+    document.getElementById('signature').value = signatureData;
+    
+    if (signatureData === canvas.toDataURL()) {
+        // Check if canvas is empty (same as initial state)
+        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let isEmpty = true;
+        for (let i = 0; i < imageData.data.length; i += 4) {
+            if (imageData.data[i + 3] !== 0) {
+                isEmpty = false;
+                break;
+            }
+        }
+        if (isEmpty) {
+            alert('Please provide a signature before approving.');
+            return false;
+        }
+    }
+    
+    return true;
+}
+</script>
+{% endblock %}
+

@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Sales · Quotations</p>
+        <h1>Build New Quote</h1>
+        <p class="muted">Combine catering experiences with bakery delights to issue a polished proposal.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('quotes.dashboard') }}">← Back to Quotations</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid" id="quote-builder">
+        {% set selected_client = request.form.get('client_id') %}
+        {% set selected_event = request.form.get('event_id') %}
+        {% set quote_value = request.form.get('quote_date') or default_quote_date.isoformat() %}
+        {% set expiry_value = request.form.get('expiry_date') or default_expiry_date.isoformat() %}
+        <label class="form-control">
+            <span>Client</span>
+            <select name="client_id" required>
+                <option value="">Select client</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if selected_client == client.id|string %}selected{% endif %}>{{ client.name }} · {{ client.contact_person }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Event (Optional)</span>
+            <select name="event_id">
+                <option value="">No event linked</option>
+                {% for event in events %}
+                <option value="{{ event.id }}" {% if selected_event == event.id|string %}selected{% endif %}>{{ event.event_name }} · {{ event.event_date.strftime('%b %d, %Y') }} · {{ event.status }}</option>
+                {% endfor %}
+            </select>
+            <small class="muted">Link this quote to an existing event, or leave blank for standalone quotes</small>
+        </label>
+
+        <label class="form-control">
+            <span>Quote Date</span>
+            <input type="date" name="quote_date" value="{{ quote_value }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Expiry Date</span>
+            <input type="date" name="expiry_date" value="{{ expiry_value }}" required>
+        </label>
+
+        <div class="form-control form-control--full">
+            <span>Catering / Event Menu Items</span>
+            <div class="quote-items" id="catering-items">
+                <div class="quote-item-row">
+                    <select name="catering_item_id[]">
+                        <option value="">Select menu item</option>
+                        {% for menu_item in catering_menu %}
+                        <option value="{{ menu_item.id }}">{{ menu_item.name }} · {{ CURRENCY }}{{ "{:,.0f}".format(menu_item.unit_price) }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="catering_quantity[]" min="1" value="1">
+                    <button type="button" class="btn-light btn-icon" data-action="remove-line">&times;</button>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" data-action="add-catering">+ Add Catering Item</button>
+            <p class="muted small">Use this list for plated dinners, buffets, live stations, and any catering-only services.</p>
+        </div>
+
+        <div class="form-control form-control--full">
+            <span>Bakery Menu Items</span>
+            <div class="quote-items" id="bakery-items">
+                <div class="quote-item-row">
+                    <select name="bakery_item_id[]">
+                        <option value="">Select bakery item</option>
+                        {% for item in bakery_items %}
+                        <option value="{{ item.id }}">{{ item.name }} · {{ item.category }} · {{ CURRENCY }}{{ "{:,.0f}".format(item.unit_price_ugx or 0) }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="bakery_quantity[]" min="1" value="1">
+                    <button type="button" class="btn-light btn-icon" data-action="remove-line">&times;</button>
+                </div>
+            </div>
+            <button type="button" class="btn-secondary" data-action="add-bakery">+ Add Bakery Item</button>
+            <p class="muted small">Pull SKUs from the managed bakery catalog to keep pricing aligned with production.</p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Generate Quote</button>
+            <a class="btn-ghost" href="{{ url_for('quotes.dashboard') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<template id="catering-line-template">
+    <div class="quote-item-row">
+        <select name="catering_item_id[]">
+            <option value="">Select menu item</option>
+            {% for menu_item in catering_menu %}
+            <option value="{{ menu_item.id }}">{{ menu_item.name }} · {{ CURRENCY }}{{ "{:,.0f}".format(menu_item.unit_price) }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="catering_quantity[]" min="1" value="1">
+        <button type="button" class="btn-light btn-icon" data-action="remove-line">&times;</button>
+    </div>
+</template>
+
+<template id="bakery-line-template">
+    <div class="quote-item-row">
+        <select name="bakery_item_id[]">
+            <option value="">Select bakery item</option>
+            {% for item in bakery_items %}
+            <option value="{{ item.id }}">{{ item.name }} · {{ item.category }} · {{ CURRENCY }}{{ "{:,.0f}".format(item.unit_price_ugx or 0) }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="bakery_quantity[]" min="1" value="1">
+        <button type="button" class="btn-light btn-icon" data-action="remove-line">&times;</button>
+    </div>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const cateringContainer = document.getElementById("catering-items");
+    const bakeryContainer = document.getElementById("bakery-items");
+    const cateringTemplate = document.getElementById("catering-line-template");
+    const bakeryTemplate = document.getElementById("bakery-line-template");
+
+    document.querySelector("[data-action='add-catering']").addEventListener("click", function (event) {
+        event.preventDefault();
+        const clone = cateringTemplate.content.firstElementChild.cloneNode(true);
+        cateringContainer.appendChild(clone);
+    });
+
+    document.querySelector("[data-action='add-bakery']").addEventListener("click", function (event) {
+        event.preventDefault();
+        const clone = bakeryTemplate.content.firstElementChild.cloneNode(true);
+        bakeryContainer.appendChild(clone);
+    });
+
+    function registerRemoval(container) {
+        container.addEventListener("click", function (event) {
+            if (event.target.matches("[data-action='remove-line']")) {
+                event.preventDefault();
+                if (container.children.length === 1) {
+                    return;
+                }
+                event.target.closest(".quote-item-row").remove();
+            }
+        });
+    }
+
+    registerRemoval(cateringContainer);
+    registerRemoval(bakeryContainer);
+});
+</script>
+{% endblock %}
+

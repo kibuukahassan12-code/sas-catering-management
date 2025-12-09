@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>{{ course.title }}</h1>
+        <p class="muted">{{ course.description }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('university.index') }}">← Back to Courses</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Course Materials</h3>
+        <span class="badge">{{ course.materials|length }} material(s)</span>
+    </div>
+    {% if course.materials %}
+    <div class="materials-list">
+        {% for material in course.materials %}
+        <div class="material-item">
+            <div class="material-item__content">
+                <h4>{{ material.title }}</h4>
+                <p class="muted small">File: {{ material.file_path }}</p>
+            </div>
+            <div class="material-item__actions">
+                <a class="btn-primary" href="{{ url_for('university.view_material', material_id=material.id) }}">View Material</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No materials have been added to this course yet.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

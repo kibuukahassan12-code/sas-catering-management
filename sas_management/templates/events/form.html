@@ -1,0 +1,496 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.sas-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border-left: 4px solid var(--brand);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--brand);
+    font-size: 1.25rem;
+}
+
+.section-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #000;
+    border-radius: 8px;
+    font-size: 1.25rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--brand); /* Official SAS branding color */
+    font-size: 0.9rem;
+}
+
+.form-group label .tooltip {
+    margin-left: 0.5rem;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: help;
+    font-size: 0.85rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px; /* SAS Best Foods branding */
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(242, 104, 34, 0.2);
+}
+
+.btn-primary {
+    background: linear-gradient(120deg, var(--brand), var(--accent));
+    color: #000;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.3);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    overflow: auto;
+}
+
+.modal-content {
+    background: var(--surface);
+    margin: 5% auto;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.close-modal {
+    float: right;
+    font-size: 2rem;
+    font-weight: bold;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.close-modal:hover {
+    color: var(--brand);
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events</p>
+        <h1>{{ 'Edit Event' if event else 'Create New Event' }}</h1>
+        <p class="muted">{{ 'Update event details' if event else 'Add a new catering event' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.events_list') }}">← Back to Events</a>
+</section>
+
+<form method="POST" action="{{ url_for('events.event_create') if not event else url_for('events.event_edit', event_id=event.id) }}">
+    <!-- Event Details Section -->
+    <div class="sas-card">
+        <div class="section-header">
+            <div class="section-icon">📅</div>
+            <h3>Event Details</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="title">Event Title <span class="tooltip" title="Select the event title">ℹ️</span> *</label>
+                <select id="title" name="title" required class="form-control">
+                    <option value="">Select Event Title</option>
+                    <option value="Kukyala" {% if event and event.title == 'Kukyala' %}selected{% endif %}>Kukyala</option>
+                    <option value="Kwanjula" {% if event and event.title == 'Kwanjula' %}selected{% endif %}>Kwanjula</option>
+                    <option value="Kuhingira" {% if event and event.title == 'Kuhingira' %}selected{% endif %}>Kuhingira</option>
+                    <option value="Nikkah" {% if event and event.title == 'Nikkah' %}selected{% endif %}>Nikkah</option>
+                    <option value="Wedding" {% if event and event.title == 'Wedding' %}selected{% endif %}>Wedding</option>
+                    <option value="Introduction Ceremony" {% if event and event.title == 'Introduction Ceremony' %}selected{% endif %}>Introduction Ceremony</option>
+                    <option value="Corporate Event" {% if event and event.title == 'Corporate Event' %}selected{% endif %}>Corporate Event</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="event_type">Event Type <span class="tooltip" title="Select the type of event">ℹ️</span></label>
+                <select id="event_type" name="event_type" class="form-control">
+                    <option value="">Select Event Type</option>
+                    <option value="Traditional" {% if event and event.event_type == 'Traditional' %}selected{% endif %}>Traditional</option>
+                    <option value="Wedding" {% if event and event.event_type == 'Wedding' %}selected{% endif %}>Wedding</option>
+                    <option value="Introduction" {% if event and event.event_type == 'Introduction' %}selected{% endif %}>Introduction</option>
+                    <option value="Corporate" {% if event and event.event_type == 'Corporate' %}selected{% endif %}>Corporate</option>
+                    <option value="Religious" {% if event and event.event_type == 'Religious' %}selected{% endif %}>Religious</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="date">Event Date <span class="tooltip" title="Select the date for the event">ℹ️</span> *</label>
+                <input type="date" id="date" name="date" value="{{ event.date.isoformat() if event and event.date else '' }}" required class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="start_time">Start Time <span class="tooltip" title="When the event begins">ℹ️</span></label>
+                <input type="time" id="start_time" name="start_time" value="{{ event.start_time if event else '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="end_time">End Time <span class="tooltip" title="When the event ends">ℹ️</span></label>
+                <input type="time" id="end_time" name="end_time" value="{{ event.end_time if event else '' }}" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="guest_count">Guest Count <span class="tooltip" title="Number of expected guests">ℹ️</span> *</label>
+                <input type="number" id="guest_count" name="guest_count" value="{{ event.guest_count if event else 0 }}" required min="0" class="form-control">
+            </div>
+        </div>
+    </div>
+
+    <!-- Client Information Section -->
+    <div class="sas-card">
+        <div class="section-header">
+            <div class="section-icon">👤</div>
+            <h3>Client Information</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="client_name">Client Name <span class="tooltip" title="Full name of the client">ℹ️</span> *</label>
+                <input type="text" id="client_name" name="client_name" value="{{ event.client_name if event else '' }}" required class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="client_email">Client Email <span class="tooltip" title="Email address for communication">ℹ️</span></label>
+                <input type="email" id="client_email" name="client_email" value="{{ event.client_email if event else '' }}" class="form-control" placeholder="client@example.com">
+            </div>
+            <div class="form-group">
+                <label for="client_phone">Client Phone <span class="tooltip" title="Contact phone number">ℹ️</span></label>
+                <input type="tel" id="client_phone" name="client_phone" value="{{ event.client_phone if event else '' }}" class="form-control" placeholder="+256 XXX XXX XXX">
+            </div>
+        </div>
+    </div>
+
+    <!-- Venue Details Section -->
+    <div class="sas-card">
+        <div class="section-header">
+            <div class="section-icon">📍</div>
+            <h3>Venue Details</h3>
+            <button type="button" onclick="openVenueModal()" class="btn-primary" style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">+ Add New Venue</button>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="venue_id">Select Venue <span class="tooltip" title="Choose from existing venues or create a new one">ℹ️</span></label>
+                <select id="venue_id" name="venue_id" class="form-control">
+                    <option value="">Select Venue</option>
+                    {% if venues %}
+                        {% for venue in venues %}
+                        <option value="{{ venue.id }}" {% if event and event.venue_id == venue.id %}selected{% endif %}>
+                            {{ venue.name }}{% if venue.address %} - {{ venue.address }}{% endif %}{% if venue.capacity %} (Capacity: {{ venue.capacity }}){% endif %}
+                        </option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="" disabled>No venues available. Please create a venue first.</option>
+                    {% endif %}
+                </select>
+                <small style="margin-top: 0.5rem; display: block; color: rgba(255, 255, 255, 0.6);">
+                    {% if venues %}
+                        {{ venues|length }} venue{{ 's' if venues|length != 1 else '' }} available
+                    {% else %}
+                        <span style="color: var(--brand);">No venues found. <a href="{{ url_for('events.venues_list') }}" target="_blank" style="color: var(--brand);">Create a venue →</a></span>
+                    {% endif %}
+                    <span style="margin-left: 1rem;">
+                        <a href="{{ url_for('events.venues_list') }}" target="_blank" style="color: var(--brand);">Manage Venues →</a>
+                    </span>
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Menu Packages Section -->
+    <div class="sas-card">
+        <div class="section-header">
+            <div class="section-icon">🍽️</div>
+            <h3>Menu Packages</h3>
+            <button type="button" onclick="openMenuPackageModal()" class="btn-primary" style="margin-left: auto; padding: 0.5rem 1rem; font-size: 0.875rem;">+ Add Menu Package</button>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="menu_package_id">Select Menu Package <span class="tooltip" title="Choose a menu package for this event">ℹ️</span></label>
+                <select id="menu_package_id" name="menu_package_id" class="form-control" onchange="showPackagePreview(this.value)">
+                    <option value="">Select Menu Package</option>
+                    {% for package in menu_packages %}
+                    <option value="{{ package.id }}" data-price="{{ package.price_per_guest }}" data-description="{{ package.description or '' }}" data-items="{{ package.items_list|tojson if package.items_list else '[]' }}" {% if event and event.menu_package_id == package.id %}selected{% endif %}>
+                        {{ package.name }} (UGX {{ "{:,.2f}".format(package.price_per_guest) }}/guest)
+                    </option>
+                    {% endfor %}
+                </select>
+                <small style="margin-top: 0.5rem; display: block;">
+                    <a href="{{ url_for('events.menu_packages_list') }}" target="_blank" style="color: var(--brand);">Manage Menu Packages →</a>
+                </small>
+            </div>
+        </div>
+        <div id="package-preview" style="margin-top: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; display: none;">
+            <strong>Package Preview:</strong>
+            <div id="preview-content"></div>
+        </div>
+    </div>
+
+    <!-- Budget & Notes Section -->
+    <div class="sas-card">
+        <div class="section-header">
+            <div class="section-icon">💰</div>
+            <h3>Budget & Notes</h3>
+        </div>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="budget_estimate">Budget Estimate (UGX) <span class="tooltip" title="Estimated total budget for this event">ℹ️</span></label>
+                <input type="number" id="budget_estimate" name="budget_estimate" value="{{ event.budget_estimate if event else 0 }}" step="0.01" min="0" class="form-control" placeholder="0.00">
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="notes">Additional Notes <span class="tooltip" title="Any special requirements or notes">ℹ️</span></label>
+            <textarea id="notes" name="notes" class="form-control" rows="4" placeholder="Special dietary requirements, setup instructions, or other important notes...">{{ event.notes if event else '' }}</textarea>
+        </div>
+    </div>
+
+    <!-- Budgeting & Cost Sheet Section -->
+    <div class="sas-card">
+        <h3 class="mt-4">Budgeting & Cost Sheet</h3>
+        <div class="row">
+            <div class="col-md-4">
+                <label>Labor Cost</label>
+                <input type="number" name="labor_cost" class="form-control"
+                       value="{{ event.labor_cost if event else '' }}">
+            </div>
+            <div class="col-md-4">
+                <label>Transport Cost</label>
+                <input type="number" name="transport_cost" class="form-control"
+                       value="{{ event.transport_cost if event else '' }}">
+            </div>
+            <div class="col-md-4">
+                <label>Equipment Hire</label>
+                <input type="number" name="equipment_cost" class="form-control"
+                       value="{{ event.equipment_cost if event else '' }}">
+            </div>
+            <div class="col-md-4 mt-3">
+                <label>Ingredients Cost</label>
+                <input type="number" name="ingredients_cost" class="form-control"
+                       value="{{ event.ingredients_cost if event else '' }}">
+            </div>
+            <div class="col-md-4 mt-3">
+                <label>Quoted Value</label>
+                <input type="number" name="quoted_value" class="form-control"
+                       value="{{ event.quoted_value if event else '' }}">
+            </div>
+            <div class="col-md-4 mt-3">
+                <label><b>Total Cost</b></label>
+                <input type="number" class="form-control" readonly
+                       value="{{ event.total_cost if event else 0 }}">
+            </div>
+            <div class="col-md-4 mt-3">
+                <label><b>Profit</b></label>
+                <input type="number" class="form-control" readonly
+                       value="{{ event.profit if event else 0 }}">
+            </div>
+        </div>
+    </div>
+
+    <!-- Submit Buttons -->
+    <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--sas-light);">
+        <button type="submit" class="btn-primary">{{ 'Update Event' if event else 'Create Event' }}</button>
+        <a href="{{ url_for('events.events_list') }}" class="btn-secondary" style="padding: 0.75rem 2rem; text-decoration: none; display: inline-block;">Cancel</a>
+    </div>
+</form>
+
+<!-- Venue Modal -->
+<div id="venueModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeVenueModal()">&times;</span>
+        <h2>Add New Venue</h2>
+        <form method="POST" action="{{ url_for('events.venue_create') }}" target="_blank">
+            <div class="form-group">
+                <label>Venue Name *</label>
+                <input type="text" name="name" required class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Address</label>
+                <textarea name="address" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Capacity</label>
+                <input type="number" name="capacity" min="0" class="form-control">
+            </div>
+            <button type="submit" class="btn-primary">Create Venue</button>
+        </form>
+    </div>
+</div>
+
+<!-- Menu Package Modal -->
+<div id="menuPackageModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeMenuPackageModal()">&times;</span>
+        <h2>Add New Menu Package</h2>
+        <form method="POST" action="{{ url_for('events.menu_package_create') }}" target="_blank">
+            <div class="form-group">
+                <label>Package Name *</label>
+                <input type="text" name="name" required class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Price per Guest (UGX) *</label>
+                <input type="number" name="price_per_guest" step="0.01" min="0" required class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Menu Items (JSON array)</label>
+                <textarea name="items" class="form-control" rows="5" placeholder='["Item 1", "Item 2", "Item 3"]'>[]</textarea>
+                <small>Enter as JSON array: ["Item 1", "Item 2", ...]</small>
+            </div>
+            <button type="submit" class="btn-primary">Create Package</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function openVenueModal() {
+    document.getElementById('venueModal').style.display = 'block';
+}
+
+function closeVenueModal() {
+    document.getElementById('venueModal').style.display = 'none';
+}
+
+function openMenuPackageModal() {
+    document.getElementById('menuPackageModal').style.display = 'block';
+}
+
+function closeMenuPackageModal() {
+    document.getElementById('menuPackageModal').style.display = 'none';
+}
+
+
+function showPackagePreview(packageId) {
+    const select = document.getElementById('menu_package_id');
+    const option = select.options[select.selectedIndex];
+    const preview = document.getElementById('package-preview');
+    const content = document.getElementById('preview-content');
+    
+    if (packageId && option.dataset.description) {
+        preview.style.display = 'block';
+        let html = '';
+        if (option.dataset.description) {
+            html += `<p><strong>Description:</strong> ${option.dataset.description}</p>`;
+        }
+        try {
+            const items = JSON.parse(option.dataset.items || '[]');
+            if (items.length > 0) {
+                html += `<p><strong>Menu Items:</strong></p><ul>`;
+                items.forEach(item => {
+                    html += `<li>${item}</li>`;
+                });
+                html += `</ul>`;
+            }
+        } catch(e) {}
+        content.innerHTML = html;
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const venueModal = document.getElementById('venueModal');
+    const menuModal = document.getElementById('menuPackageModal');
+    if (event.target == venueModal) {
+        venueModal.style.display = 'none';
+    }
+    if (event.target == menuModal) {
+        menuModal.style.display = 'none';
+    }
+}
+
+// Show preview if package is already selected
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('menu_package_id');
+    if (select.value) {
+        showPackagePreview(select.value);
+    }
+    
+    // Initialize cost calculation
+    calculateCosts();
+});
+
+// Auto-calculate total cost and profit
+function calculateCosts() {
+    const laborCost = parseFloat(document.getElementById('labor_cost').value) || 0;
+    const transportCost = parseFloat(document.getElementById('transport_cost').value) || 0;
+    const equipmentCost = parseFloat(document.getElementById('equipment_cost').value) || 0;
+    const ingredientsCost = parseFloat(document.getElementById('ingredients_cost').value) || 0;
+    const quotedValue = parseFloat(document.getElementById('quoted_value').value) || 0;
+    
+    const totalCost = laborCost + transportCost + equipmentCost + ingredientsCost;
+    const profit = quotedValue - totalCost;
+    
+    document.getElementById('total_cost').value = totalCost.toFixed(2);
+    document.getElementById('profit').value = profit.toFixed(2);
+}
+
+// Add event listeners for cost fields
+document.addEventListener('DOMContentLoaded', function() {
+    ['labor_cost', 'transport_cost', 'equipment_cost', 'ingredients_cost', 'quoted_value'].forEach(function(fieldId) {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.addEventListener('input', calculateCosts);
+            field.addEventListener('change', calculateCosts);
+        }
+    });
+});
+</script>
+{% endblock %}

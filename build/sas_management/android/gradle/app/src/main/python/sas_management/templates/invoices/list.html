@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Finance · Invoices</p>
+        <h1>Invoice Management</h1>
+        <p class="muted">Track all issued invoices and their payment status.</p>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('invoices.invoice_new') }}" class="btn-primary">
+            ➕ Create Invoice
+        </a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>All Invoices</h3>
+        <span class="badge">{{ pagination.total }} total</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Event</th>
+                    <th>Client</th>
+                    <th>Issue Date</th>
+                    <th>Due Date</th>
+                    <th>Amount ({{ CURRENCY.rstrip() }})</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td data-label="Invoice #">{{ invoice.invoice_number }}</td>
+                    <td data-label="Event">
+                        {% if invoice.event %}
+                            <a href="{{ url_for('core.events_edit', event_id=invoice.event.id) }}">{{ invoice.event.event_name }}</a>
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Client">
+                        {% if invoice.event and invoice.event.client %}
+                            {{ invoice.event.client.name }}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Issue Date">{{ invoice.issue_date.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Due Date">{{ invoice.due_date.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Amount">{{ CURRENCY }}{{ "{:,.2f}".format(invoice.total_amount_ugx or 0) }}</td>
+                    <td data-label="Status">
+                        <span class="badge badge-{{ invoice.status.value.lower() }}">{{ invoice.status.value }}</span>
+                    </td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('invoices.invoice_view', invoice_id=invoice.id) }}">View</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8">No invoices found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Invoices pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('invoices.invoice_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('invoices.invoice_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

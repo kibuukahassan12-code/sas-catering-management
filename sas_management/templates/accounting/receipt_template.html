@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Accounting · Receipts</p>
+        <h1>Receipt {{ receipt.reference }}</h1>
+        <p class="muted">Payment receipt for {% if invoice %}Invoice {{ invoice.invoice_number }}{% else %}services{% endif %}.</p>
+    </div>
+    <div class="quick-links">
+        <button onclick="window.print()" class="btn-primary">Print Receipt</button>
+        <a href="{{ url_for('accounting.receipt_pdf', receipt_id=receipt.id) }}" class="btn-secondary" target="_blank">View PDF</a>
+        <a href="{{ url_for('accounting.receipt_pdf', receipt_id=receipt.id) }}?download=1" class="btn-secondary">Download PDF</a>
+        <a href="{{ url_for('accounting.dashboard') }}" class="btn-secondary">Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="receipt-container" style="max-width: 800px; margin: 0 auto; padding: 2rem; background: white; color: #333; border-radius: 0.5rem;">
+        <div class="receipt-header" style="text-align: center; margin-bottom: 2rem; border-bottom: 2px solid #f26822; padding-bottom: 1rem;">
+            <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods" style="max-width: 200px; height: auto; margin-bottom: 1rem;" onerror="this.style.display='none';">
+            <h1 style="color: #f26822; margin: 0;">SAS Best Foods</h1>
+            <p style="margin: 0.5rem 0;">For all your Catering Solutions</p>
+            <p style="margin: 0;">Near Akamwesi Mall, Gayaza Rd</p>
+            <p style="margin: 0;">Opp Electoral Commission Kawempe Offices</p>
+            <p style="margin: 0;">Kawempe, Kampala, Uganda</p>
+            <p style="margin: 0.5rem 0;">Tel: 0702060778 / 0745705088</p>
+            <p style="margin: 0;">Website: www.sasbestfoods.com</p>
+        </div>
+        
+        <div class="receipt-body">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem;">
+                <div>
+                    <h3 style="margin: 0 0 0.5rem 0; color: #333;">RECEIPT</h3>
+                    <p style="margin: 0;"><strong>Receipt No:</strong> {{ receipt.reference }}</p>
+                    <p style="margin: 0;"><strong>Date:</strong> {{ receipt.date.strftime('%B %d, %Y') }}</p>
+                </div>
+                <div style="text-align: right;">
+                    {% if invoice %}
+                    <p style="margin: 0;"><strong>Invoice No:</strong> {{ invoice.invoice_number }}</p>
+                    {% endif %}
+                    {% if payment.reference %}
+                    <p style="margin: 0;"><strong>Payment Ref:</strong> {{ payment.reference }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if client %}
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f9f9f9; border-radius: 0.5rem;">
+                <h4 style="margin: 0 0 0.5rem 0;">Received From:</h4>
+                <p style="margin: 0;"><strong>{{ client.name or 'N/A' }}</strong></p>
+                {% if client.email %}
+                <p style="margin: 0;">{{ client.email }}</p>
+                {% endif %}
+                {% if client.phone %}
+                <p style="margin: 0;">{{ client.phone }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div style="margin-bottom: 1.5rem;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #ddd; background: #f9f9f9;">
+                            <th style="text-align: left; padding: 0.75rem;">Description</th>
+                            <th style="text-align: right; padding: 0.75rem;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding: 0.75rem;">
+                                Payment for {% if invoice %}Invoice {{ invoice.invoice_number }}{% else %}Services{% endif %}
+                            </td>
+                            <td style="text-align: right; padding: 0.75rem; font-weight: bold;">
+                                {% set amount = receipt.amount if receipt.amount else (payment.amount if payment else 0) %}
+                                {{ CURRENCY }}{{ "{:,.2f}".format(float(amount)) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top: 2px solid #ddd; font-weight: bold; background: #f9f9f9;">
+                            <td style="padding: 0.75rem;">Total Amount</td>
+                            <td style="text-align: right; padding: 0.75rem;">
+                                {% set amount = receipt.amount if receipt.amount else (payment.amount if payment else 0) %}
+                                {{ CURRENCY }}{{ "{:,.2f}".format(float(amount)) }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f9f9f9; border-radius: 0.5rem;">
+                <p style="margin: 0.5rem 0;"><strong>Payment Method:</strong> {{ (receipt.method or payment.method or 'N/A')|title }}</p>
+                <p style="margin: 0.5rem 0;"><strong>Amount in Words:</strong> {{ "{:,.0f}".format(float(receipt.amount if receipt.amount else (payment.amount if payment.amount else 0))) }} Uganda Shillings</p>
+                {% if receipt.notes %}
+                <p style="margin: 0.5rem 0;"><strong>Notes:</strong> {{ receipt.notes }}</p>
+                {% elif payment and payment.invoice %}
+                <p style="margin: 0.5rem 0;"><strong>Notes:</strong> Payment for Invoice {{ payment.invoice.invoice_number }}</p>
+                {% endif %}
+            </div>
+            
+            <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd;">
+                <p style="margin: 0.5rem 0; text-align: center; color: #666;">
+                    Thank you for your business!
+                </p>
+                <p style="margin: 0.5rem 0; text-align: center; color: #666; font-size: 0.9rem;">
+                    This is a computer-generated receipt.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+@media print {
+    .page-header, .btn-primary, .btn-secondary {
+        display: none !important;
+    }
+    
+    .receipt-container {
+        box-shadow: none;
+        margin: 0;
+        padding: 1rem;
+    }
+    
+    body {
+        background: white;
+    }
+    
+    .panel {
+        border: none;
+        box-shadow: none;
+    }
+}
+</style>
+{% endblock %}
+

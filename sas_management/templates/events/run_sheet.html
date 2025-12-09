@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Run Sheet</p>
+        <h1>Event Run Sheet</h1>
+        <p class="muted">{{ event.event_name }} · {{ event.event_date.strftime('%B %d, %Y') }}</p>
+    </div>
+    <div>
+        <button onclick="window.print()" class="btn-primary">Print Run Sheet</button>
+        <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) }}">← Back to Event</a>
+    </div>
+</section>
+
+<style>
+@media print {
+    .page-header, .no-print { display: none; }
+    body { background: white; }
+    .run-sheet { box-shadow: none; border: none; }
+}
+.run-sheet {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-width: 900px;
+    margin: 0 auto;
+}
+.run-sheet-header {
+    text-align: center;
+    border-bottom: 3px solid #2d5016;
+    padding-bottom: 1.5rem;
+    margin-bottom: 2rem;
+}
+.run-sheet-header h1 {
+    color: #2d5016;
+    margin: 0;
+}
+.run-sheet-section {
+    margin-bottom: 2rem;
+    page-break-inside: avoid;
+}
+.run-sheet-section h2 {
+    color: #2d5016;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+.info-row {
+    display: grid;
+    grid-template-columns: 150px 1fr;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+.info-row strong {
+    color: #6c757d;
+}
+.table-compact {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+.table-compact th,
+.table-compact td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+.table-compact th {
+    background: #f8f9fa;
+    font-weight: 600;
+    color: #2d5016;
+}
+</style>
+
+<div class="run-sheet">
+    <div class="run-sheet-header">
+        <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods" class="run-sheet-logo" onerror="this.style.display='none';" style="max-width: 200px; height: auto; margin-bottom: 1rem;">
+        <h1>SAS Best Foods</h1>
+        <h2>Event Run Sheet</h2>
+        <p style="margin: 0.5rem 0; color: #6c757d;">Generated {{ "now" | date('%B %d, %Y at %I:%M %p') }}</p>
+    </div>
+
+    <!-- Event Summary -->
+    <div class="run-sheet-section">
+        <h2>Event Summary</h2>
+        <div class="info-row">
+            <strong>Event Name:</strong>
+            <span>{{ event.event_name }}</span>
+        </div>
+        <div class="info-row">
+            <strong>Client:</strong>
+            <span>{{ event.client.name }}</span>
+        </div>
+        <div class="info-row">
+            <strong>Event Type:</strong>
+            <span>{{ event.event_type or '—' }}</span>
+        </div>
+        <div class="info-row">
+            <strong>Date:</strong>
+            <span>{{ event.event_date.strftime('%B %d, %Y') }}</span>
+        </div>
+        {% if event.event_time %}
+        <div class="info-row">
+            <strong>Time:</strong>
+            <span>{{ event.event_time }}</span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <strong>Guest Count:</strong>
+            <span>{{ event.guest_count }}</span>
+        </div>
+        {% if event.venue %}
+        <div class="info-row">
+            <strong>Venue:</strong>
+            <span>{{ event.venue }}</span>
+        </div>
+        {% endif %}
+        {% if event.venue_map_link %}
+        <div class="info-row">
+            <strong>Map Link:</strong>
+            <span><a href="{{ event.venue_map_link }}" target="_blank">{{ event.venue_map_link }}</a></span>
+        </div>
+        {% endif %}
+        <div class="info-row">
+            <strong>Status:</strong>
+            <span>{{ event.status }}</span>
+        </div>
+        {% if event.notes %}
+        <div class="info-row">
+            <strong>Special Notes:</strong>
+            <span style="white-space: pre-wrap;">{{ event.notes }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Menu -->
+    {% if menu_selections %}
+    <div class="run-sheet-section">
+        <h2>Menu Selection</h2>
+        <table class="table-compact">
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in menu_selections %}
+                <tr>
+                    <td>{{ item.item_name }}</td>
+                    <td>{{ item.item_type }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.unit_price_ugx or 0) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.line_total_ugx or 0) }}</td>
+                </tr>
+                {% if item.dietary_notes %}
+                <tr>
+                    <td colspan="5" style="font-size: 0.875rem; color: #6c757d; padding-left: 2rem;">
+                        <em>Dietary Notes: {{ item.dietary_notes }}</em>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: 600; border-top: 2px solid #2d5016;">
+                    <td colspan="4" style="text-align: right;">Total:</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(menu_total or 0) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Staff Assignments -->
+    {% if staff_assignments %}
+    <div class="run-sheet-section">
+        <h2>Staff Assignments</h2>
+        <table class="table-compact">
+            <thead>
+                <tr>
+                    <th>Staff Member</th>
+                    <th>Role</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in staff_assignments %}
+                <tr>
+                    <td>{{ assignment.user.email }}</td>
+                    <td>{{ assignment.role }}</td>
+                    <td>{{ assignment.notes or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Hire Orders / Inventory -->
+    {% if hire_orders %}
+    <div class="run-sheet-section">
+        <h2>Hire Orders & Equipment</h2>
+        {% for order in hire_orders %}
+        <div style="margin-bottom: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 6px;">
+            <h3 style="margin-top: 0; color: #2d5016;">Order #{{ order.id }}</h3>
+            <div class="info-row">
+                <strong>Period:</strong>
+                <span>{{ order.start_date.strftime('%b %d, %Y') }} to {{ order.end_date.strftime('%b %d, %Y') }}</span>
+            </div>
+            <div class="info-row">
+                <strong>Delivery Address:</strong>
+                <span>{{ order.delivery_address }}</span>
+            </div>
+            <div class="info-row">
+                <strong>Total Cost:</strong>
+                <span>{{ CURRENCY }}{{ "{:,.2f}".format(order.total_cost or 0) }}</span>
+            </div>
+            {% if order.items %}
+            <table class="table-compact" style="margin-top: 1rem;">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Quantity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items %}
+                    <tr>
+                        <td>{{ item.inventory_item.name }}</td>
+                        <td>{{ item.quantity_rented }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Tasks Timeline -->
+    {% if tasks %}
+    <div class="run-sheet-section">
+        <h2>Tasks & Timeline</h2>
+        <table class="table-compact">
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Assigned To</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <td>
+                        <strong>{{ task.title }}</strong>
+                        {% if task.description %}
+                        <br><small style="color: #6c757d;">{{ task.description }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ task.assigned_user.email if task.assigned_user else 'Unassigned' }}</td>
+                    <td>{{ task.due_date.strftime('%b %d, %Y') if task.due_date else '—' }}</td>
+                    <td>{{ task.status.value }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- Financial Summary -->
+    <div class="run-sheet-section">
+        <h2>Financial Summary</h2>
+        <div class="info-row">
+            <strong>Quoted Value:</strong>
+            <span>{{ CURRENCY }}{{ "{:,.2f}".format(event.quoted_value or 0) }}</span>
+        </div>
+        {% if event.actual_cogs_ugx %}
+        <div class="info-row">
+            <strong>Actual COGS:</strong>
+            <span>{{ CURRENCY }}{{ "{:,.2f}".format(event.actual_cogs_ugx) }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 3rem; padding-top: 2rem; border-top: 2px solid #e9ecef; text-align: center; color: #6c757d; font-size: 0.875rem;">
+        <p>This run sheet was generated automatically by the SAS Best Foods Catering Management System.</p>
+        <p>For questions or updates, please contact the event coordinator.</p>
+    </div>
+</div>
+{% endblock %}
+

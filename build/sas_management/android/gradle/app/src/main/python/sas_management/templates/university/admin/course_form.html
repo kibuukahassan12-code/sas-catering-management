@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">University Admin · Courses</p>
+        <h1>{{ action }} Course</h1>
+        <p class="muted">Define training courses and assign them to specific employee roles.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('university.admin_courses_list') }}">← Back to Courses</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <label class="form-control">
+            <span>Course Title</span>
+            <input type="text" name="title" value="{{ course.title if course else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Target Role</span>
+            <select name="target_role" required>
+                <option value="">Select Role</option>
+                {% for role in roles %}
+                <option value="{{ role.value }}" {% if course and course.target_role == role %}selected{% endif %}>{{ role.value }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control form-control--full">
+            <span>Description</span>
+            <textarea name="description" rows="4" required>{{ course.description if course else '' }}</textarea>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Course</button>
+            <a class="btn-ghost" href="{{ url_for('university.admin_courses_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

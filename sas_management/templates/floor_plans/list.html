@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Floor Plans - SAS Best Foods{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Floor Plans</p>
+        <h1>Floor Plan Builder</h1>
+        <p class="muted">Design and manage professional event layouts.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Dashboard</a>
+        <a class="btn-primary" href="{{ url_for('floor_plans.new') }}">+ New Floor Plan</a>
+    </div>
+</section>
+
+<section class="panel">
+    <!-- Search Bar -->
+    <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+        <form method="GET" action="{{ url_for('floor_plans.list') }}" style="display: flex; gap: 0.5rem; align-items: center;">
+            <input 
+                type="search" 
+                name="search" 
+                placeholder="Search floor plans..." 
+                value="{{ search_query }}"
+                style="flex: 1; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;"
+            >
+            <button type="submit" class="btn-primary">Search</button>
+            {% if search_query %}
+            <a href="{{ url_for('floor_plans.list') }}" class="btn-secondary">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Floor Plans Table -->
+    {% if floor_plans %}
+    <div style="overflow-x: auto;">
+        <table class="table" style="margin: 0;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Event</th>
+                    <th>Created</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for floor_plan in floor_plans %}
+                <tr>
+                    <td><strong>{{ floor_plan.name }}</strong></td>
+                    <td>
+                        {% if floor_plan.event %}
+                        <a href="{{ url_for('events.event_view', event_id=floor_plan.event.id) }}">
+                            {{ floor_plan.event.title }}
+                        </a>
+                        {% else %}
+                        <span style="color: #999;">No event assigned</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ floor_plan.created_at.strftime('%b %d, %Y') if floor_plan.created_at else 'N/A' }}</td>
+                    <td>{{ floor_plan.updated_at.strftime('%b %d, %Y') if floor_plan.updated_at else 'Never' }}</td>
+                    <td>
+                        <a href="{{ url_for('floor_plans.edit_floor_plan', id=floor_plan.id) }}" class="btn-primary btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+        <p style="color: #999; font-size: 1.1rem; margin-bottom: 1rem;">No floor plans found.</p>
+        <a href="{{ url_for('floor_plans.new') }}" class="btn-primary">Create Your First Floor Plan</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

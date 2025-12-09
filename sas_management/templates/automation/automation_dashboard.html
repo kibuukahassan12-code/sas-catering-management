@@ -1,0 +1,593 @@
+{% extends "base.html" %}
+{% block title %}Experience Automation – SAS Management System{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<style>
+  .automation-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  /* Header */
+  .automation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 2px solid rgba(242, 104, 34, 0.3);
+  }
+
+  .header-content h1 {
+    color: #F26822;
+    margin: 0 0 0.5rem 0;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .header-content .eyebrow {
+    color: #FFBD4A;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .header-content .muted {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .kpi-card {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+    padding: 1.5rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #F26822, #FFBD4A);
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(242, 104, 34, 0.2);
+    border-color: rgba(242, 104, 34, 0.3);
+  }
+
+  .kpi-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.9;
+  }
+
+  .kpi-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .kpi-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #F26822;
+    line-height: 1.2;
+  }
+
+  .kpi-trend {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 0.5rem;
+  }
+
+  /* Content Cards */
+  .content-card {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+    padding: 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .card-header h2 {
+    color: #F26822;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  /* Workflow Cards Grid */
+  .workflows-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .workflow-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+
+  .workflow-card:hover {
+    background: rgba(242, 104, 34, 0.1);
+    border-color: rgba(242, 104, 34, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.2);
+  }
+
+  .workflow-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+
+  .workflow-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .workflow-description {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+    line-height: 1.5;
+  }
+
+  .workflow-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .workflow-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* Status Badges */
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .status-badge.active {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+  }
+
+  .status-badge.inactive {
+    background: rgba(149, 165, 166, 0.2);
+    color: #95a5a6;
+  }
+
+  /* Tables */
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  thead {
+    background: rgba(242, 104, 34, 0.15);
+  }
+
+  th {
+    padding: 1rem;
+    text-align: left;
+    color: #F26822;
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid rgba(242, 104, 34, 0.3);
+  }
+
+  td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  tbody tr {
+    transition: all 0.2s ease;
+  }
+
+  tbody tr:hover {
+    background: rgba(242, 104, 34, 0.1);
+    transform: scale(1.01);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  .log-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .log-status.success {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+  }
+
+  .log-status.failed {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+  }
+
+  .log-status.pending {
+    background: rgba(241, 196, 15, 0.2);
+    color: #f1c40f;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+  }
+
+  .btn-primary {
+    background: #F26822;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #E55A1A;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.3);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  .btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .btn-icon {
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+  }
+
+  .empty-state h3 {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .automation-container {
+      padding: 1rem;
+    }
+
+    .automation-header {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .workflows-grid {
+      grid-template-columns: 1fr;
+    }
+
+    table {
+      font-size: 0.85rem;
+    }
+
+    th, td {
+      padding: 0.75rem 0.5rem;
+    }
+  }
+</style>
+
+<div class="automation-container">
+  <!-- Header -->
+  <div class="automation-header">
+    <div class="header-content">
+      <p class="eyebrow">Experience Automation</p>
+      <h1>Automation Dashboard</h1>
+      <p class="muted">Manage automated workflows, triggers, and action logs</p>
+    </div>
+    <div>
+      <button class="btn btn-primary" onclick="alert('Create workflow feature coming soon!')">
+        ➕ Create Workflow
+      </button>
+    </div>
+  </div>
+
+  <!-- KPI Summary Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-icon">⚙️</div>
+      <div class="kpi-label">Total Workflows</div>
+      <div class="kpi-value">{{ workflows|length if workflows else 0 }}</div>
+      <div class="kpi-trend">{{ workflows|selectattr('is_active', 'equalto', True)|list|length }} active</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Total Executions</div>
+      <div class="kpi-value">{{ logs|length if logs else 0 }}</div>
+      <div class="kpi-trend">Last 30 days</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">✅</div>
+      <div class="kpi-label">Success Rate</div>
+      <div class="kpi-value">
+        {% if logs and logs|length > 0 %}
+          {% set success_count = logs|selectattr('status', 'equalto', 'success')|list|length %}
+          {{ "%.1f"|format((success_count / logs|length * 100)) }}%
+        {% else %}
+          0%
+        {% endif %}
+      </div>
+      <div class="kpi-trend">Execution success</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-icon">⚠️</div>
+      <div class="kpi-label">Failed Executions</div>
+      <div class="kpi-value">
+        {% if logs %}
+          {{ logs|selectattr('status', 'equalto', 'failed')|list|length }}
+        {% else %}
+          0
+        {% endif %}
+      </div>
+      <div class="kpi-trend">Requires attention</div>
+    </div>
+  </div>
+
+  <!-- Workflows Section -->
+  <div class="content-card">
+    <div class="card-header">
+      <h2>⚙️ Active Workflows</h2>
+      <div class="card-actions">
+        <button class="btn btn-icon" title="Refresh">🔄</button>
+        <button class="btn btn-icon" title="Export">📥</button>
+      </div>
+    </div>
+    {% if workflows and workflows|length > 0 %}
+      <div class="workflows-grid">
+        {% for workflow in workflows %}
+          <div class="workflow-card">
+            <div class="workflow-header">
+              <div style="flex: 1;">
+                <h3 class="workflow-name">{{ workflow.name }}</h3>
+                <span class="status-badge {% if workflow.is_active %}active{% else %}inactive{% endif %}">
+                  {% if workflow.is_active %}✓ Active{% else %}○ Inactive{% endif %}
+                </span>
+              </div>
+            </div>
+            <p class="workflow-description">{{ workflow.description or 'No description provided' }}</p>
+            <div class="workflow-meta">
+              <span class="workflow-tag">🔔 {{ workflow.trigger_type.replace('_', ' ').title() }}</span>
+              <button class="btn btn-secondary btn-sm" onclick="testWorkflow({{ workflow.id }})" title="Test Workflow">
+                ▶️ Test
+              </button>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">⚙️</div>
+        <h3>No Workflows Found</h3>
+        <p>Create your first automation workflow to get started.</p>
+        <button class="btn btn-primary" style="margin-top: 1rem;" onclick="alert('Create workflow feature coming soon!')">
+          Create Workflow
+        </button>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Action Logs Section -->
+  <div class="content-card">
+    <div class="card-header">
+      <h2>📊 Recent Action Logs</h2>
+      <div class="card-actions">
+        <button class="btn btn-icon" title="Refresh">🔄</button>
+        <button class="btn btn-icon" title="Export">📥</button>
+        <button class="btn btn-icon" title="Filter">🔍</button>
+      </div>
+    </div>
+    {% if logs and logs|length > 0 %}
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Workflow</th>
+              <th>Action Type</th>
+              <th>Status</th>
+              <th>Executed At</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in logs %}
+              <tr>
+                <td>
+                  <strong>{{ log.workflow.name if log.workflow else 'Manual' }}</strong>
+                </td>
+                <td>
+                  <span class="workflow-tag">{{ log.action_type.replace('_', ' ').title() }}</span>
+                </td>
+                <td>
+                  <span class="log-status {{ log.status.lower() }}">
+                    {% if log.status == 'success' %}✓{% elif log.status == 'failed' %}✗{% else %}⏳{% endif %}
+                    {{ log.status.title() }}
+                  </span>
+                </td>
+                <td>
+                  {% if log.run_at %}
+                    <div>{{ log.run_at.strftime('%Y-%m-%d') }}</div>
+                    <div style="font-size: 0.85rem; color: rgba(255,255,255,0.5);">
+                      {{ log.run_at.strftime('%H:%M:%S') }}
+                    </div>
+                  {% else %}
+                    N/A
+                  {% endif %}
+                </td>
+                <td>
+                  <button class="btn btn-secondary btn-sm" onclick="viewLogDetails({{ log.id }})" title="View Details">
+                    👁️ Details
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <div class="empty-state-icon">📊</div>
+        <h3>No Action Logs Found</h3>
+        <p>Action logs will appear here when workflows are executed.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function testWorkflow(workflowId) {
+  if (!confirm('Test this workflow? This will execute the workflow actions.')) {
+    return;
+  }
+  
+  fetch('/automation/trigger-test', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ workflow_id: workflowId })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      alert('Workflow executed successfully!');
+      location.reload();
+    } else {
+      alert('Error: ' + (data.error || 'Failed to execute workflow'));
+    }
+  })
+  .catch(error => {
+    alert('Error: ' + error.message);
+  });
+}
+
+function viewLogDetails(logId) {
+  // TODO: Implement log details modal
+  alert('Log details view coming soon! Log ID: ' + logId);
+}
+</script>
+{% endblock %}

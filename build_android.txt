@@ -1,0 +1,24 @@
+Android Build Options:
+
+
+
+Option A — BeeWare:
+
+1. pip install beeware
+
+2. briefcase create
+
+3. briefcase build android
+
+4. briefcase package android
+
+
+
+Option B — Chaquopy (inside Android Studio):
+
+1. Add Chaquopy plugin to gradle
+
+2. Put your Flask code in /src/main/python
+
+3. Package into APK
+

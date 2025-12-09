@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>{{ course.title }}</h1>
+        <p class="muted">{{ course.description or 'No description available.' }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('university.courses_list') }}">← Back to Courses</a>
+        {% if not enrollment %}
+        <form method="post" action="{{ url_for('university.enroll_in_course', course_id=course.id) }}" style="display: inline;">
+            <button type="submit" class="btn-primary">Enroll Now</button>
+        </form>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Course Info -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Course Information</h3>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Category</p>
+            <h3>{{ course.category or 'General' }}</h3>
+        </article>
+        <article class="summary-card">
+            <p>Difficulty</p>
+            <h3>{{ course.difficulty }}</h3>
+        </article>
+        <article class="summary-card">
+            <p>Lessons</p>
+            <h3>{{ course.lessons|length if course.lessons else 0 }}</h3>
+        </article>
+        <article class="summary-card">
+            <p>Duration</p>
+            <h3>{{ course.duration_minutes or 'N/A' }} min</h3>
+        </article>
+    </div>
+    
+    {% if enrollment %}
+    <div style="margin-top: 1.5rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <strong>Your Progress</strong>
+            <span style="font-weight: 600; font-size: 1.125rem;">{{ enrollment.progress }}%</span>
+        </div>
+        <div style="background: #e9ecef; border-radius: 4px; height: 10px; overflow: hidden;">
+            <div style="background: #28a745; height: 100%; width: {{ enrollment.progress }}%; transition: width 0.3s;"></div>
+        </div>
+        {% if enrollment.completed %}
+        <p style="margin-top: 0.5rem; color: #28a745; font-weight: 600;">✓ Course Completed!</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<!-- Lessons List -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Course Lessons</h3>
+        <span class="badge">{{ lessons_with_progress|length }} lessons</span>
+    </div>
+    
+    {% if lessons_with_progress %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50px;">#</th>
+                    <th>Lesson Title</th>
+                    <th>Type</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in lessons_with_progress %}
+                {% set lesson = item.lesson %}
+                <tr>
+                    <td>{{ lesson.order }}</td>
+                    <td>
+                        <strong>{{ lesson.title }}</strong>
+                        {% if lesson.content %}
+                        <br><small class="muted">{{ lesson.content[:80] if lesson.content else '' }}...</small>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge">{{ lesson.lesson_type }}</span></td>
+                    <td>{{ lesson.duration_minutes or 'N/A' }} min</td>
+                    <td>
+                        {% if item.completed %}
+                        <span class="badge success">✓ Completed</span>
+                        {% elif enrollment %}
+                        <span class="badge">Not Started</span>
+                        {% else %}
+                        <span class="badge">Locked</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if enrollment %}
+                        <a href="{{ url_for('university.lesson_view', lesson_id=lesson.id) }}" class="btn-ghost btn-sm">View Lesson</a>
+                        {% else %}
+                        <span class="muted" style="font-size: 0.875rem;">Enroll to access</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No lessons have been added to this course yet.</p>
+    </div>
+    {% endif %}
+</section>
+
+{% endblock %}
+

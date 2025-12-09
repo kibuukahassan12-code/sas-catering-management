@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">University Admin · Courses</p>
+        <h1>Course Management</h1>
+        <p class="muted">Create and manage training courses for different employee roles.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('university.admin_courses_add') }}">+ Add Course</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>All Courses</h3>
+        <span class="badge">{{ pagination.total }} courses</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Target Role</th>
+                    <th>Materials</th>
+                    <th>Description</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for course in courses %}
+                <tr>
+                    <td data-label="Title">{{ course.title }}</td>
+                    <td data-label="Role"><span class="badge">{{ course.target_role.value }}</span></td>
+                    <td data-label="Materials">{{ course.materials|length }}</td>
+                    <td data-label="Description">{{ course.description[:100] }}{% if course.description|length > 100 %}...{% endif %}</td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('university.admin_courses_edit', course_id=course.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('university.admin_courses_delete', course_id=course.id) }}" onsubmit="return confirm('Delete this course? All associated materials will also be deleted.');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No courses created yet. Start by adding a new course.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Courses pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('university.admin_courses_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('university.admin_courses_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

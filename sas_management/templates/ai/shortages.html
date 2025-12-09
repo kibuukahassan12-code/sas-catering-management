@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Shortage Prediction</p>
+        <h1>Inventory Shortage Alerts</h1>
+        <p class="muted">AI-powered predictions of inventory shortages before they happen.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="runShortagePrediction()">Run Prediction</button>
+        <a class="btn-secondary" href="{{ url_for('ai.dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+
+{% if alerts %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Active Shortage Alerts</h3>
+        <span class="badge" style="background: {% if alerts|length > 0 %}#e74c3c{% else %}#2ecc71{% endif %};">{{ alerts|length }} alerts</span>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Predicted Shortage Date</th>
+                    <th>Recommended Order Qty</th>
+                    <th>Severity</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for alert in alerts %}
+                <tr>
+                    <td><strong>#{{ alert.inventory_item_id }}</strong></td>
+                    <td>{{ alert.predicted_shortage_date.strftime('%Y-%m-%d') if alert.predicted_shortage_date else 'N/A' }}</td>
+                    <td><strong>{{ alert.recommended_order_qty }}</strong></td>
+                    <td>
+                        <span class="badge badge-{{ alert.severity }}" style="background: 
+                            {% if alert.severity == 'high' %}#e74c3c
+                            {% elif alert.severity == 'medium' %}#f39c12
+                            {% else %}#3498db
+                            {% endif %};">
+                            {{ alert.severity|upper }}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn-ghost btn-sm" onclick="createOrder({{ alert.inventory_item_id }}, {{ alert.recommended_order_qty }})">Create Order</button>
+                        <button class="btn-ghost btn-sm" onclick="dismissAlert({{ alert.id }})">Dismiss</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">No shortage alerts. Your inventory levels look good!</p>
+</section>
+{% endif %}
+
+<script>
+function runShortagePrediction() {
+    fetch('{{ url_for("ai.api_shortages_run") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({horizon_days: 30})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+}
+
+function createOrder(itemId, qty) {
+    // TODO: Implement create order action
+    alert(`Create order for item #${itemId} with quantity ${qty}`);
+}
+
+function dismissAlert(alertId) {
+    // TODO: Implement dismiss action
+    alert('Dismiss functionality to be implemented');
+}
+</script>
+
+{% endblock %}
+

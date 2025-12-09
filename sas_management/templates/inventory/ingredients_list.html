@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Inventory · Ingredients</p>
+        <h1>Raw Material Inventory</h1>
+        <p class="muted">Track ingredient stock levels and unit costs for accurate COGS calculations.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('inventory.ingredients_add') }}">+ New Ingredient</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>Ingredients</h3>
+        <span class="badge">{{ pagination.total }} items</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Unit of Measure</th>
+                    <th>Stock Count</th>
+                    <th>Unit Cost</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ingredient in ingredients %}
+                <tr>
+                    <td data-label="Name">{{ ingredient.name }}</td>
+                    <td data-label="Unit">{{ ingredient.unit_of_measure }}</td>
+                    <td data-label="Stock">{{ "{:,.2f}".format(ingredient.stock_count or 0) }}</td>
+                    <td data-label="Unit Cost">{{ CURRENCY }}{{ "{:,.2f}".format(ingredient.unit_cost_ugx or 0) }}</td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('inventory.ingredients_edit', ingredient_id=ingredient.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('inventory.ingredients_delete', ingredient_id=ingredient.id) }}" onsubmit="return confirm('Delete this ingredient?');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No ingredients recorded yet. Add your first raw material.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Ingredients pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('inventory.ingredients_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('inventory.ingredients_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

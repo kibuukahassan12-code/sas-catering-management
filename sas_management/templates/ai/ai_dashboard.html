@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">AI Suite</p>
+        <h1>AI-Powered Insights & Automation</h1>
+        <p class="muted">Leverage AI for cost optimization, forecasting, staffing, and inventory management.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('ai.menu_recommendations') }}">Menu AI</a>
+        <a class="btn-secondary" href="{{ url_for('ai.cost_optimizations') }}">Cost Optimization</a>
+    </div>
+</section>
+
+<!-- Status Cards -->
+<div class="kpi-grid" style="margin-bottom: 2rem;">
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">🤖</div>
+        <div class="kpi-content">
+            <p>AI Service Status</p>
+            <h2 style="color: {% if status.ai_service_available %}#2ecc71{% else %}#e74c3c{% endif %};">
+                {% if status.ai_service_available %}Active{% else %}Unavailable{% endif %}
+            </h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-content">
+            <p>Recent Predictions</p>
+            <h2>{{ recent_runs|length }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">💡</div>
+        <div class="kpi-content">
+            <p>Menu Recommendations</p>
+            <h2>{{ recent_recommendations|length }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-content">
+            <p>Active Shortage Alerts</p>
+            <h2 style="color: {% if active_alerts > 0 %}#e74c3c{% else %}#2ecc71{% endif %};">{{ active_alerts }}</h2>
+        </div>
+    </article>
+</div>
+
+{% if status.mock_mode %}
+<div class="panel" style="background: #fff3cd; border-color: #ffc107; margin-bottom: 2rem;">
+    <p><strong>⚠️ Mock Mode Active:</strong> AI is running in mock mode. Install ML libraries and configure API keys for production use.</p>
+</div>
+{% endif %}
+
+<!-- Quick Actions -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+        <a href="{{ url_for('ai.menu_recommendations') }}" class="card-link">
+            <div class="card">
+                <h4>📋 Menu Recommendations</h4>
+                <p>AI-powered menu suggestions based on margins and popularity</p>
+            </div>
+        </a>
+        <a href="{{ url_for('ai.cost_optimizations') }}" class="card-link">
+            <div class="card">
+                <h4>💰 Cost Optimization</h4>
+                <p>Find ways to reduce costs without compromising quality</p>
+            </div>
+        </a>
+        <a href="{{ url_for('ai.forecast_view', source='POS') }}" class="card-link">
+            <div class="card">
+                <h4>📈 Sales Forecast</h4>
+                <p>Predict future sales with AI forecasting</p>
+            </div>
+        </a>
+        <a href="{{ url_for('ai.shortages') }}" class="card-link">
+            <div class="card">
+                <h4>📦 Shortage Alerts</h4>
+                <p>Predict inventory shortages before they happen</p>
+            </div>
+        </a>
+    </div>
+</section>
+
+<!-- Recent Prediction Runs -->
+{% if recent_runs %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Prediction Runs</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Model</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in recent_runs %}
+                <tr>
+                    <td><strong>{{ run.run_type }}</strong></td>
+                    <td>{{ run.model_name or 'N/A' }}</td>
+                    <td>{{ run.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td><span class="badge badge-success">Completed</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Recent Recommendations -->
+{% if recent_recommendations %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Menu Recommendations</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Recommendation</th>
+                    <th>Score</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rec in recent_recommendations %}
+                <tr>
+                    <td>{{ rec.recommendation[:100] }}{% if rec.recommendation|length > 100 %}...{% endif %}</td>
+                    <td><span class="badge">{{ "%.2f"|format(rec.score) }}</span></td>
+                    <td><span class="badge badge-{{ rec.status }}">{{ rec.status }}</span></td>
+                    <td>{{ rec.created_at.strftime('%Y-%m-%d') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}
+

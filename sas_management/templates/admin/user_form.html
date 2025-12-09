@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · User Management</p>
+        <h1>{{ action }} User</h1>
+        <p class="muted">
+            {% if action == 'Add' %}
+            Create a new user. A secure password will be auto-generated.
+            {% else %}
+            Edit user details and permissions.
+            {% endif %}
+        </p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a class="btn-secondary" href="{{ url_for('admin.users_list') }}">← Back to Users</a>
+        <a class="btn-ghost" href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <label class="form-control">
+            <span>Email Address</span>
+            <input type="email" name="email" value="{{ user.email if user else '' }}" required autocomplete="email">
+        </label>
+        
+        <div class="form-control">
+            <span style="display: block; margin-bottom: 0.75rem; font-weight: 600;">Roles (RBAC) - Select Multiple</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.75rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                {% for role in roles %}
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 4px; transition: background 0.2s;" 
+                       onmouseover="this.style.background='rgba(255, 110, 31, 0.1)'" 
+                       onmouseout="this.style.background='transparent'">
+                    <input type="checkbox" 
+                           name="role_ids" 
+                           value="{{ role.id }}"
+                           {% if user %}
+                               {% set user_has_role = False %}
+                               {% if user.roles %}
+                                   {% for ur in user.roles %}
+                                       {% if ur.id == role.id %}
+                                           {% set user_has_role = True %}
+                                       {% endif %}
+                                   {% endfor %}
+                               {% endif %}
+                               {% if not user_has_role and user.role_id == role.id %}
+                                   {% set user_has_role = True %}
+                               {% endif %}
+                               {% if user_has_role %}checked{% endif %}
+                           {% endif %}
+                           style="width: auto; cursor: pointer;">
+                    <span>{{ role.name }}</span>
+                    {% if role.description %}
+                    <small style="color: rgba(255, 255, 255, 0.5); font-size: 0.85rem;">({{ role.description[:30] }}{% if role.description|length > 30 %}...{% endif %})</small>
+                    {% endif %}
+                </label>
+                {% endfor %}
+                {% if not roles %}
+                <p style="color: rgba(255, 255, 255, 0.5); grid-column: 1 / -1;">No roles available. Create roles first.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <label class="form-control">
+            <span>Legacy Role (for backward compatibility)</span>
+            <select name="legacy_role">
+                <option value="">Select legacy role</option>
+                <option value="Admin" {% if user and user.role and user.role.value == 'Admin' %}selected{% endif %}>Admin</option>
+                <option value="SalesManager" {% if user and user.role and user.role.value == 'SalesManager' %}selected{% endif %}>Sales Manager</option>
+                <option value="KitchenStaff" {% if user and user.role and user.role.value == 'KitchenStaff' %}selected{% endif %}>Kitchen Staff</option>
+                <option value="Waiter" {% if user and user.role and user.role.value == 'Waiter' %}selected{% endif %}>Waiter</option>
+                <option value="Cleaner" {% if user and user.role and user.role.value == 'Cleaner' %}selected{% endif %}>Cleaner</option>
+                <option value="Driver" {% if user and user.role and user.role.value == 'Driver' %}selected{% endif %}>Driver</option>
+                <option value="HireManager" {% if user and user.role and user.role.value == 'HireManager' %}selected{% endif %}>Hire Manager</option>
+                <option value="BakeryManager" {% if user and user.role and user.role.value == 'BakeryManager' %}selected{% endif %}>Bakery Manager</option>
+            </select>
+        </label>
+        
+        {% if action == 'Edit' %}
+        <label class="form-control" style="display: flex; align-items: center; gap: 0.5rem;">
+            <input type="checkbox" name="must_change_password" {% if user and (user.must_change_password or user.force_password_change) %}checked{% endif %}>
+            <span>Force password change on next login</span>
+        </label>
+        {% endif %}
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} User</button>
+            <a href="{{ url_for('admin.users_list') }}" class="btn-ghost">Cancel</a>
+        </div>
+    </form>
+    
+    {% if action == 'Add' %}
+    <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(242, 104, 34, 0.1); border: 1px solid rgba(242, 104, 34, 0.3); border-radius: 8px;">
+        <p style="margin: 0; color: var(--brand);">
+            <strong>ℹ️ Note:</strong> A secure 12-character password will be automatically generated and displayed after user creation.
+        </p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

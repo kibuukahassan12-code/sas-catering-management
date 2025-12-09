@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Group Management</p>
+        <h1>{{ group.name }}</h1>
+        <p class="muted">{{ group.description or 'View group details, roles, and permissions' }}</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a class="btn-primary" href="{{ url_for('admin.group_edit', group_id=group.id) }}">Edit Group</a>
+        <a class="btn-secondary" href="{{ url_for('admin.groups_list') }}">← Back to Groups</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Group Information</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+            <div>
+                <label class="muted" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem;">Group Name</label>
+                <strong style="font-size: 1.125rem;">{{ group.name }}</strong>
+            </div>
+            <div>
+                <label class="muted" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem;">Description</label>
+                <div>{{ group.description or '—' }}</div>
+            </div>
+            <div>
+                <label class="muted" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem;">Created</label>
+                <div>{{ group.created_at.strftime('%Y-%m-%d %H:%M') if group.created_at else '—' }}</div>
+            </div>
+            <div>
+                <label class="muted" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem;">Last Updated</label>
+                <div>{{ group.updated_at.strftime('%Y-%m-%d %H:%M') if group.updated_at else '—' }}</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Roles in Group</h3>
+        <span class="badge">{{ group.roles.count() if group.roles else 0 }} roles</span>
+    </div>
+    {% if group.roles and group.roles.count() > 0 %}
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Role Name</th>
+                    <th>Description</th>
+                    <th>Permissions</th>
+                    <th>Users</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for role in group.roles %}
+                <tr>
+                    <td><strong>{{ role.name }}</strong></td>
+                    <td>{{ role.description or '—' }}</td>
+                    <td>
+                        <span class="badge">{{ role.permissions|length if role.permissions else 0 }} permission{{ 's' if (role.permissions|length if role.permissions else 0) != 1 else '' }}</span>
+                    </td>
+                    <td>
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">
+                            {{ role.users.count() if role.users else 0 }} user{{ 's' if (role.users.count() if role.users else 0) != 1 else '' }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin.role_edit', role_id=role.id) }}" class="btn-ghost btn-sm">View Role</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 2rem; text-align: center;">
+        <p class="muted">No roles assigned to this group.</p>
+        <a href="{{ url_for('admin.group_edit', group_id=group.id) }}" class="btn-primary" style="margin-top: 1rem;">Add Roles</a>
+    </div>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>All Permissions (from all roles)</h3>
+        <span class="badge">{{ total_permissions }} unique permissions</span>
+    </div>
+    {% if permissions_by_group %}
+    <div style="padding: 1.5rem;">
+        {% for group_name, perms in permissions_by_group.items() %}
+        <div style="margin-bottom: 2rem;">
+            <h4 style="margin: 0 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary);">
+                {{ group_name|title }}
+                <span class="badge" style="margin-left: 0.5rem;">{{ perms|length }} permission{{ 's' if perms|length != 1 else '' }}</span>
+            </h4>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                {% for perm in perms %}
+                <div style="padding: 1rem; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary);">
+                    <strong style="display: block; margin-bottom: 0.25rem;">{{ perm.name or perm.code }}</strong>
+                    <small class="muted" style="font-size: 0.75rem; display: block; margin-bottom: 0.5rem;">{{ perm.code }}</small>
+                    {% if perm.description %}
+                    <p style="font-size: 0.875rem; margin: 0; color: var(--text-secondary);">{{ perm.description }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="padding: 2rem; text-align: center;">
+        <p class="muted">No permissions found. Add roles to this group to see permissions.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

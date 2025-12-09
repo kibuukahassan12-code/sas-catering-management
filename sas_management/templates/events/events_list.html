@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events</p>
+        <h1>All Events</h1>
+        <p class="muted">View and manage all events.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Dashboard</a>
+    </div>
+</section>
+
+{% if events %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Events</h3>
+        <span class="badge">{{ events|length }} events</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Client</th>
+                    <th>Date</th>
+                    <th>Venue</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td><strong>{{ event.event_name or 'Unnamed Event' }}</strong></td>
+                    <td>{{ event.client.name if event.client else 'N/A' }}</td>
+                    <td>{{ event.event_date.strftime('%Y-%m-%d') if event.event_date else '—' }}</td>
+                    <td>{{ event.venue or '—' }}</td>
+                    <td>
+                        <span class="badge">{{ event.status }}</span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('events.event_view', event_id=event.id) }}" class="btn-ghost btn-sm">View</a>
+                        <a href="{{ url_for('floorplanner.new_floorplan', event_id=event.id) }}" class="btn-ghost btn-sm" style="margin-left: 0.5rem;">📐 Floor Plan</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">No events found.</p>
+</section>
+{% endif %}
+{% endblock %}
+

@@ -1,0 +1,914 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow" style="color: var(--accent);">CRM · Sales Pipeline</p>
+        <h1 style="background: linear-gradient(120deg, var(--brand), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">Sales Pipeline Kanban Board</h1>
+        <p class="muted">Drag and drop leads through the sales process. Track your sales funnel with visual workflow management.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+        {% if total_leads == 0 %}
+        <form method="POST" action="{{ url_for('crm.seed_pipeline_data') }}" style="display: inline;">
+            <button type="submit" class="btn-primary" style="margin-right: 0.5rem;">
+                🌱 Add Professional Sample Data
+            </button>
+        </form>
+        {% else %}
+        <form method="POST" action="{{ url_for('crm.seed_pipeline_data') }}" style="display: inline;">
+            <input type="hidden" name="clear_existing" value="true">
+            <button type="submit" class="btn-secondary" style="margin-right: 0.5rem;" 
+                    onclick="return confirm('This will clear all existing leads and add sample data. Continue?');">
+                🔄 Clear & Add Sample Data
+            </button>
+        </form>
+        {% endif %}
+        <a class="btn-primary" href="{{ url_for('leads.index') }}">📋 Manage Leads</a>
+        <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Pipeline Statistics -->
+<section class="panel pipeline-stats" style="margin-bottom: 1.5rem;">
+    <div class="stats-grid">
+        <div class="stat-card stat-primary">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-label">Total Leads</div>
+                <div class="stat-value">{{ total_leads or 0 }}</div>
+            </div>
+        </div>
+        <div class="stat-card stat-info">
+            <div class="stat-icon">🔄</div>
+            <div class="stat-content">
+                <div class="stat-label">Active Pipeline</div>
+                <div class="stat-value">{{ (total_leads or 0) - ((leads_by_stage.get('Completed', [])|length) + (leads_by_stage.get('Lost', [])|length)) }}</div>
+            </div>
+        </div>
+        <div class="stat-card stat-success">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+                <div class="stat-label">Conversion Rate</div>
+                <div class="stat-value">
+                    {% if total_leads and total_leads > 0 %}
+                    {% set completed_count = leads_by_stage.get('Completed', [])|length %}
+                    {% set conversion_rate = (completed_count / total_leads * 100) %}
+                    {{ "{:.1f}".format(conversion_rate) }}%
+                    {% else %}
+                    0%
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="stat-card stat-warning">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+                <div class="stat-label">Pipeline Value</div>
+                <div class="stat-value">UGX {{ "{:,.0f}".format(total_value or 0) }}</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+/* Pipeline Statistics - SAS Best Foods Branding */
+.pipeline-stats {
+    background: linear-gradient(135deg, #F26822 0%, #F6BC38 100%);
+    color: #000;
+    border: none;
+    box-shadow: 0 4px 20px rgba(242, 104, 34, 0.4);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    padding: 1.5rem;
+}
+
+.stat-card {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    color: #000;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    opacity: 0.9;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+/* Kanban Board */
+.kanban-board {
+    display: flex;
+    gap: 1.5rem;
+    overflow-x: auto;
+    padding: 1.5rem;
+    min-height: 650px;
+    background: radial-gradient(circle at top, rgba(242,104,34,0.15), transparent),
+                var(--bg);
+    border-radius: 12px;
+    scroll-behavior: smooth;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kanban-column {
+    flex: 0 0 340px;
+    background: rgba(17, 17, 17, 0.9);
+    border-radius: 12px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    border-top: 5px solid var(--accent);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    color: var(--text);
+}
+
+.kanban-column::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+}
+
+.kanban-column:hover::before {
+    transform: translateX(100%);
+}
+
+.kanban-column:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+.kanban-column-header {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--accent);
+}
+
+.kanban-column-header .column-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.kanban-column-header .badge {
+    background: linear-gradient(135deg, #F26822 0%, #F6BC38 100%);
+    color: #000;
+    padding: 0.375rem 0.875rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    min-width: 32px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(242, 104, 34, 0.4);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+@keyframes cardDropSuccess {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1) rotate(2deg); }
+    100% { transform: scale(1); }
+}
+
+.kanban-column-body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 400px;
+}
+
+.kanban-card {
+    background: rgba(17, 17, 17, 0.9);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    cursor: grab;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 5px solid;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text);
+}
+
+.kanban-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.kanban-card:hover::before {
+    opacity: 1;
+}
+
+.kanban-card:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    border-left-width: 6px;
+}
+
+.kanban-card:active {
+    cursor: grabbing;
+    transform: rotate(2deg) scale(1.05);
+}
+
+.kanban-card.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg) scale(1.1);
+    z-index: 1000;
+}
+
+.kanban-card-header {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--accent);
+    font-size: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+}
+
+.kanban-card-body {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.kanban-card-body > div {
+    margin-bottom: 0.375rem;
+}
+
+.kanban-card-body strong {
+    color: var(--accent);
+    font-weight: 600;
+    display: inline-block;
+    min-width: 60px;
+}
+
+.kanban-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.kanban-card-actions {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+
+/* Stage-specific colors - SAS Branding */
+.stage-new { border-left-color: #F6BC38; }
+.stage-new .kanban-column { border-top-color: #F6BC38; }
+
+.stage-qualified { border-left-color: #F26822; }
+.stage-qualified .kanban-column { border-top-color: #F26822; }
+
+.stage-proposal { border-left-color: #F6BC38; }
+.stage-proposal .kanban-column { border-top-color: #F6BC38; }
+
+.stage-negotiation { border-left-color: #F26822; }
+.stage-negotiation .kanban-column { border-top-color: #F26822; }
+
+.stage-payment { border-left-color: #F6BC38; }
+.stage-payment .kanban-column { border-top-color: #F6BC38; }
+
+.stage-confirmed { border-left-color: #F26822; }
+.stage-confirmed .kanban-column { border-top-color: #F26822; }
+
+.stage-completed { border-left-color: #F6BC38; }
+.stage-completed .kanban-column { border-top-color: #F6BC38; }
+
+.stage-lost { border-left-color: #666; }
+.stage-lost .kanban-column { border-top-color: #666; }
+
+/* Column colors with SAS branding gradients */
+.kanban-column[data-stage="New Lead"] { 
+    border-top-color: #F6BC38;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(242, 104, 34, 0.05) 100%);
+}
+.kanban-column[data-stage="Qualified"] { 
+    border-top-color: #F26822;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(246, 188, 56, 0.05) 100%);
+}
+.kanban-column[data-stage="Proposal Sent"] { 
+    border-top-color: #F6BC38;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(242, 104, 34, 0.05) 100%);
+}
+.kanban-column[data-stage="Negotiation"] { 
+    border-top-color: #F26822;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(246, 188, 56, 0.05) 100%);
+}
+.kanban-column[data-stage="Awaiting Payment"] { 
+    border-top-color: #F6BC38;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(242, 104, 34, 0.05) 100%);
+}
+.kanban-column[data-stage="Confirmed"] { 
+    border-top-color: #F26822;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(246, 188, 56, 0.05) 100%);
+}
+.kanban-column[data-stage="Completed"] { 
+    border-top-color: #F6BC38;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(242, 104, 34, 0.05) 100%);
+}
+.kanban-column[data-stage="Lost"] { 
+    border-top-color: #666;
+    background: linear-gradient(to bottom, rgba(17, 17, 17, 0.95) 0%, rgba(102, 102, 102, 0.05) 100%);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    background: rgba(17, 17, 17, 0.98);
+    padding: 2.5rem;
+    border-radius: 16px;
+    max-width: 650px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+    animation: modalSlideIn 0.3s ease;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: var(--accent);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 0.5rem;
+}
+
+.empty-column {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    padding: 3rem 1rem;
+    font-size: 0.875rem;
+    font-style: italic;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    margin: 1rem 0;
+    background: rgba(17, 17, 17, 0.5);
+    transition: all 0.3s ease;
+}
+
+.empty-column:hover {
+    border-color: var(--accent);
+    background: rgba(246, 188, 56, 0.1);
+    color: var(--accent);
+}
+
+/* Stage icons */
+.stage-icon {
+    font-size: 1.125rem;
+    margin-right: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .kanban-board {
+        flex-direction: column;
+    }
+    .kanban-column {
+        flex: 1;
+        margin-bottom: 1rem;
+        min-height: auto;
+    }
+    .kanban-column-body {
+        min-height: 200px;
+    }
+}
+</style>
+
+<section class="panel">
+    <div class="kanban-board" id="kanbanBoard">
+        {% for stage in stages %}
+        <div class="kanban-column" data-stage="{{ stage }}">
+            <div class="kanban-column-header">
+                <div class="column-title">
+                    <span class="stage-icon">
+                        {% if stage == "New Lead" %}🆕
+                        {% elif stage == "Qualified" %}✅
+                        {% elif stage == "Proposal Sent" %}📋
+                        {% elif stage == "Negotiation" %}🤝
+                        {% elif stage == "Awaiting Payment" %}💳
+                        {% elif stage == "Confirmed" %}✔️
+                        {% elif stage == "Completed" %}🎉
+                        {% elif stage == "Lost" %}❌
+                        {% endif %}
+                    </span>
+                    <span>{{ stage }}</span>
+                </div>
+                <span class="badge">{{ leads_by_stage.get(stage, [])|length }}</span>
+            </div>
+            <div class="kanban-column-body" data-stage="{{ stage }}">
+                {% for lead in leads_by_stage.get(stage, []) %}
+                <div class="kanban-card stage-{{ stage.lower().replace(' ', '-') }}" 
+                     draggable="true" 
+                     data-lead-id="{{ lead.id }}"
+                     data-current-stage="{{ stage }}">
+                    <div class="kanban-card-header">
+                        <span>{{ lead.client_name }}</span>
+                        {% if lead.converted_client_id %}
+                        <span style="font-size: 0.75rem; color: var(--accent); font-weight: normal;">✓ Converted</span>
+                        {% endif %}
+                    </div>
+                    <div class="kanban-card-body">
+                        <div><strong>Type:</strong> {{ lead.inquiry_type or 'N/A' }}</div>
+                        <div><strong>Email:</strong> <a href="mailto:{{ lead.email or '' }}" style="color: #007bff;">{{ lead.email or 'N/A' }}</a></div>
+                        {% if lead.phone %}<div><strong>Phone:</strong> <a href="tel:{{ lead.phone }}" style="color: #007bff;">{{ lead.phone }}</a></div>{% endif %}
+                        {% if lead.assigned_user %}
+                        <div><strong>Assigned:</strong> 
+                            <span style="background: rgba(246, 188, 56, 0.2); color: var(--accent); padding: 0.125rem 0.5rem; border-radius: 12px; font-size: 0.75rem; border: 1px solid rgba(246, 188, 56, 0.3);">
+                                {{ lead.assigned_user.email }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        {% if lead.message and lead.message|length < 100 %}
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.8125rem; color: rgba(255, 255, 255, 0.6); font-style: italic;">
+                            "{{ lead.message[:80] }}{% if lead.message|length > 80 %}...{% endif %}"
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="kanban-card-footer">
+                        <span title="{{ lead.timestamp.strftime('%Y-%m-%d %H:%M') }}">
+                            {{ lead.timestamp.strftime('%b %d, %Y') }}
+                        </span>
+                        <div class="kanban-card-actions">
+                            <button class="btn-sm btn-ghost" onclick="openLeadModal({{ lead.id }})" title="View Details" style="color: var(--accent); border-color: rgba(246, 188, 56, 0.4);">👁️ View</button>
+                            {% if not lead.converted_client_id %}
+                            <a class="btn-sm btn-primary" href="{{ url_for('crm.convert_lead', lead_id=lead.id) }}" title="Convert to Client" style="background: linear-gradient(120deg, var(--brand), var(--accent)); color: #000; border: none; text-decoration: none; display: inline-flex; align-items: center; padding: 0.375rem 0.75rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600;">✨ Convert</a>
+                            {% else %}
+                            <span style="font-size: 0.75rem; color: var(--accent); padding: 0.25rem 0.5rem; background: rgba(246, 188, 56, 0.2); border-radius: 4px; border: 1px solid rgba(246, 188, 56, 0.3);">✓ Converted</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-column">
+                    No leads in this stage<br>
+                    <span style="font-size: 0.75rem; opacity: 0.7;">Drag leads here to move them</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Lead Detail Modal -->
+<div class="modal" id="leadModal" onclick="if(event.target === this) closeLeadModal();">
+    <div class="modal-content" onclick="event.stopPropagation();">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 id="modalLeadName" style="margin: 0; color: var(--accent);">Lead Details</h3>
+            <button onclick="closeLeadModal()" style="background: none; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">×</button>
+        </div>
+        <div id="modalLeadDetails"></div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255, 255, 255, 0.1);">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--accent);">Assign to:</label>
+            <select id="assignUser" class="form-control" style="margin-bottom: 0.5rem; background: rgba(17, 17, 17, 0.9); color: var(--text); border: 1px solid rgba(255, 255, 255, 0.1);">
+                <option value="">Unassigned</option>
+                {% for user in users %}
+                <option value="{{ user.id }}">{{ user.email }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn-primary" onclick="assignLead()" style="width: 100%;">Assign Lead</button>
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid rgba(255, 255, 255, 0.1); display: flex; gap: 0.5rem;">
+            <button class="btn-ghost" onclick="closeLeadModal()" style="flex: 1;">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentLeadId = null;
+const leadsData = {};
+{% for stage in stages %}
+{% for lead in leads_by_stage.get(stage, []) %}
+leadsData[{{ lead.id }}] = {
+    id: {{ lead.id }},
+    name: {{ (lead.client_name or '')|tojson }},
+    email: {{ (lead.email or '')|tojson }},
+    phone: {{ (lead.phone or '')|tojson }},
+    type: {{ (lead.inquiry_type or '')|tojson }},
+    message: {{ (lead.message or '')|tojson }},
+    stage: {{ stage|tojson }},
+    assigned: {% if lead.assigned_user_id %}{{ lead.assigned_user_id }}{% else %}null{% endif %},
+    timestamp: {% if lead.timestamp %}{{ lead.timestamp.strftime('%Y-%m-%d %H:%M')|tojson }}{% else %}'N/A'{% endif %},
+    converted: {% if lead.converted_client_id %}true{% else %}false{% endif %}
+};
+{% endfor %}
+{% endfor %}
+
+// Drag and drop functionality
+let draggedElement = null;
+
+document.querySelectorAll('.kanban-card').forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+        draggedElement = card;
+        e.dataTransfer.effectAllowed = 'move';
+        card.classList.add('dragging');
+        card.style.opacity = '0.6';
+        card.style.cursor = 'grabbing';
+        // Create a custom drag image
+        const dragImage = card.cloneNode(true);
+        dragImage.style.transform = 'rotate(5deg)';
+        dragImage.style.opacity = '0.8';
+        document.body.appendChild(dragImage);
+        e.dataTransfer.setDragImage(dragImage, e.offsetX, e.offsetY);
+        setTimeout(() => document.body.removeChild(dragImage), 0);
+    });
+    
+    card.addEventListener('dragend', (e) => {
+        card.classList.remove('dragging');
+        card.style.opacity = '1';
+        card.style.cursor = 'grab';
+        card.style.transform = '';
+        draggedElement = null;
+    });
+});
+
+document.querySelectorAll('.kanban-column-body').forEach(column => {
+    column.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const columnElement = column.closest('.kanban-column');
+        columnElement.style.transform = 'scale(1.02)';
+        columnElement.style.boxShadow = '0 12px 32px rgba(102, 126, 234, 0.3)';
+        column.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+        column.style.borderRadius = '8px';
+        column.style.border = '2px dashed #667eea';
+    });
+    
+    column.addEventListener('dragleave', (e) => {
+        const columnElement = column.closest('.kanban-column');
+        columnElement.style.transform = '';
+        columnElement.style.boxShadow = '';
+        column.style.backgroundColor = '';
+        column.style.borderRadius = '';
+        column.style.border = '';
+    });
+    
+    column.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const columnElement = column.closest('.kanban-column');
+        columnElement.style.transform = '';
+        columnElement.style.boxShadow = '';
+        column.style.backgroundColor = '';
+        column.style.borderRadius = '';
+        column.style.border = '';
+        
+        if (draggedElement) {
+            const newStage = column.dataset.stage;
+            const leadId = parseInt(draggedElement.dataset.leadId);
+            
+            if (draggedElement.dataset.currentStage !== newStage) {
+                // Add animation
+                draggedElement.style.transition = 'all 0.3s ease';
+                updateLeadStage(leadId, newStage);
+                column.appendChild(draggedElement);
+                draggedElement.dataset.currentStage = newStage;
+                
+                // Update card class for new stage
+                const stageClass = `stage-${newStage.toLowerCase().replace(' ', '-')}`;
+                draggedElement.className = `kanban-card ${stageClass}`;
+                
+                // Update badge counts
+                updateBadgeCounts();
+                
+                // Success animation
+                draggedElement.style.animation = 'cardDropSuccess 0.5s ease';
+                setTimeout(() => {
+                    draggedElement.style.animation = '';
+                }, 500);
+            }
+        }
+    });
+});
+
+function updateLeadStage(leadId, newStage) {
+    fetch(`{{ url_for('crm.api_update_pipeline_stage', lead_id=0) }}`.replace('0', leadId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ stage: newStage })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            console.log('Stage updated:', data);
+            // Update the card's class for styling
+            const card = document.querySelector(`[data-lead-id="${leadId}"]`);
+            if (card) {
+                card.className = `kanban-card stage-${newStage.toLowerCase().replace(' ', '-')}`;
+            }
+        } else {
+            alert('Error updating stage: ' + (data.message || 'Unknown error'));
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating stage. Please refresh the page.');
+        location.reload();
+    });
+}
+
+function updateBadgeCounts() {
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        const stage = column.dataset.stage;
+        const count = column.querySelectorAll('.kanban-card[data-lead-id]').length;
+        const badge = column.querySelector('.badge');
+        if (badge) {
+            badge.textContent = count;
+        }
+        
+        // Update empty state
+        const body = column.querySelector('.kanban-column-body');
+        const hasCards = body.querySelectorAll('.kanban-card[data-lead-id]').length > 0;
+        let emptyMsg = body.querySelector('.empty-column');
+        if (!hasCards && !emptyMsg) {
+            emptyMsg = document.createElement('div');
+            emptyMsg.className = 'empty-column';
+            emptyMsg.innerHTML = 'No leads in this stage<br><span style="font-size: 0.75rem; opacity: 0.7;">Drag leads here to move them</span>';
+            body.appendChild(emptyMsg);
+        } else if (hasCards && emptyMsg) {
+            emptyMsg.remove();
+        }
+    });
+}
+
+function openLeadModal(leadId) {
+    try {
+        currentLeadId = leadId;
+        const lead = leadsData[leadId];
+        
+        if (!lead) {
+            // Try to get data from the card element if not in leadsData
+            const card = document.querySelector(`[data-lead-id="${leadId}"]`);
+            if (card) {
+                // Extract data from card
+                const name = card.querySelector('.kanban-card-header span').textContent.trim();
+                const email = card.querySelector('a[href^="mailto:"]')?.textContent.trim() || 'N/A';
+                const phone = card.querySelector('a[href^="tel:"]')?.textContent.trim() || 'N/A';
+                const type = card.querySelector('.kanban-card-body div')?.textContent.replace('Type:', '').trim() || 'N/A';
+                const stage = card.getAttribute('data-current-stage') || 'Unknown';
+                const timestamp = card.querySelector('.kanban-card-footer span')?.getAttribute('title') || 'N/A';
+                const message = card.querySelector('.kanban-card-body div[style*="font-style: italic"]')?.textContent.replace(/[""]/g, '').trim() || '';
+                const converted = card.querySelector('.kanban-card-header span[style*="Converted"]') !== null;
+                
+                // Build lead object from card data
+                const leadFromCard = {
+                    name: name,
+                    email: email === 'N/A' ? '' : email,
+                    phone: phone === 'N/A' ? '' : phone,
+                    type: type === 'N/A' ? '' : type,
+                    stage: stage,
+                    timestamp: timestamp,
+                    message: message,
+                    converted: converted,
+                    assigned: null
+                };
+                
+                displayLeadDetails(leadFromCard);
+            } else {
+                alert('Lead data not found. Please refresh the page.');
+                return;
+            }
+        } else {
+            displayLeadDetails(lead);
+        }
+    } catch (error) {
+        console.error('Error opening lead modal:', error);
+        alert('An error occurred while loading lead details. Please try again.');
+    }
+}
+
+function displayLeadDetails(lead) {
+    try {
+        // Safely escape HTML to prevent XSS
+        const escapeHtml = (text) => {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        };
+        
+        const name = escapeHtml(lead.name || 'Unknown Lead');
+        const email = lead.email || '';
+        const phone = lead.phone || '';
+        const type = escapeHtml(lead.type || 'N/A');
+        const stage = escapeHtml(lead.stage || 'Unknown');
+        const timestamp = escapeHtml(lead.timestamp || 'N/A');
+        const message = escapeHtml(lead.message || '');
+        const converted = lead.converted || false;
+        const assigned = lead.assigned || null;
+        
+        document.getElementById('modalLeadName').textContent = name;
+        
+        let detailsHTML = `
+            <div style="line-height: 1.8; color: var(--text);">
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: var(--accent); display: inline-block; min-width: 120px;">Client Name:</strong>
+                    <span style="color: var(--text); font-weight: 600;">${name}</span>
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: var(--accent); display: inline-block; min-width: 120px;">Email:</strong>
+                    ${email ? `<a href="mailto:${escapeHtml(email)}" style="color: var(--accent);">${escapeHtml(email)}</a>` : '<span style="color: rgba(255, 255, 255, 0.5);">N/A</span>'}
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: var(--accent); display: inline-block; min-width: 120px;">Phone:</strong>
+                    ${phone ? `<a href="tel:${escapeHtml(phone)}" style="color: var(--accent);">${escapeHtml(phone)}</a>` : '<span style="color: rgba(255, 255, 255, 0.5);">N/A</span>'}
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: var(--accent); display: inline-block; min-width: 120px;">Inquiry Type:</strong>
+                    <span style="color: var(--text);">${type}</span>
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: var(--accent); display: inline-block; min-width: 120px;">Pipeline Stage:</strong>
+                    <span style="background: rgba(246, 188, 56, 0.2); color: var(--accent); padding: 0.25rem 0.75rem; border-radius: 4px; border: 1px solid rgba(246, 188, 56, 0.3); font-weight: 600;">${stage}</span>
+                </div>
+                <div style="margin-bottom: 0.75rem;">
+                    <strong style="color: var(--accent); display: inline-block; min-width: 120px;">Received:</strong>
+                    <span style="color: var(--text);">${timestamp}</span>
+                </div>
+        `;
+        
+        if (converted) {
+            detailsHTML += `
+                <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(246, 188, 56, 0.15); border-radius: 6px; border-left: 3px solid var(--accent);">
+                    <span style="color: var(--accent); font-weight: 600;">✓ This lead has been converted to a client</span>
+                </div>
+            `;
+        }
+        
+        if (message) {
+            detailsHTML += `
+                <div style="margin-top: 1rem; padding: 1rem; background: rgba(17, 17, 17, 0.5); border-radius: 6px; border-left: 3px solid var(--accent);">
+                    <strong style="color: var(--accent); display: block; margin-bottom: 0.5rem;">Message:</strong>
+                    <div style="color: var(--text); line-height: 1.6; white-space: pre-wrap;">${message}</div>
+                </div>
+            `;
+        }
+        
+        detailsHTML += `</div>`;
+        
+        document.getElementById('modalLeadDetails').innerHTML = detailsHTML;
+        
+        // Set assigned user if available
+        if (document.getElementById('assignUser')) {
+            document.getElementById('assignUser').value = assigned || '';
+        }
+        
+        // Show modal
+        document.getElementById('leadModal').classList.add('active');
+    } catch (error) {
+        console.error('Error displaying lead details:', error);
+        document.getElementById('modalLeadDetails').innerHTML = `
+            <div style="color: var(--text); padding: 1rem; background: rgba(255, 92, 92, 0.1); border-radius: 6px; border-left: 3px solid #ff5c5c;">
+                <strong style="color: #ff5c5c;">Error loading lead details:</strong><br>
+                ${error.message || 'Unknown error'}
+            </div>
+        `;
+        document.getElementById('leadModal').classList.add('active');
+    }
+}
+
+function closeLeadModal() {
+    document.getElementById('leadModal').classList.remove('active');
+    currentLeadId = null;
+}
+
+function assignLead() {
+    if (!currentLeadId) return;
+    const userId = document.getElementById('assignUser').value;
+    
+    fetch(`{{ url_for('crm.api_assign_lead', lead_id=0) }}`.replace('0', currentLeadId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ user_id: userId || null })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Lead assigned successfully!');
+            location.reload();
+        } else {
+            alert('Error assigning lead: ' + (data.message || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error assigning lead');
+    });
+}
+
+// Close modal on outside click
+document.getElementById('leadModal').addEventListener('click', (e) => {
+    if (e.target.id === 'leadModal') {
+        closeLeadModal();
+    }
+});
+
+// Initialize empty states
+updateBadgeCounts();
+</script>
+{% endblock %}

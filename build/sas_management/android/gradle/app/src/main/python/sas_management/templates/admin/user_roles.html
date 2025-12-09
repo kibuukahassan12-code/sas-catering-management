@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · User Management</p>
+        <h1>Assign Roles to Users</h1>
+        <p class="muted">Assign roles to users to control their access permissions.</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a class="btn-primary" href="{{ url_for('admin.users_add') }}">+ Add User</a>
+        <a class="btn-secondary" href="{{ url_for('admin.roles_list') }}">Manage Roles</a>
+        <a class="btn-secondary" href="{{ url_for('admin.dashboard') }}">← Admin Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Users & Role Assignments</h3>
+        <span class="badge">{{ users|length }} users</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Current Role</th>
+                    <th>Legacy Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td><strong>{{ user.email }}</strong></td>
+                    <td>
+                        {% if user.role_obj %}
+                            <span class="badge">{{ user.role_obj.name }}</span>
+                        {% else %}
+                            <span class="muted">No role assigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge" style="background: var(--muted);">{{ user.role.value if user.role else '—' }}</span>
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('admin.assign_user_role', user_id=user.id) }}" style="display: inline-flex; gap: 0.5rem; align-items: center;">
+                            <select name="role_id" class="form-control" style="width: auto; min-width: 150px;">
+                                <option value="">— No Role —</option>
+                                {% for role in roles %}
+                                <option value="{{ role.id }}" {% if user.role_id == role.id %}selected{% endif %}>
+                                    {{ role.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn-ghost btn-sm">Assign</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No users found.</p>
+                        <a href="{{ url_for('admin.users_add') }}" class="btn-primary" style="margin-top: 1rem;">Add First User</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Role Summary</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
+        {% for role in roles %}
+        <div style="border: 1px solid var(--border); border-radius: 8px; padding: 1rem; text-align: center;">
+            <h4 style="margin: 0 0 0.5rem 0;">{{ role.name }}</h4>
+            <p class="muted" style="font-size: 0.875rem; margin: 0 0 0.5rem 0;">{{ role.description or '—' }}</p>
+            <span class="badge">
+                {% set user_count = role.users|length if role.users else 0 %}
+                {{ user_count }} user{{ 's' if user_count != 1 else '' }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
+

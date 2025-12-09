@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>New Delivery QC Checklist</h1>
+        <p class="muted">Complete quality control checklist for food delivery.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.delivery_qc_list') }}">← Back to QC Checklists</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <h3>Delivery Information</h3>
+        
+        <label class="form-control">
+            <span>Event *</span>
+            <select name="event_id" required>
+                <option value="">-- Select Event --</option>
+                {% for event in events %}
+                <option value="{{ event.id }}">{{ event.event_name }} - {{ event.event_date.strftime('%Y-%m-%d') }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Delivery Date</span>
+            <input type="date" name="delivery_date" value="{{ checklist.delivery_date.strftime('%Y-%m-%d') if checklist else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Delivery Time</span>
+            <input type="time" name="delivery_time" value="{{ checklist.delivery_time.strftime('%H:%M') if checklist and checklist.delivery_time else '' }}">
+        </label>
+
+        <h3>Quality Checks</h3>
+
+        <label class="form-control">
+            <span>Temperature Check</span>
+            <input type="text" name="temperature_check" placeholder="e.g., Hot: 65°C, Cold: 4°C" value="{{ checklist.temperature_check if checklist else '' }}">
+        </label>
+
+        <label class="form-control">
+            <span>Packaging Integrity</span>
+            <select name="packaging_integrity" required>
+                <option value="Good" {% if checklist and checklist.packaging_integrity == 'Good' %}selected{% endif %}>Good</option>
+                <option value="Damaged" {% if checklist and checklist.packaging_integrity == 'Damaged' %}selected{% endif %}>Damaged</option>
+                <option value="Poor" {% if checklist and checklist.packaging_integrity == 'Poor' %}selected{% endif %}>Poor</option>
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Presentation</span>
+            <select name="presentation" required>
+                <option value="Excellent" {% if checklist and checklist.presentation == 'Excellent' %}selected{% endif %}>Excellent</option>
+                <option value="Good" {% if checklist and checklist.presentation == 'Good' %}selected{% endif %}>Good</option>
+                <option value="Acceptable" {% if checklist and checklist.presentation == 'Acceptable' %}selected{% endif %}>Acceptable</option>
+                <option value="Poor" {% if checklist and checklist.presentation == 'Poor' %}selected{% endif %}>Poor</option>
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Quantity Verified</span>
+            <input type="checkbox" name="quantity_verified" {% if checklist and checklist.quantity_verified %}checked{% endif %}>
+        </label>
+
+        <label class="form-control">
+            <span>Customer Satisfaction</span>
+            <select name="customer_satisfaction">
+                <option value="">-- Not Recorded --</option>
+                <option value="Excellent" {% if checklist and checklist.customer_satisfaction == 'Excellent' %}selected{% endif %}>Excellent</option>
+                <option value="Good" {% if checklist and checklist.customer_satisfaction == 'Good' %}selected{% endif %}>Good</option>
+                <option value="Fair" {% if checklist and checklist.customer_satisfaction == 'Fair' %}selected{% endif %}>Fair</option>
+                <option value="Poor" {% if checklist and checklist.customer_satisfaction == 'Poor' %}selected{% endif %}>Poor</option>
+            </select>
+        </label>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Issues Found</span>
+            <textarea name="issues" rows="3" placeholder="Any issues or concerns identified">{{ checklist.issues if checklist else '' }}</textarea>
+        </label>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Notes</span>
+            <textarea name="notes" rows="3" placeholder="Additional notes">{{ checklist.notes if checklist else '' }}</textarea>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save QC Checklist</button>
+            <a class="btn-ghost" href="{{ url_for('production.delivery_qc_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

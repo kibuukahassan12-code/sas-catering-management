@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Contract Editor</p>
+        <h1>{% if contract %}Edit{% else %}Create{% endif %} Contract</h1>
+        <p class="muted">Event: {{ event.event_name }} • Client: {{ client.name }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('contracts.dashboard') }}">← Cancel</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Use Template</h3>
+    </div>
+    {% if templates %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        {% for template in templates %}
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer;" onclick="loadTemplate({{ template.id }})">
+            <strong>{{ template.name }}</strong>
+            {% if template.is_default %}<span class="badge">Default</span>{% endif %}
+            {% if template.description %}
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: rgba(255,255,255,0.7);">{{ template.description[:100] }}...</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</section>
+
+<section class="panel">
+    <form method="POST" {% if contract %}action="{{ url_for('contracts.contract_edit', contract_id=contract.id) }}"{% else %}action="{{ url_for('contracts.contract_new', event_id=event.id) }}"{% endif %}>
+        {% if templates %}
+        <input type="hidden" name="template_id" id="template_id" value="">
+        {% endif %}
+        <div class="form-grid">
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Contract Body (HTML) *</span>
+                <textarea name="contract_body" rows="20" id="contract_body" required style="font-family: monospace; font-size: 0.9rem;">{{ contract.contract_body if contract else 'Enter contract content here. Use placeholders: {client_name}, {event_name}, {event_date}, {venue}, {package_name}, {today}' }}</textarea>
+            </label>
+            {% if contract %}
+            <label class="form-control">
+                <span>Status</span>
+                <select name="status">
+                    <option value="draft" {% if contract.status == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="sent" {% if contract.status == 'sent' %}selected{% endif %}>Sent</option>
+                    <option value="signed" {% if contract.status == 'signed' %}selected{% endif %}>Signed</option>
+                    <option value="expired" {% if contract.status == 'expired' %}selected{% endif %}>Expired</option>
+                </select>
+            </label>
+            {% endif %}
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn-primary">{% if contract %}Update{% else %}Create{% endif %} Contract</button>
+                <a class="btn-ghost" href="{{ url_for('contracts.dashboard') }}">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<script>
+function loadTemplate(templateId) {
+    fetch(`/contracts/api/template/${templateId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('template_id').value = templateId;
+                document.getElementById('contract_body').value = data.template.body;
+            }
+        })
+        .catch(error => {
+            console.error('Error loading template:', error);
+            alert('Error loading template');
+        });
+}
+</script>
+{% endblock %}
+

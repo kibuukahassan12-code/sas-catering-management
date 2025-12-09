@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Enterprise Integrations</p>
+        <h1>Integration Dashboard</h1>
+        <p class="muted">Manage and test external service integrations.</p>
+    </div>
+</section>
+
+<div class="panel">
+    <div class="panel-header">
+        <h3>Integration Status</h3>
+    </div>
+    
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+        <!-- Payments -->
+        <div class="card">
+            <h4>💳 Payment Processors</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.payments.stripe else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.payments.stripe else 'Mock Mode' }}
+                    </span>
+                    Stripe
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.payments.flutterwave else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.payments.flutterwave else 'Mock Mode' }}
+                    </span>
+                    Flutterwave
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.payments.paystack else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.payments.paystack else 'Mock Mode' }}
+                    </span>
+                    Paystack
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.payments.mtnmomo else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.payments.mtnmomo else 'Mock Mode' }}
+                    </span>
+                    MTN MoMo
+                </li>
+            </ul>
+            <button class="btn-primary btn-sm" onclick="testPayment()">Test Payment</button>
+        </div>
+        
+        <!-- Communications -->
+        <div class="card">
+            <h4>📱 Communications</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.communications.whatsapp_twilio else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.communications.whatsapp_twilio else 'Mock Mode' }}
+                    </span>
+                    WhatsApp (Twilio)
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.communications.africastalking else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.communications.africastalking else 'Mock Mode' }}
+                    </span>
+                    Africa's Talking
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.communications.sendgrid else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.communications.sendgrid else 'Mock Mode' }}
+                    </span>
+                    SendGrid Email
+                </li>
+            </ul>
+            <button class="btn-primary btn-sm" onclick="testCommunication()">Test Message</button>
+        </div>
+        
+        <!-- Accounting -->
+        <div class="card">
+            <h4>📊 Accounting</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.accounting.quickbooks else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.accounting.quickbooks else 'Mock Mode' }}
+                    </span>
+                    QuickBooks
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.accounting.xero else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.accounting.xero else 'Mock Mode' }}
+                    </span>
+                    Xero
+                </li>
+            </ul>
+            <button class="btn-primary btn-sm" onclick="testAccounting()">Test Sync</button>
+        </div>
+        
+        <!-- Storage -->
+        <div class="card">
+            <h4>☁️ Storage</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.storage.s3 else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.storage.s3 else 'Mock Mode' }}
+                    </span>
+                    AWS S3
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <span class="badge {{ 'badge-success' if status.storage.cloudinary else 'badge-secondary' }}">
+                        {{ '✓ Enabled' if status.storage.cloudinary else 'Mock Mode' }}
+                    </span>
+                    Cloudinary
+                </li>
+            </ul>
+            <button class="btn-primary btn-sm" onclick="testStorage()">Test Upload</button>
+        </div>
+    </div>
+</div>
+
+{% if status.mock_mode %}
+<div class="alert alert-warning" style="margin-top: 1.5rem;">
+    <strong>Mock Mode Active:</strong> All integrations are running in mock mode. 
+    Configure API keys in <code>.env</code> to enable real integrations.
+</div>
+{% endif %}
+
+<script>
+function testPayment() {
+    fetch('/integrations/payments/test', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({provider: 'stripe', amount: 10.0, currency: 'USD'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.success ? 'Payment test successful!' : 'Payment test failed: ' + data.error);
+    });
+}
+
+function testCommunication() {
+    const to = prompt('Enter recipient (phone/email):');
+    if (!to) return;
+    
+    fetch('/integrations/comms/test', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({channel: 'whatsapp', to: to, message: 'Test message from SAS ERP'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.success ? 'Message sent!' : 'Failed: ' + data.error);
+    });
+}
+
+function testAccounting() {
+    fetch('/integrations/accounting/test', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({provider: 'quickbooks'})
+    })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.success ? 'Accounting sync test successful!' : 'Failed: ' + data.error);
+    });
+}
+
+function testStorage() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.onchange = (e) => {
+        const formData = new FormData();
+        formData.append('file', e.target.files[0]);
+        formData.append('provider', 's3');
+        
+        fetch('/integrations/storage/upload-test', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            alert(data.success ? 'File uploaded! URL: ' + data.url : 'Failed: ' + data.error);
+        });
+    };
+    input.click();
+}
+</script>
+{% endblock %}
+

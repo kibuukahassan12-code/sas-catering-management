@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+.mobile-dashboard {
+    max-width: 100%;
+    padding: 1rem;
+}
+.mobile-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>
+
+<div class="mobile-dashboard">
+    <h1 style="font-size: 1.5em; margin-bottom: 1rem;">Staff Portal</h1>
+    
+    <div class="mobile-card">
+        <h3>My Tasks</h3>
+        {% if user_tasks %}
+        <ul>
+            {% for task in user_tasks %}
+            <li>{{ task.title }}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="muted">No tasks assigned</p>
+        {% endif %}
+    </div>
+    
+    <div class="mobile-card">
+        <button onclick="clockIn()" class="btn-primary" style="width: 100%; margin-bottom: 0.5rem;">Clock In</button>
+        <button onclick="clockOut()" class="btn-secondary" style="width: 100%;">Clock Out</button>
+    </div>
+</div>
+
+<script>
+function clockIn() {
+    fetch('/mobile/attendance/clock', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'clock_in'})
+    }).then(r => r.json()).then(data => alert(data.success ? 'Clocked in!' : 'Error'));
+}
+
+function clockOut() {
+    fetch('/mobile/attendance/clock', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({action: 'clock_out'})
+    }).then(r => r.json()).then(data => alert(data.success ? 'Clocked out!' : 'Error'));
+}
+</script>
+{% endblock %}
+

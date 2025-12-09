@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Hygiene Report - {{ report.report_date.strftime('%Y-%m-%d') }}</h1>
+        <p class="muted">Area: {{ report.area }} | Rating: <span class="badge">{{ report.overall_rating }}</span></p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.hygiene_reports_list') }}">← Back to Reports</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Report Information</h3>
+    </div>
+    <div class="form-grid">
+        <div>
+            <strong>Date:</strong>
+            <p>{{ report.report_date.strftime('%Y-%m-%d') }}</p>
+        </div>
+        <div>
+            <strong>Time:</strong>
+            <p>{{ report.report_time.strftime('%H:%M') if report.report_time else 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Area:</strong>
+            <p>{{ report.area }}</p>
+        </div>
+        <div>
+            <strong>Overall Rating:</strong>
+            <p><span class="badge">{{ report.overall_rating or (report.rating or 'N/A') }}</span></p>
+        </div>
+        <div>
+            <strong>Status:</strong>
+            <p><span class="badge">{{ report.status }}</span></p>
+        </div>
+        <div>
+            <strong>Event:</strong>
+            <p>{{ report.event.event_name if report.event_id and report.event else 'General' }}</p>
+        </div>
+        <div>
+            <strong>Inspected By:</strong>
+            <p>{{ report.inspector.email if report.inspected_by and report.inspector else (report.creator.email if report.created_by and report.creator else 'N/A') }}</p>
+        </div>
+        {% if report.follow_up_date %}
+        <div>
+            <strong>Follow-up Date:</strong>
+            <p>{{ report.follow_up_date.strftime('%Y-%m-%d') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Checklist Items</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>{{ item.name }}</td>
+                    <td>
+                        {% if item.checked %}
+                        <span class="badge success">✓ Checked</span>
+                        {% else %}
+                        <span class="badge">Not Checked</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" class="text-center muted">No checklist items</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+{% if report.issues_found %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Issues Found</h3>
+    </div>
+    <p>{{ report.issues_found }}</p>
+</section>
+{% endif %}
+
+{% if report.corrective_actions %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Corrective Actions</h3>
+    </div>
+    <p>{{ report.corrective_actions }}</p>
+</section>
+{% endif %}
+{% endblock %}
+
+
+
+

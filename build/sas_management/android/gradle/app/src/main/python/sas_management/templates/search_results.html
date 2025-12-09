@@ -1,0 +1,1145 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Search Results</p>
+        <h1>Search: "{{ query }}"</h1>
+        <p class="muted">{{ total }} result{{ 's' if total != 1 else '' }} found</p>
+    </div>
+    <div class="quick-links">
+        <form action="{{ url_for('search.search') }}" method="GET" style="display: flex; gap: 0.5rem; align-items: center;">
+            <input type="search" name="q" value="{{ query }}" placeholder="Search again..." style="padding: 0.5rem 1rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 4px; min-width: 300px; background: rgba(0, 0, 0, 0.4); color: var(--text);">
+            <button type="submit" class="btn-primary">Search</button>
+        </form>
+    </div>
+</section>
+
+{% if error %}
+<div class="panel" style="background: rgba(242, 104, 34, 0.2); border-color: var(--brand); border-left: 4px solid var(--brand);">
+    <p style="color: var(--brand); margin: 0;">⚠️ {{ error }}</p>
+</div>
+{% endif %}
+
+{% if total == 0 and query %}
+<div class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">
+        No results found for "{{ query }}".<br>
+        Try different keywords or check your spelling.
+    </p>
+</div>
+{% elif not query %}
+<div class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">
+        Enter a search term to find clients, events, items, invoices, employees, and more.
+    </p>
+</div>
+{% else %}
+
+<!-- Results Summary -->
+<div class="panel" style="background: rgba(255, 255, 255, 0.02); margin-bottom: 1rem;">
+    <div style="display: flex; flex-wrap: wrap; gap: 1rem; padding: 1rem;">
+        {% for category, count in counts.items() %}
+        {% if count > 0 %}
+        <span style="padding: 0.25rem 0.75rem; background: rgba(242, 104, 34, 0.15); border: 1px solid rgba(242, 104, 34, 0.3); border-radius: 12px; font-size: 0.875rem; color: var(--text);">
+            <strong style="color: var(--accent);">{{ count }}</strong> {{ category.replace('_', ' ').title() }}
+        </span>
+        {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Search Results by Category -->
+{% if results.clients and results.clients|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>👤 Clients ({{ counts.clients }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact Person</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.clients %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.contact_person }}</td>
+                    <td>{{ item.email }}</td>
+                    <td>{{ item.phone }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.events and results.events|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📅 Events ({{ counts.events }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Client</th>
+                    <th>Date</th>
+                    <th>Venue</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.events %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.client_name or '—' }}</td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td>{{ item.venue or '—' }}</td>
+                    <td><span class="badge badge-{{ item.status.lower() }}">{{ item.status }}</span></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.leads and results.leads|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🎯 Leads ({{ counts.leads }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Contact Name</th>
+                    <th>Company</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Stage</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.leads %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.company or '—' }}</td>
+                    <td>{{ item.email or '—' }}</td>
+                    <td>{{ item.phone or '—' }}</td>
+                    <td><span class="badge">{{ item.stage }}</span></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.invoices and results.invoices|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🧾 Invoices ({{ counts.invoices }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Invoice #</th>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.invoices %}
+                <tr>
+                    <td><strong>{{ item.invoice_number }}</strong></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.total) }}</td>
+                    <td><span class="badge badge-{{ item.status.lower() }}">{{ item.status }}</span></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.receipts and results.receipts|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>💰 Receipts ({{ counts.receipts }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Receipt #</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.receipts %}
+                <tr>
+                    <td><strong>{{ item.reference }}</strong></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.amount) }}</td>
+                    <td>{{ item.method or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.payments and results.payments|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>💳 Payments ({{ counts.payments }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.payments %}
+                <tr>
+                    <td><strong>{{ item.reference }}</strong></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.amount) }}</td>
+                    <td>{{ item.method or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.transactions and results.transactions|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>💵 Transactions ({{ counts.transactions }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.transactions %}
+                <tr>
+                    <td><strong>{{ item.description }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.amount) }}</td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.inventory and results.inventory|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📦 Inventory Items ({{ counts.inventory }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>SKU</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.inventory %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ item.sku or '—' }}</td>
+                    <td>{{ item.stock_count }}</td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.bakery and results.bakery|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🍰 Bakery Items ({{ counts.bakery }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.bakery %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.selling_price) }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.catering and results.catering|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🍽️ Catering Items ({{ counts.catering }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.catering %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.ingredients and results.ingredients|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🥘 Ingredients ({{ counts.ingredients }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Stock</th>
+                    <th>Unit</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.ingredients %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.stock_count }} {{ item.unit }}</td>
+                    <td>{{ item.unit }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.recipes and results.recipes|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📝 Recipes ({{ counts.recipes }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Servings</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.recipes %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ item.base_servings or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.production_orders and results.production_orders|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🏭 Production Orders ({{ counts.production_orders }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.production_orders %}
+                <tr>
+                    <td><strong>{{ item.reference }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.pos_orders and results.pos_orders|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🖥️ POS Orders ({{ counts.pos_orders }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.pos_orders %}
+                <tr>
+                    <td><strong>{{ item.order_number }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.total) }}</td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.pos_products and results.pos_products|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🛒 POS Products ({{ counts.pos_products }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.pos_products %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.price) }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.hire_orders and results.hire_orders|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🚚 Hire Orders ({{ counts.hire_orders }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.hire_orders %}
+                <tr>
+                    <td><strong>{{ item.reference }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.maintenance and results.maintenance|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🔧 Maintenance Records ({{ counts.maintenance }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Scheduled Date</th>
+                    <th>Technician</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.maintenance %}
+                <tr>
+                    <td><strong>{{ item.type }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ item.scheduled_date or '—' }}</td>
+                    <td>{{ item.technician or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.employees and results.employees|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>👔 Employees ({{ counts.employees }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Employee #</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.employees %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.employee_number or '—' }}</td>
+                    <td>{{ item.department or '—' }}</td>
+                    <td>{{ item.position or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.users and results.users|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>👤 System Users ({{ counts.users }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.users %}
+                <tr>
+                    <td><strong>{{ item.email }}</strong></td>
+                    <td><span class="badge">{{ item.role }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.departments and results.departments|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🏢 Departments ({{ counts.departments }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.departments %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.description or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.tasks and results.tasks|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>✅ Tasks ({{ counts.tasks }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Due Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.tasks %}
+                <tr>
+                    <td><strong>{{ item.title }}</strong></td>
+                    <td><span class="badge badge-{{ item.status.lower().replace(' ', '-') }}">{{ item.status }}</span></td>
+                    <td>{{ item.due_date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.staff_tasks and results.staff_tasks|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📋 Staff Tasks ({{ counts.staff_tasks }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.staff_tasks %}
+                <tr>
+                    <td><strong>{{ item.title }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.announcements and results.announcements|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📢 Announcements ({{ counts.announcements }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.announcements %}
+                <tr>
+                    <td><strong>{{ item.title }}</strong></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.suppliers and results.suppliers|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🏪 Suppliers ({{ counts.suppliers }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Rating</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.suppliers %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.contact or '—' }}</td>
+                    <td>{{ item.email or '—' }}</td>
+                    <td>{{ item.phone or '—' }}</td>
+                    <td>{{ "%.1f"|format(item.rating) }}/5</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.purchase_orders and results.purchase_orders|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📝 Purchase Orders ({{ counts.purchase_orders }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>PO Number</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.purchase_orders %}
+                <tr>
+                    <td><strong>{{ item.po_number }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.total) }}</td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.proposals and results.proposals|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📄 Proposals ({{ counts.proposals }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.proposals %}
+                <tr>
+                    <td><strong>{{ item.title }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.total) }}</td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.vehicles and results.vehicles|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🚚 Vehicles ({{ counts.vehicles }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Registration</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.vehicles %}
+                <tr>
+                    <td><strong>{{ item.reg_no }}</strong></td>
+                    <td>{{ item.type or '—' }}</td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.incidents and results.incidents|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>⚠️ Incidents ({{ counts.incidents }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Severity</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.incidents %}
+                <tr>
+                    <td><strong>{{ item.type }}</strong></td>
+                    <td><span class="badge badge-{{ item.severity }}">{{ item.severity }}</span></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.temperature_logs and results.temperature_logs|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🌡️ Temperature Logs ({{ counts.temperature_logs }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Temperature</th>
+                    <th>Location</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.temperature_logs %}
+                <tr>
+                    <td><strong>{{ item.item }}</strong></td>
+                    <td>{{ "%.1f"|format(item.temperature) }}°C</td>
+                    <td>{{ item.location or '—' }}</td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.contracts and results.contracts|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📜 Contracts ({{ counts.contracts }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Contract #</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.contracts %}
+                <tr>
+                    <td><strong>#{{ item.id }}</strong></td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.menu_items and results.menu_items|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>🍴 Menu Items ({{ counts.menu_items }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.menu_items %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.price) }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.courses and results.courses|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📚 Courses ({{ counts.courses }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Difficulty</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.courses %}
+                <tr>
+                    <td><strong>{{ item.title }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td>{{ item.difficulty or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.audit_logs and results.audit_logs|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📝 Audit Logs ({{ counts.audit_logs }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Action</th>
+                    <th>Table</th>
+                    <th>User</th>
+                    <th>Timestamp</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.audit_logs %}
+                <tr>
+                    <td><strong>{{ item.action }}</strong></td>
+                    <td>{{ item.table_name or '—' }}</td>
+                    <td>{{ item.user or '—' }}</td>
+                    <td>{{ item.timestamp or '—' }}</td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if results.quotations and results.quotations|length > 0 %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>📋 Quotations ({{ counts.quotations }})</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in results.quotations %}
+                <tr>
+                    <td><strong>{{ item.reference }}</strong></td>
+                    <td>{{ item.date or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.total) }}</td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td><a href="{{ item.url }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% endif %}
+
+<script>
+function performQuickSearch(query) {
+    if (!query || query.length < 2) {
+        document.getElementById('search-suggestions').innerHTML = '';
+        document.getElementById('search-suggestions').style.display = 'none';
+        return;
+    }
+    
+    fetch(`/search/api/quick?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            const suggestionsDiv = document.getElementById('search-suggestions');
+            if (!data.success || !data.results || data.results.length === 0) {
+                suggestionsDiv.innerHTML = '<div style="padding: 1rem; color: rgba(255, 255, 255, 0.6); text-align: center;">No suggestions found</div>';
+                suggestionsDiv.style.display = 'block';
+                return;
+            }
+            
+            let html = '<div style="padding: 0.5rem;">';
+            data.results.forEach(item => {
+                html += `
+                    <a href="${item.url}" style="display: flex; align-items: center; padding: 0.75rem; border-radius: 4px; text-decoration: none; color: var(--text); transition: background 0.2s;" onmouseover="this.style.background='rgba(242, 104, 34, 0.1)'" onmouseout="this.style.background='transparent'">
+                        <span style="margin-right: 0.75rem; font-size: 1.2rem;">${item.icon}</span>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 500;">${item.text}</div>
+                            ${item.subtext ? `<div style="font-size: 0.875rem; color: rgba(255, 255, 255, 0.6);">${item.subtext}</div>` : ''}
+                            <div style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); text-transform: capitalize;">${item.type}</div>
+                        </div>
+                    </a>
+                `;
+            });
+            html += '</div>';
+            suggestionsDiv.innerHTML = html;
+            suggestionsDiv.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            document.getElementById('search-suggestions').innerHTML = '<div style="padding: 1rem; color: rgba(255, 255, 255, 0.6); text-align: center;">Unable to load suggestions</div>';
+        });
+}
+</script>
+{% endblock %}

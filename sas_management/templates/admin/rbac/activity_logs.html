@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · RBAC</p>
+        <h1>Activity Logs</h1>
+        <p class="muted">View system activity and user actions.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('rbac.roles_list') }}">← Back to Roles</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Activity Logs</h3>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>IP Address</th>
+                    <th>URL</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else '—' }}</td>
+                    <td>
+                        {% if log.user %}
+                            {{ log.user.email }}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ log.action or '—' }}</td>
+                    <td>{{ log.ip_address or '—' }}</td>
+                    <td><small>{{ log.url or '—' }}</small></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No activity logs found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination %}
+    <div style="padding: 1rem; display: flex; justify-content: center; gap: 1rem;">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}" class="btn-secondary">← Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}" class="btn-secondary">Next →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Delivery QC Checklist - {{ checklist.delivery_date.strftime('%Y-%m-%d') }}</h1>
+        <p class="muted">Event: {{ checklist.event.event_name if checklist.event_id and checklist.event else 'N/A' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.delivery_qc_list') }}">← Back to QC Checklists</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Delivery Information</h3>
+    </div>
+    <div class="form-grid">
+        <div>
+            <strong>Event:</strong>
+            <p>{{ checklist.event.event_name if checklist.event_id and checklist.event else 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Delivery Date:</strong>
+            <p>{{ checklist.delivery_date.strftime('%Y-%m-%d') if checklist.delivery_date else 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Delivery Time:</strong>
+            <p>{{ checklist.delivery_time.strftime('%H:%M') if checklist.delivery_time else 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Checked By:</strong>
+            <p>{{ checklist.checker.email if checklist.checked_by and checklist.checker else (checklist.creator.email if checklist.created_by and checklist.creator else 'N/A') }}</p>
+        </div>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quality Checks</h3>
+    </div>
+    <div class="form-grid">
+        <div>
+            <strong>Temperature Check:</strong>
+            <p>{{ checklist.temperature_check or 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Packaging Integrity:</strong>
+            <p><span class="badge">{{ checklist.packaging_integrity or 'N/A' }}</span></p>
+        </div>
+        <div>
+            <strong>Presentation:</strong>
+            <p><span class="badge">{{ checklist.presentation or 'N/A' }}</span></p>
+        </div>
+        <div>
+            <strong>Quantity Verified:</strong>
+            <p>{% if checklist.quantity_verified %}✓ Yes{% else %}✗ No{% endif %}</p>
+        </div>
+        <div>
+            <strong>Customer Satisfaction:</strong>
+            <p>{{ checklist.customer_satisfaction or 'Not Recorded' }}</p>
+        </div>
+    </div>
+    
+    {% if checklist.issues %}
+    <div style="margin-top: 1rem;">
+        <strong>Issues Found:</strong>
+        <p>{{ checklist.issues }}</p>
+    </div>
+    {% endif %}
+    
+    {% if checklist.notes %}
+    <div style="margin-top: 1rem;">
+        <strong>Notes:</strong>
+        <p>{{ checklist.notes }}</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+
+
+

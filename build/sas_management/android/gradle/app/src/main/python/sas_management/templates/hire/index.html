@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow" style="color: var(--accent);">Hire Department</p>
+        <h1 style="background: linear-gradient(120deg, var(--brand), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">Equipment Hire Overview</h1>
+        <p class="muted">Monitor active orders, protect stock levels, and keep the field teams in sync.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hire.inventory_add') }}" style="background: linear-gradient(120deg, var(--brand), var(--accent)); color: #000; border: none;">+ Add Inventory</a>
+        <a class="btn-secondary" href="{{ url_for('hire.create_hire_order') }}">+ New Hire Order</a>
+    </div>
+</section>
+
+<section class="panel" style="background: rgba(17, 17, 17, 0.9); border: 1px solid rgba(255, 255, 255, 0.08); border-left: 4px solid var(--accent);">
+    <div class="panel-header" style="border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+        <h3 style="color: var(--accent);">Hire Snapshot</h3>
+        <span class="badge" style="background: linear-gradient(135deg, #F26822 0%, #F6BC38 100%); color: #000;">Live overview</span>
+    </div>
+    <div class="summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; padding: 1.5rem;">
+        <article class="summary-card" style="background: rgba(17, 17, 17, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 4px solid var(--accent); padding: 1.5rem; border-radius: 8px; transition: all 0.3s ease;">
+            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem; margin-bottom: 0.5rem;">Total Inventory SKUs</p>
+            <h2 style="color: var(--accent); font-size: 2rem; margin: 0; font-weight: 700;">{{ summary.total_inventory_items or 0 }}</h2>
+        </article>
+        <article class="summary-card" style="background: rgba(17, 17, 17, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 4px solid var(--brand); padding: 1.5rem; border-radius: 8px; transition: all 0.3s ease;">
+            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem; margin-bottom: 0.5rem;">Units Available</p>
+            <h2 style="color: var(--brand); font-size: 2rem; margin: 0; font-weight: 700;">{{ summary.total_available_units or 0 }}</h2>
+        </article>
+        <article class="summary-card" style="background: rgba(17, 17, 17, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 4px solid var(--accent); padding: 1.5rem; border-radius: 8px; transition: all 0.3s ease;">
+            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem; margin-bottom: 0.5rem;">Active Orders</p>
+            <h2 style="color: var(--accent); font-size: 2rem; margin: 0; font-weight: 700;">{{ summary.active_orders or 0 }}</h2>
+        </article>
+        <article class="summary-card" style="background: rgba(17, 17, 17, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-left: 4px solid var(--brand); padding: 1.5rem; border-radius: 8px; transition: all 0.3s ease;">
+            <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem; margin-bottom: 0.5rem;">Order Value</p>
+            <h2 style="color: var(--brand); font-size: 2rem; margin: 0; font-weight: 700;">{{ CURRENCY }}{{ "{:,.2f}".format(summary.orders_value or 0) }}</h2>
+        </article>
+    </div>
+</section>
+
+<section class="panel hire-activity" style="background: rgba(17, 17, 17, 0.9); border: 1px solid rgba(255, 255, 255, 0.08); border-left: 4px solid var(--accent);">
+    <div class="panel-header" style="border-bottom: 2px solid rgba(255, 255, 255, 0.1);">
+        <h3 style="color: var(--accent);">Operational Watchlist</h3>
+        <span class="badge" style="background: linear-gradient(135deg, #F26822 0%, #F6BC38 100%); color: #000;">Orders & Inventory</span>
+    </div>
+    <div class="hire-activity-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; padding: 1.5rem;">
+        <div class="activity-column" style="background: rgba(17, 17, 17, 0.5); padding: 1.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h4 style="color: var(--accent); margin-bottom: 1rem; font-size: 1.125rem;">Active Hire Orders</h4>
+            <ul class="activity-list" style="list-style: none; padding: 0; margin: 0 0 1rem 0;">
+                {% for order in active_orders %}
+                <li style="padding: 1rem; margin-bottom: 0.75rem; background: rgba(17, 17, 17, 0.5); border-radius: 6px; border-left: 3px solid var(--accent); display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: var(--text); display: block; margin-bottom: 0.25rem;">{{ order.client.name if order.client else 'N/A' }}</strong>
+                        <p class="muted" style="color: rgba(255, 255, 255, 0.6); font-size: 0.875rem; margin: 0;">
+                            {{ order.event.event_name if order.event else 'N/A' }} · {{ order.start_date.strftime('%b %d') if order.start_date else 'N/A' }} – {{ order.end_date.strftime('%b %d') if order.end_date else 'N/A' }}
+                        </p>
+                    </div>
+                    <div class="status-pill" style="background: rgba(246, 188, 56, 0.2); color: var(--accent); padding: 0.375rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
+                        {{ order.items|length if order.items else 0 }} items · {{ CURRENCY }}{{ "{:,.0f}".format(order.total_cost or 0) }}
+                    </div>
+                </li>
+                {% else %}
+                <li class="empty-state" style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.5);">No active orders in this window.</li>
+                {% endfor %}
+            </ul>
+            <a class="btn-ghost" href="{{ url_for('hire.orders_list') }}" style="color: var(--accent); border-color: rgba(246, 188, 56, 0.4);">View all orders →</a>
+        </div>
+        <div class="activity-column" style="background: rgba(17, 17, 17, 0.5); padding: 1.5rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+            <h4 style="color: var(--accent); margin-bottom: 1rem; font-size: 1.125rem;">Low Inventory Alerts</h4>
+            <ul class="activity-list" style="list-style: none; padding: 0; margin: 0 0 1rem 0;">
+                {% for item in low_inventory %}
+                <li style="padding: 1rem; margin-bottom: 0.75rem; background: rgba(17, 17, 17, 0.5); border-radius: 6px; border-left: 3px solid #ff5c5c; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: var(--text); display: block; margin-bottom: 0.25rem;">{{ item.name }}</strong>
+                        <p class="muted" style="color: rgba(255, 255, 255, 0.6); font-size: 0.875rem; margin: 0;">Status · {{ item.status or 'N/A' }}</p>
+                    </div>
+                    <div class="status-pill warning" style="background: rgba(255, 92, 92, 0.2); color: #ff5c5c; padding: 0.375rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
+                        {{ item.stock_count or 0 }} in stock
+                    </div>
+                </li>
+                {% else %}
+                <li class="empty-state" style="padding: 2rem; text-align: center; color: rgba(255, 255, 255, 0.5);">All inventory looks healthy.</li>
+                {% endfor %}
+            </ul>
+            <a class="btn-ghost" href="{{ url_for('hire.inventory_list') }}" style="color: var(--accent); border-color: rgba(246, 188, 56, 0.4);">Review inventory →</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

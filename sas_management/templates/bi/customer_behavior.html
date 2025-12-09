@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence</p>
+        <h1>Customer Behavior Analytics</h1>
+        <p class="muted">Analyze customer purchase patterns, frequency, and lifetime value.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('bi.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Analyze Customer -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Analyze Customer</h3>
+    </div>
+    <form id="analyze-form" style="display: flex; gap: 1rem; align-items: end;">
+        <div style="flex: 1;">
+            <label>Customer ID</label>
+            <input type="number" name="customer_id" placeholder="Enter client ID" required>
+        </div>
+        <div>
+            <button type="submit" class="btn-primary">Analyze Customer</button>
+        </div>
+    </form>
+</section>
+
+<!-- Customer Behavior Summary -->
+{% if behaviors_by_customer %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Customer Behavior Metrics</h3>
+        <span class="badge">{{ total_records }} metrics</span>
+    </div>
+    {% for customer_id, behaviors in behaviors_by_customer.items() %}
+    <div style="margin-bottom: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+        <h4>Customer #{{ customer_id }}</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            {% for behavior in behaviors %}
+            <div style="padding: 1rem; background: white; border-radius: 4px;">
+                <strong>{{ behavior.metric|replace('_', ' ')|title }}</strong>
+                <p style="font-size: 1.5rem; margin: 0.5rem 0; color: #2d5016;">
+                    {% if behavior.metric == 'frequency' %}
+                        {{ "{:.2f}".format(behavior.value) }}/month
+                    {% elif behavior.metric in ['aov', 'ltv'] %}
+                        {{ CURRENCY }}{{ "{:,.0f}".format(behavior.value) }}
+                    {% elif behavior.metric == 'churn_risk' %}
+                        {{ "{:.0%}".format(behavior.value) }}
+                    {% else %}
+                        {{ "{:,.2f}".format(behavior.value) }}
+                    {% endif %}
+                </p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</section>
+{% endif %}
+
+<!-- Behavior Chart -->
+{% if behaviors_by_customer %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Customer Segmentation</h3>
+    </div>
+    <div style="padding: 2rem;">
+        <canvas id="behaviorChart" style="max-height: 400px;"></canvas>
+    </div>
+</section>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.getElementById('analyze-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const customerId = parseInt(this.querySelector('input[name="customer_id"]').value);
+    
+    fetch('/bi/api/customer-behavior/analyze', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({customer_id: customerId})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Analysis complete!\nFrequency: ${data.frequency}/month\nAOV: ${data.aov}\nLTV: ${data.ltv}\nChurn Risk: ${(data.churn_risk * 100).toFixed(0)}%`);
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error analyzing customer');
+    });
+});
+</script>
+{% endblock %}
+

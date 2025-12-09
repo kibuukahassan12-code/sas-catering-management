@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Production Order: {{ order.reference }}</h1>
+        <p class="muted">View production details and generate production sheet.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('production.index') }}">← Back to Production</a>
+        <button onclick="window.print()" class="btn-primary">Print Production Sheet</button>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Order Information</h3>
+        <span class="badge badge-{{ order.status.lower().replace(' ', '-') }}">{{ order.status }}</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Reference</p>
+            <h2>{{ order.reference }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Event</p>
+            <h2>{{ order.event.event_name if order.event else 'Standalone' }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Portions</p>
+            <h2>{{ order.total_portions }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Cost</p>
+            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(order.total_cost) }}</h2>
+        </article>
+    </div>
+    
+    <div class="form-grid" style="margin-top: 1.5rem;">
+        <div class="form-control">
+            <span><strong>Scheduled Prep:</strong></span>
+            <p>{{ order.scheduled_prep.strftime('%B %d, %Y at %H:%M') if order.scheduled_prep else 'Not scheduled' }}</p>
+        </div>
+        {% if order.scheduled_cook %}
+        <div class="form-control">
+            <span><strong>Scheduled Cook:</strong></span>
+            <p>{{ order.scheduled_cook.strftime('%B %d, %Y at %H:%M') }}</p>
+        </div>
+        {% endif %}
+        {% if order.scheduled_pack %}
+        <div class="form-control">
+            <span><strong>Scheduled Pack:</strong></span>
+            <p>{{ order.scheduled_pack.strftime('%B %d, %Y at %H:%M') }}</p>
+        </div>
+        {% endif %}
+        {% if order.scheduled_load %}
+        <div class="form-control">
+            <span><strong>Scheduled Load:</strong></span>
+            <p>{{ order.scheduled_load.strftime('%B %d, %Y at %H:%M') }}</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="panel production-sheet" id="production-sheet">
+    <div class="panel-header">
+        <h3>Production Sheet</h3>
+        <img src="{{ url_for('static', filename='images/sas_logo.png') }}" alt="SAS Best Foods" class="production-logo" onerror="this.style.display='none';" style="max-width: 200px; height: auto;">
+    </div>
+    
+    {% if sheet_data.order.event_name %}
+    <div class="sheet-header">
+        <h4>Event: {{ sheet_data.order.event_name }}</h4>
+    </div>
+    {% endif %}
+    
+    <div class="sheet-section">
+        <h4>Recipes & Ingredients</h4>
+        {% for item in sheet_data.line_items %}
+        <div class="recipe-block">
+            <h5>{{ item.recipe_name }} ({{ item.portions }} portions)</h5>
+            <p class="muted">Prep: {{ item.prep_time }} mins | Cook: {{ item.cook_time }} mins</p>
+            <ul class="ingredient-list">
+                {% for ing in item.ingredients %}
+                <li>{{ ing.name }}: {{ ing.quantity }} {{ ing.unit }}</li>
+                {% endfor %}
+            </ul>
+            <span class="badge badge-{{ item.status.lower() }}">{{ item.status }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="sheet-section">
+        <h4>Total Shopping List</h4>
+        <ul class="ingredient-list">
+            {% for item in sheet_data.shopping_list %}
+            <li><strong>{{ item.name }}:</strong> {{ item.quantity }} {{ item.unit }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="sheet-section">
+        <h4>Cost Summary</h4>
+        <p><strong>Total COGS:</strong> {{ CURRENCY }}{{ "{:,.2f}".format(sheet_data.total_cogs) }}</p>
+    </div>
+    
+    {% if sheet_data.order.assigned_team %}
+    <div class="sheet-section">
+        <h4>Assigned Team</h4>
+        <p>{{ sheet_data.order.assigned_team }}</p>
+    </div>
+    {% endif %}
+    
+    {% if sheet_data.order.notes %}
+    <div class="sheet-section">
+        <h4>Notes</h4>
+        <p>{{ sheet_data.order.notes }}</p>
+    </div>
+    {% endif %}
+</section>
+
+<style>
+.production-sheet {
+    background: white;
+    color: #333;
+}
+
+@media print {
+    .page-header, .quick-links, .panel-header button {
+        display: none;
+    }
+    
+    .production-sheet {
+        page-break-inside: avoid;
+    }
+    
+    .recipe-block {
+        page-break-inside: avoid;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #eee;
+    }
+}
+
+.recipe-block {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background: #f9f9f9;
+    border-radius: 0.5rem;
+}
+
+.ingredient-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.ingredient-list li {
+    padding: 0.25rem 0;
+}
+</style>
+{% endblock %}
+

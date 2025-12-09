@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>
+            {% if checklist.title %}
+                {{ checklist.title }}
+            {% else %}
+                Kitchen Checklist
+            {% endif %}
+        </h1>
+        <p class="muted">
+            <span class="badge status-badge status-{{ checklist.status|lower|replace(' ', '-') }}" 
+                  style="padding: 0.4rem 0.8rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 0.5rem;">
+                {{ checklist.status or 'Pending' }}
+            </span>
+            Created on {{ checklist.checklist_date.strftime('%B %d, %Y') if checklist.checklist_date else 'N/A' }}
+        </p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a class="btn-secondary" href="{{ url_for('production.kitchen_checklist_list') }}">← Back to Checklists</a>
+    </div>
+</section>
+
+<!-- Checklist Overview -->
+<section class="panel" style="margin-bottom: 1.5rem;">
+    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="color: #2c3e50; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; margin: 0;">
+            Checklist Overview
+        </h3>
+    </div>
+    
+    <div class="info-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+        <div class="info-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Date</div>
+            <div style="font-size: 1.5rem; font-weight: bold;">
+                {{ checklist.checklist_date.strftime('%B %d, %Y') if checklist.checklist_date else 'N/A' }}
+            </div>
+        </div>
+        
+        <div class="info-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Event</div>
+            <div style="font-size: 1.5rem; font-weight: bold;">
+                {{ checklist.event.event_name if checklist.event_id and checklist.event else 'Daily Checklist' }}
+            </div>
+        </div>
+        
+        <div class="info-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Checked By</div>
+            <div style="font-size: 1.5rem; font-weight: bold;">
+                {{ checklist.checker.email if checklist.checked_by and checklist.checker else (checklist.creator.email if checklist.created_by and checklist.creator else 'N/A') }}
+            </div>
+        </div>
+        
+        {% if checklist.checklist_type %}
+        <div class="info-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Type</div>
+            <div style="font-size: 1.5rem; font-weight: bold;">
+                {{ checklist.checklist_type }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if checklist.completed_at %}
+    <div style="margin-top: 1.5rem; padding: 1rem; background: #d4edda; border-left: 4px solid #28a745; border-radius: 6px; color: #155724;">
+        <strong>✓ Completed:</strong> {{ checklist.completed_at.strftime('%Y-%m-%d at %H:%M') }}
+    </div>
+    {% endif %}
+</section>
+
+<!-- Checklist Items -->
+<section class="panel" style="margin-bottom: 1.5rem;">
+    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3 style="color: #2c3e50; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; margin: 0;">
+            Checklist Items
+            <span class="badge" style="background: var(--accent); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; margin-left: 0.5rem; font-size: 0.85rem;">
+                {{ items|length }} items
+            </span>
+        </h3>
+    </div>
+    
+    {% if items %}
+    <div class="items-list" style="display: flex; flex-direction: column; gap: 1rem;">
+        {% for item in items %}
+        <div class="item-card" style="background: white; border: 2px solid {% if item.status == 'Checked' %}#28a745{% elif item.status == 'Issue' %}#dc3545{% else %}#e9ecef{% endif %}; border-radius: 8px; padding: 1.25rem; transition: all 0.3s ease;">
+            <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: center;">
+                <div style="width: 40px; height: 40px; border-radius: 50%; background: {% if item.status == 'Checked' %}#28a745{% elif item.status == 'Issue' %}#dc3545{% else %}#ffc107{% endif %}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; font-weight: bold;">
+                    {% if item.status == 'Checked' %}✓{% elif item.status == 'Issue' %}!{% else %}○{% endif %}
+                </div>
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 0.5rem 0; color: #2c3e50; font-size: 1.1rem;">
+                        {{ item.name }}
+                    </h4>
+                    {% if item.note %}
+                    <p style="margin: 0; color: #6c757d; font-size: 0.9rem;">
+                        {{ item.note }}
+                    </p>
+                    {% endif %}
+                </div>
+                <span class="status-badge status-{{ item.status|lower }}" 
+                      style="padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                    {{ item.status }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Progress Summary -->
+    <div style="margin-top: 2rem; padding: 1.5rem; background: #f8f9fa; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <strong style="color: #2c3e50;">Progress Summary</strong>
+            <span style="color: #6c757d; font-size: 0.9rem;">
+                {{ items|selectattr('status', 'equalto', 'Checked')|list|length }} of {{ items|length }} completed
+            </span>
+        </div>
+        <div style="width: 100%; height: 12px; background: #e9ecef; border-radius: 6px; overflow: hidden;">
+            {% set checked_count = items|selectattr('status', 'equalto', 'Checked')|list|length %}
+            {% set total_count = items|length %}
+            {% set progress_percent = (checked_count / total_count * 100) if total_count > 0 else 0 %}
+            <div style="width: {{ progress_percent }}%; height: 100%; background: linear-gradient(90deg, #28a745, #20c997); transition: width 0.5s ease;"></div>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state" style="text-align: center; padding: 3rem; color: #6c757d;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📝</div>
+        <h3 style="color: #2c3e50; margin-bottom: 0.5rem;">No Items in This Checklist</h3>
+        <p>This checklist doesn't have any items yet.</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Notes Section -->
+{% if checklist.notes %}
+<section class="panel">
+    <div class="panel-header" style="margin-bottom: 1rem;">
+        <h3 style="color: #2c3e50; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; margin: 0;">
+            Additional Notes
+        </h3>
+    </div>
+    <div style="padding: 1.5rem; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--accent);">
+        <p style="margin: 0; color: #2c3e50; line-height: 1.6; white-space: pre-wrap;">{{ checklist.notes }}</p>
+    </div>
+</section>
+{% endif %}
+
+<style>
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-checked {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.status-issue {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.item-card:hover {
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.info-card {
+    transition: transform 0.3s ease;
+}
+
+.info-card:hover {
+    transform: translateY(-4px);
+}
+
+@media (max-width: 768px) {
+    .info-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+{% endblock %}

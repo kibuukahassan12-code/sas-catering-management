@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+{% set CURRENCY = CURRENCY or 'UGX ' %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow" style="color: var(--accent);">Catering · Recipe Builder</p>
+        <h1 style="background: linear-gradient(120deg, var(--brand), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">Recipe: {{ item.name }}</h1>
+        <p class="muted">Link ingredients to this menu item. COGS will be calculated automatically.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('catering.menu_list') }}">← Back to Menu</a>
+</section>
+
+<section class="panel">
+    <div style="margin-bottom: 2rem;">
+        <h3>Current Recipe</h3>
+        {% if existing_recipe %}
+        <table class="responsive-table" style="margin-top: 1rem;">
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Quantity Required</th>
+                    <th>Unit Cost</th>
+                    <th>Line Cost</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ing_id, qty in existing_recipe.items() %}
+                    {% set ingredient = ingredients|selectattr('id', 'equalto', ing_id)|first %}
+                    {% if ingredient %}
+                    <tr>
+                        <td>{{ ingredient.name }}</td>
+                        <td>{{ "{:,.2f}".format(qty) }} {{ ingredient.unit_of_measure or 'unit' }}</td>
+                        <td>{{ CURRENCY }}{{ "{:,.2f}".format(ingredient.unit_cost_ugx or 0) }}</td>
+                        <td>{{ CURRENCY }}{{ "{:,.2f}".format((ingredient.unit_cost_ugx or 0) * qty) }}</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="muted">No recipe defined yet. Add ingredients below.</p>
+        {% endif %}
+    </div>
+
+    <form method="post" id="recipe-form">
+        <div id="ingredient-rows">
+            {% if existing_recipe %}
+                {% for ing_id, qty in existing_recipe.items() %}
+                    {% set ingredient = ingredients|selectattr('id', 'equalto', ing_id)|first %}
+                    {% if ingredient %}
+                    <div class="recipe-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: end;">
+                        <label class="form-control">
+                            <span>Ingredient</span>
+                            <select name="ingredient_id[]" class="ingredient-select">
+                                <option value="">Select Ingredient</option>
+                                {% for ing in ingredients %}
+                                <option value="{{ ing.id }}" {% if ing.id == ing_id %}selected{% endif %}>{{ ing.name }} ({{ ing.unit_of_measure }})</option>
+                                {% endfor %}
+                            </select>
+                        </label>
+                        <label class="form-control">
+                            <span>Quantity Required</span>
+                            <input type="number" name="quantity[]" min="0" step="0.01" value="{{ qty }}" class="quantity-input">
+                        </label>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+            <div class="recipe-row" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem; align-items: end;">
+                <label class="form-control">
+                    <span>Ingredient</span>
+                    <select name="ingredient_id[]" class="ingredient-select">
+                        <option value="">Select Ingredient</option>
+                        {% for ingredient in ingredients %}
+                        <option value="{{ ingredient.id }}">{{ ingredient.name }} ({{ ingredient.unit_of_measure }})</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="form-control">
+                    <span>Quantity Required</span>
+                    <input type="number" name="quantity[]" min="0" step="0.01" value="0" class="quantity-input">
+                </label>
+            </div>
+        </div>
+        <button type="button" class="btn-secondary" onclick="addIngredientRow()" style="margin-bottom: 1rem;">+ Add Another Ingredient</button>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Recipe</button>
+            <a class="btn-ghost" href="{{ url_for('catering.menu_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<script>
+function addIngredientRow() {
+    const container = document.getElementById('ingredient-rows');
+    const firstRow = container.querySelector('.recipe-row');
+    const newRow = firstRow.cloneNode(true);
+    newRow.querySelector('.ingredient-select').value = '';
+    newRow.querySelector('.quantity-input').value = '0';
+    container.appendChild(newRow);
+}
+</script>
+{% endblock %}
+

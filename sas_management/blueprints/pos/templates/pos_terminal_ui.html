@@ -1,0 +1,1103 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="pos-terminal-container">
+    <div class="pos-header-bar">
+        <div class="pos-header-left">
+            <h1>POS Terminal: {{ device.name }}</h1>
+            <p class="device-location">{{ device.location or 'No location set' }}</p>
+        </div>
+        <div class="pos-header-right">
+            {% if open_shift %}
+            <div class="shift-status">
+                <span class="badge badge-success">Shift Open</span>
+                <span class="shift-time">Started: {{ open_shift.started_at.strftime('%H:%M') }}</span>
+                <span class="shift-cash">Cash: {{ CURRENCY }}{{ "{:,.2f}".format(open_shift.starting_cash) }}</span>
+            </div>
+            <button id="close-shift-btn" class="btn-secondary btn-sm">Close Shift</button>
+            {% else %}
+            <button id="start-shift-btn" class="btn-primary">Start Shift</button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="pos-main-layout">
+        <!-- Left: Products Panel -->
+        <div class="pos-products-panel">
+            <div class="products-header">
+                <h3>Products</h3>
+                <div class="products-controls">
+                    <input type="text" id="product-search" placeholder="Search products..." class="search-input">
+                    <select id="category-filter" class="category-select">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+            </div>
+            <div class="product-grid" id="product-grid">
+                <div class="loading">Loading products...</div>
+            </div>
+        </div>
+        
+        <!-- Right: Cart & Checkout Panel -->
+        <div class="pos-cart-panel">
+            <div class="cart-header">
+                <h3>Order Cart</h3>
+                <button id="clear-cart-btn" class="btn-light btn-sm">Clear</button>
+            </div>
+            
+            <div class="cart-items-container" id="cart-items">
+                <div class="empty-cart">Cart is empty</div>
+            </div>
+            
+            <div class="cart-summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="cart-subtotal">{{ CURRENCY }}0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax (18%):</span>
+                    <span id="cart-tax">{{ CURRENCY }}0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Discount:</span>
+                    <span id="cart-discount">{{ CURRENCY }}0.00</span>
+                </div>
+                <div class="summary-row total-row">
+                    <span>Total:</span>
+                    <span id="cart-total">{{ CURRENCY }}0.00</span>
+                </div>
+            </div>
+            
+            <div class="discount-section">
+                <label>Discount Code:</label>
+                <div class="discount-input-group">
+                    <input type="text" id="discount-code" placeholder="Enter code" class="discount-input">
+                    <button id="apply-discount-btn" class="btn-secondary btn-sm">Apply</button>
+                </div>
+            </div>
+            
+            <div class="checkout-section">
+                <button id="checkout-btn" class="btn-primary btn-large" disabled>Checkout</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Modal -->
+    <div id="payment-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Process Payment</h2>
+                <button class="modal-close" onclick="closePaymentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-amount">
+                    <h3>Total Amount</h3>
+                    <p class="amount-display" id="payment-total">{{ CURRENCY }}0.00</p>
+                </div>
+                
+                <div class="payment-methods">
+                    <h4>Payment Method</h4>
+                    <div class="method-buttons">
+                        <button class="method-btn active" data-method="cash" onclick="selectPaymentMethod('cash')">
+                            💵 Cash
+                        </button>
+                        <button class="method-btn" data-method="mobile_money" onclick="selectPaymentMethod('mobile_money')">
+                            📱 Mobile Money
+                        </button>
+                        <button class="method-btn" data-method="pos" onclick="selectPaymentMethod('pos')">
+                            💳 POS/Card
+                        </button>
+                        <button class="method-btn" data-method="bank_transfer" onclick="selectPaymentMethod('bank_transfer')">
+                            🏦 Bank Transfer
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="payment-details" id="payment-details">
+                    <div class="form-group">
+                        <label>Amount Received:</label>
+                        <input type="number" id="amount-received" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                    <div class="form-group" id="reference-group" style="display: none;">
+                        <label>Reference Number:</label>
+                        <input type="text" id="payment-reference" placeholder="Enter reference">
+                    </div>
+                    <div class="change-display" id="change-display" style="display: none;">
+                        <strong>Change:</strong> <span id="change-amount">{{ CURRENCY }}0.00</span>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button id="process-payment-btn" class="btn-primary" onclick="processPayment()">Process Payment</button>
+                    <button class="btn-secondary" onclick="closePaymentModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Receipt Modal -->
+    <div id="receipt-modal" class="modal" style="display: none;">
+        <div class="modal-content receipt-modal-content">
+            <div class="modal-header">
+                <h2>Receipt</h2>
+                <button class="modal-close" onclick="closeReceiptModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="receipt-content">
+                <!-- Receipt content will be loaded here -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="printReceipt()">Print Receipt</button>
+                <button class="btn-secondary" onclick="closeReceiptModal()">Close</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.pos-terminal-container {
+    padding: 1rem;
+    background: #0a0a0a;
+    min-height: 100vh;
+}
+
+.pos-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: rgba(17, 17, 17, 0.9);
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pos-header-left h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.device-location {
+    margin: 0.25rem 0 0 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+}
+
+.shift-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-right: 1rem;
+}
+
+.shift-time, .shift-cash {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.pos-main-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+    height: calc(100vh - 200px);
+}
+
+.pos-products-panel {
+    background: rgba(17, 17, 17, 0.9);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+}
+
+.products-header {
+    margin-bottom: 1rem;
+}
+
+.products-controls {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.search-input, .category-select {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+}
+
+.search-input {
+    flex: 1;
+}
+
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.product-card {
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+}
+
+.product-card:hover {
+    background: rgba(242, 104, 34, 0.2);
+    border-color: var(--brand);
+    transform: translateY(-2px);
+}
+
+.product-name {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.product-price {
+    color: var(--brand);
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.product-category {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.pos-cart-panel {
+    background: rgba(17, 17, 17, 0.9);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+}
+
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.cart-items-container {
+    flex: 1;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    min-height: 200px;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.cart-item-info {
+    flex: 1;
+}
+
+.cart-item-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.cart-item-details {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.cart-item-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.qty-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.qty-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.qty-btn:hover {
+    background: var(--brand);
+    border-color: var(--brand);
+}
+
+.qty-value {
+    min-width: 30px;
+    text-align: center;
+}
+
+.cart-item-total {
+    font-weight: 700;
+    color: var(--brand);
+    min-width: 80px;
+    text-align: right;
+}
+
+.cart-summary {
+    padding: 1rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.total-row {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.discount-section {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 0.25rem;
+}
+
+.discount-input-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.discount-input {
+    flex: 1;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+}
+
+.checkout-section {
+    margin-top: auto;
+}
+
+.btn-large {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: rgba(17, 17, 17, 0.95);
+    border-radius: 1rem;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+}
+
+.payment-amount {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.amount-display {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--brand);
+    margin: 0.5rem 0;
+}
+
+.method-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.method-btn {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.method-btn:hover, .method-btn.active {
+    border-color: var(--brand);
+    background: rgba(242, 104, 34, 0.2);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(0, 0, 0, 0.4);
+    color: var(--text);
+}
+
+.change-display {
+    padding: 1rem;
+    background: rgba(46, 204, 113, 0.2);
+    border-radius: 0.25rem;
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+}
+
+.modal-actions button {
+    flex: 1;
+}
+
+.empty-cart {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+</style>
+
+<script>
+// POS Terminal JavaScript
+const CURRENCY = '{{ CURRENCY }}';
+const DEVICE_CODE = '{{ device.terminal_code }}';
+const SHIFT_ID = {{ open_shift.id if open_shift else 'null' }};
+
+let cart = [];
+let products = [];
+let currentOrderId = null;
+let selectedPaymentMethod = 'cash';
+let taxRate = 0.18; // 18% VAT
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    setupEventListeners();
+    updateCartDisplay();
+});
+
+function setupEventListeners() {
+    document.getElementById('product-search').addEventListener('input', filterProducts);
+    document.getElementById('category-filter').addEventListener('change', filterProducts);
+    document.getElementById('clear-cart-btn').addEventListener('click', clearCart);
+    document.getElementById('checkout-btn').addEventListener('click', openPaymentModal);
+    document.getElementById('start-shift-btn')?.addEventListener('click', startShift);
+    document.getElementById('close-shift-btn')?.addEventListener('click', closeShift);
+    document.getElementById('apply-discount-btn').addEventListener('click', applyDiscount);
+    document.getElementById('amount-received').addEventListener('input', calculateChange);
+}
+
+function loadProducts() {
+    const grid = document.getElementById('product-grid');
+    grid.innerHTML = '<div class="loading">Loading products...</div>';
+    
+    fetch('/pos/products')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                products = data.products || [];
+                if (products.length === 0) {
+                    grid.innerHTML = '<div class="loading">No products available. Please add products to the Catering Menu or Bakery Menu.</div>';
+                } else {
+                    renderProducts(products);
+                    updateCategoryFilter();
+                }
+            } else {
+                throw new Error(data.message || 'Failed to load products');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading products:', error);
+            grid.innerHTML = '<div class="loading" style="color: #ff5c5c;">Error loading products: ' + error.message + '</div>';
+            showError('Error loading products: ' + error.message);
+        });
+}
+
+function renderProducts(productsToRender) {
+    const grid = document.getElementById('product-grid');
+    if (productsToRender.length === 0) {
+        grid.innerHTML = '<div class="loading">No products available</div>';
+        return;
+    }
+    
+    grid.innerHTML = productsToRender.map(product => `
+        <div class="product-card" onclick="addToCart(${product.id}, '${escapeHtml(product.name)}', ${product.price}, '${product.type}', '${escapeHtml(product.category)}')">
+            <div class="product-name">${product.name}</div>
+            <div class="product-price">${CURRENCY}${product.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            <div class="product-category">${product.category}</div>
+        </div>
+    `).join('');
+}
+
+function updateCategoryFilter() {
+    const filter = document.getElementById('category-filter');
+    const categories = [...new Set(products.map(p => p.category))];
+    categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        filter.appendChild(option);
+    });
+}
+
+function filterProducts() {
+    const search = document.getElementById('product-search').value.toLowerCase();
+    const category = document.getElementById('category-filter').value;
+    
+    let filtered = products.filter(p => {
+        const matchSearch = p.name.toLowerCase().includes(search);
+        const matchCategory = !category || p.category === category;
+        return matchSearch && matchCategory;
+    });
+    
+    renderProducts(filtered);
+}
+
+function addToCart(productId, productName, price, productType, category) {
+    const existingItem = cart.find(item => item.productId === productId);
+    
+    if (existingItem) {
+        existingItem.qty += 1;
+        existingItem.total = existingItem.qty * existingItem.unitPrice;
+    } else {
+        cart.push({
+            productId: productId,
+            name: productName,
+            unitPrice: price,
+            qty: 1,
+            total: price,
+            type: productType,
+            category: category
+        });
+    }
+    
+    updateCartDisplay();
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    updateCartDisplay();
+}
+
+function updateQuantity(index, change) {
+    cart[index].qty += change;
+    if (cart[index].qty < 1) {
+        removeFromCart(index);
+        return;
+    }
+    cart[index].total = cart[index].qty * cart[index].unitPrice;
+    updateCartDisplay();
+}
+
+function updateCartDisplay() {
+    const container = document.getElementById('cart-items');
+    const checkoutBtn = document.getElementById('checkout-btn');
+    
+    if (cart.length === 0) {
+        container.innerHTML = '<div class="empty-cart">Cart is empty</div>';
+        checkoutBtn.disabled = true;
+    } else {
+        container.innerHTML = cart.map((item, index) => `
+            <div class="cart-item">
+                <div class="cart-item-info">
+                    <div class="cart-item-name">${item.name}</div>
+                    <div class="cart-item-details">${CURRENCY}${item.unitPrice.toLocaleString('en-US', {minimumFractionDigits: 2})} × ${item.qty}</div>
+                </div>
+                <div class="cart-item-controls">
+                    <div class="qty-control">
+                        <button class="qty-btn" onclick="updateQuantity(${index}, -1)">-</button>
+                        <span class="qty-value">${item.qty}</span>
+                        <button class="qty-btn" onclick="updateQuantity(${index}, 1)">+</button>
+                    </div>
+                    <div class="cart-item-total">${CURRENCY}${item.total.toLocaleString('en-US', {minimumFractionDigits: 2})}</div>
+                    <button class="qty-btn" onclick="removeFromCart(${index})" style="margin-left: 0.5rem;">×</button>
+                </div>
+            </div>
+        `).join('');
+        checkoutBtn.disabled = false;
+    }
+    
+    updateCartSummary();
+}
+
+function updateCartSummary() {
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const tax = subtotal * taxRate;
+    const discount = 0; // TODO: Implement discount logic
+    const total = subtotal + tax - discount;
+    
+    document.getElementById('cart-subtotal').textContent = CURRENCY + subtotal.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('cart-tax').textContent = CURRENCY + tax.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('cart-discount').textContent = CURRENCY + discount.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('cart-total').textContent = CURRENCY + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+}
+
+function getCartTotal() {
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const tax = subtotal * taxRate;
+    return subtotal + tax;
+}
+
+function clearCart() {
+    if (confirm('Clear all items from cart?')) {
+        cart = [];
+        updateCartDisplay();
+    }
+}
+
+function openPaymentModal() {
+    if (cart.length === 0) return;
+    
+    const total = getCartTotal();
+    document.getElementById('payment-total').textContent = CURRENCY + total.toLocaleString('en-US', {minimumFractionDigits: 2});
+    document.getElementById('amount-received').value = '';
+    document.getElementById('payment-reference').value = '';
+    document.getElementById('payment-modal').style.display = 'flex';
+    
+    if (selectedPaymentMethod === 'cash') {
+        document.getElementById('amount-received').focus();
+    }
+}
+
+function closePaymentModal() {
+    document.getElementById('payment-modal').style.display = 'none';
+}
+
+function selectPaymentMethod(method) {
+    selectedPaymentMethod = method;
+    document.querySelectorAll('.method-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.method === method) {
+            btn.classList.add('active');
+        }
+    });
+    
+    const refGroup = document.getElementById('reference-group');
+    const amountReceived = document.getElementById('amount-received');
+    
+    if (method === 'cash') {
+        refGroup.style.display = 'none';
+        amountReceived.required = true;
+        amountReceived.focus();
+    } else {
+        refGroup.style.display = 'block';
+        amountReceived.required = false;
+    }
+    
+    calculateChange();
+}
+
+function calculateChange() {
+    if (selectedPaymentMethod !== 'cash') {
+        document.getElementById('change-display').style.display = 'none';
+        return;
+    }
+    
+    const total = getCartTotal();
+    const received = parseFloat(document.getElementById('amount-received').value) || 0;
+    const change = received - total;
+    
+    const changeDisplay = document.getElementById('change-display');
+    const changeAmount = document.getElementById('change-amount');
+    
+    if (received > 0) {
+        changeDisplay.style.display = 'block';
+        changeAmount.textContent = CURRENCY + change.toLocaleString('en-US', {minimumFractionDigits: 2});
+        changeAmount.style.color = change >= 0 ? '#2ecc71' : '#ff5c5c';
+    } else {
+        changeDisplay.style.display = 'none';
+    }
+}
+
+function getCartTotal() {
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const tax = subtotal * taxRate;
+    return subtotal + tax;
+}
+
+function processPayment() {
+    if (cart.length === 0) {
+        showError('Cart is empty');
+        return;
+    }
+    
+    const total = getCartTotal();
+    const amountReceived = parseFloat(document.getElementById('amount-received').value) || 0;
+    const reference = document.getElementById('payment-reference').value || null;
+    
+    if (selectedPaymentMethod === 'cash' && amountReceived < total) {
+        showError('Amount received is less than total');
+        return;
+    }
+    
+    if (selectedPaymentMethod !== 'cash' && !reference) {
+        showError('Please enter reference number');
+        return;
+    }
+    
+    // Create order
+    const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
+    const orderData = {
+        device_code: DEVICE_CODE,
+        shift_id: SHIFT_ID,
+        items: cart.map(item => ({
+            product_id: item.productId,
+            product_name: item.name,
+            qty: item.qty,
+            unit_price: item.unitPrice,
+            line_total: item.total,
+            product_type: item.type
+        })),
+        tax_rate: taxRate * 100,  // Send as percentage (18%)
+        discount_amount: 0
+    };
+    
+    fetch('/pos/api/orders', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(orderData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            currentOrderId = data.order_id;
+            // Process payment
+            return fetch(`/pos/api/orders/${data.order_id}/payments`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    amount: total,
+                    method: selectedPaymentMethod,
+                    ref: reference
+                })
+            });
+        } else {
+            throw new Error(data.message || 'Failed to create order');
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            closePaymentModal();
+            showSuccess('Payment processed successfully!');
+            // Load receipt
+            if (data.receipt_id) {
+                loadReceipt(data.receipt_id);
+            }
+            // Clear cart
+            cart = [];
+            updateCartDisplay();
+        } else {
+            throw new Error(data.message || 'Failed to process payment');
+        }
+    })
+    .catch(error => {
+        console.error('Payment error:', error);
+        showError('Error processing payment: ' + error.message);
+    });
+}
+
+function loadReceipt(receiptId) {
+    fetch(`/pos/api/receipts/${receiptId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                displayReceipt(data.receipt);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading receipt:', error);
+        });
+}
+
+function displayReceipt(receipt) {
+    const content = document.getElementById('receipt-content');
+    content.innerHTML = `
+        <div class="receipt">
+            <div class="receipt-header">
+                <img src="/static/images/sas_logo.png" alt="SAS Best Foods" style="max-width: 150px; margin-bottom: 1rem;" onerror="this.style.display='none';">
+                <h3>SAS Best Foods</h3>
+                <p>For all your Catering Solutions</p>
+            </div>
+            <div class="receipt-body">
+                <p><strong>Receipt #:</strong> ${receipt.receipt_ref}</p>
+                <p><strong>Date:</strong> ${new Date(receipt.issued_at).toLocaleString()}</p>
+                <p><strong>Payment Method:</strong> ${receipt.payment_method}</p>
+                <p><strong>Amount:</strong> ${CURRENCY}${parseFloat(receipt.amount).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+            </div>
+            <div class="receipt-footer">
+                <p>Thank you for your business!</p>
+            </div>
+        </div>
+    `;
+    document.getElementById('receipt-modal').style.display = 'flex';
+}
+
+function closeReceiptModal() {
+    document.getElementById('receipt-modal').style.display = 'none';
+}
+
+function printReceipt() {
+    window.print();
+}
+
+function startShift() {
+    const startingCash = prompt('Enter starting cash amount:', '0.00');
+    if (startingCash === null) return;
+    
+    const cashAmount = parseFloat(startingCash);
+    if (isNaN(cashAmount) || cashAmount < 0) {
+        showError('Please enter a valid cash amount (0 or greater)');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('start-shift-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Starting...';
+    }
+    
+    fetch('/pos/api/shifts/start', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            device_code: DEVICE_CODE,
+            starting_cash: cashAmount
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            showSuccess('Shift started successfully!');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            throw new Error(data.message || 'Failed to start shift');
+        }
+    })
+    .catch(error => {
+        console.error('Error starting shift:', error);
+        showError('Error starting shift: ' + error.message);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Start Shift';
+        }
+    });
+}
+
+function closeShift() {
+    if (!confirm('Close current shift? This will generate a Z-report.')) return;
+    
+    const endingCash = prompt('Enter ending cash amount:', '0.00');
+    if (endingCash === null) return;
+    
+    const cashAmount = parseFloat(endingCash);
+    if (isNaN(cashAmount) || cashAmount < 0) {
+        showError('Please enter a valid cash amount (0 or greater)');
+        return;
+    }
+    
+    if (!SHIFT_ID) {
+        showError('No active shift found');
+        return;
+    }
+    
+    // Show loading state
+    const btn = document.getElementById('close-shift-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Closing...';
+    }
+    
+    fetch(`/pos/api/shifts/${SHIFT_ID}/close`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            ending_cash: cashAmount
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            showSuccess('Shift closed successfully!');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            throw new Error(data.message || 'Failed to close shift');
+        }
+    })
+    .catch(error => {
+        console.error('Error closing shift:', error);
+        showError('Error closing shift: ' + error.message);
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Close Shift';
+        }
+    });
+}
+
+function applyDiscount() {
+    const code = document.getElementById('discount-code').value;
+    if (!code) {
+        showError('Please enter a discount code');
+        return;
+    }
+    // TODO: Implement discount logic
+    showError('Discount feature coming soon');
+}
+
+function showError(message) {
+    // Create a better error notification
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'notification error';
+    errorDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ff5c5c; color: white; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 10000; max-width: 400px;';
+    errorDiv.innerHTML = `<strong>Error:</strong> ${message}`;
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+        errorDiv.style.opacity = '0';
+        errorDiv.style.transition = 'opacity 0.3s';
+        setTimeout(() => errorDiv.remove(), 300);
+    }, 5000);
+    
+    console.error('POS Error:', message);
+}
+
+function showSuccess(message) {
+    // Create a better success notification
+    const successDiv = document.createElement('div');
+    successDiv.className = 'notification success';
+    successDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #2ecc71; color: white; padding: 1rem 1.5rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 10000; max-width: 400px;';
+    successDiv.innerHTML = `<strong>Success:</strong> ${message}`;
+    document.body.appendChild(successDiv);
+    
+    setTimeout(() => {
+        successDiv.style.opacity = '0';
+        successDiv.style.transition = 'opacity 0.3s';
+        setTimeout(() => successDiv.remove(), 300);
+    }, 3000);
+    
+    console.log('POS Success:', message);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+</script>
+{% endblock %}
+
+{% endblock %}

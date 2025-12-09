@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Menu Builder</p>
+        <h1>Menu Engineering Dashboard</h1>
+        <p class="muted">Build menus, calculate margins, and create catering packages.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('menu_builder.menu_new') }}">+ New Menu Item</a>
+        <a class="btn-secondary" href="{{ url_for('menu_builder.menu_list') }}">View All Items</a>
+    </div>
+</section>
+
+<!-- KPIs -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Menu Statistics</h3>
+        <span class="badge">Live data</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Menu Items</p>
+            <h2>{{ total_items }}</h2>
+            <small class="muted">Active & inactive</small>
+        </article>
+        <article class="summary-card">
+            <p>Menu Packages</p>
+            <h2>{{ total_packages }}</h2>
+            <small class="muted">Available packages</small>
+        </article>
+        <article class="summary-card">
+            <p>Categories</p>
+            <h2>{{ total_categories }}</h2>
+            <small class="muted">Menu categories</small>
+        </article>
+        <article class="summary-card">
+            <p>Avg Margin %</p>
+            <h2>{{ avg_margin }}%</h2>
+            <small class="muted">Average profit margin</small>
+        </article>
+    </div>
+</section>
+
+<!-- Recent Items -->
+{% if recent_items %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Menu Items</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('menu_builder.menu_list') }}">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Cost</th>
+                    <th>Price</th>
+                    <th>Margin %</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in recent_items %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category.name if item.category else '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.cost_per_portion) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.selling_price) }}</td>
+                    <td>
+                        <span class="badge {% if item.margin_percent > 50 %}success{% elif item.margin_percent > 30 %}warning{% else %}danger{% endif %}">
+                            {{ item.margin_percent }}%
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('menu_builder.menu_view', item_id=item.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Recent Packages -->
+{% if recent_packages %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Menu Packages</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('menu_builder.package_new') }}">+ New Package</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Package Name</th>
+                    <th>Category</th>
+                    <th>Total Price</th>
+                    <th>Margin %</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for package in recent_packages %}
+                <tr>
+                    <td><strong>{{ package.name }}</strong></td>
+                    <td>{{ package.category or '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(package.total_price) }}</td>
+                    <td>
+                        <span class="badge {% if package.margin_percent > 50 %}success{% elif package.margin_percent > 30 %}warning{% else %}danger{% endif %}">
+                            {{ package.margin_percent or 0 }}%
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('menu_builder.package_view', package_id=package.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

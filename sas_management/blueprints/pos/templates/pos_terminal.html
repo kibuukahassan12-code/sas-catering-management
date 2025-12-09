@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Point of Sale</p>
+        <h1>POS Terminal Launcher</h1>
+        <p class="muted">Select a device and start your shift to begin processing sales.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Available Devices</h3>
+    </div>
+    {% if devices %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Device Name</th>
+                    <th>Terminal Code</th>
+                    <th>Location</th>
+                    <th>Last Seen</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for device in devices %}
+                <tr>
+                    <td><strong>{{ device.name }}</strong></td>
+                    <td><code>{{ device.terminal_code }}</code></td>
+                    <td>{{ device.location or 'N/A' }}</td>
+                    <td>{{ device.last_seen.strftime('%Y-%m-%d %H:%M') if device.last_seen else 'Never' }}</td>
+                    <td>
+                        <a href="{{ url_for('pos.terminal', device_code=device.terminal_code) }}" class="btn-primary btn-sm">Open Terminal</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted">No active POS devices registered. Contact administrator to register a device.</p>
+    {% endif %}
+</section>
+
+{% if open_shifts %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Your Open Shifts</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Shift ID</th>
+                    <th>Started At</th>
+                    <th>Starting Cash</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for shift in open_shifts %}
+                <tr>
+                    <td>#{{ shift.id }}</td>
+                    <td>{{ shift.started_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(shift.starting_cash) }}</td>
+                    <td><span class="badge badge-success">{{ shift.status }}</span></td>
+                    <td>
+                        {% if shift.device %}
+                        <a href="{{ url_for('pos.terminal', device_code=shift.device.terminal_code) }}" class="btn-secondary btn-sm">Continue</a>
+                        {% else %}
+                        <span class="muted">No device</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

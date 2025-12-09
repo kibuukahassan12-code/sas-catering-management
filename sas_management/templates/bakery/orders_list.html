@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Bakery</p>
+        <h1>Bakery Orders</h1>
+        <p class="muted">Manage all bakery orders and track their status.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('bakery.orders_new') }}">+ New Order</a>
+</section>
+
+<!-- Status Filter -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Filter by Status</h3>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('bakery.orders_list') }}" class="btn-ghost {% if not status_filter %}active{% endif %}">All</a>
+        <a href="{{ url_for('bakery.orders_list', status='Draft') }}" class="btn-ghost {% if status_filter == 'Draft' %}active{% endif %}">Draft</a>
+        <a href="{{ url_for('bakery.orders_list', status='Confirmed') }}" class="btn-ghost {% if status_filter == 'Confirmed' %}active{% endif %}">Confirmed</a>
+        <a href="{{ url_for('bakery.orders_list', status='In Production') }}" class="btn-ghost {% if status_filter == 'In Production' %}active{% endif %}">In Production</a>
+        <a href="{{ url_for('bakery.orders_list', status='Ready') }}" class="btn-ghost {% if status_filter == 'Ready' %}active{% endif %}">Ready</a>
+        <a href="{{ url_for('bakery.orders_list', status='Completed') }}" class="btn-ghost {% if status_filter == 'Completed' %}active{% endif %}">Completed</a>
+    </div>
+</section>
+
+<!-- Orders Table -->
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th>Items</th>
+                    <th>Amount</th>
+                    <th>Pickup Date</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    <td>
+                        {{ order.customer_name or (order.client.name if order.client else 'Walk-in') }}
+                        {% if order.customer_phone %}
+                        <br><small class="muted">{{ order.customer_phone }}</small>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge">{{ order.order_status }}</span></td>
+                    <td>{{ order.items|length }} item{% if order.items|length != 1 %}s{% endif %}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(order.total_amount) }}</td>
+                    <td>{{ order.pickup_date.strftime('%Y-%m-%d') if order.pickup_date else 'N/A' }}</td>
+                    <td>{{ order.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <a href="{{ url_for('bakery.orders_view', order_id=order.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center muted">No orders found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn-ghost">Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="btn-ghost">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

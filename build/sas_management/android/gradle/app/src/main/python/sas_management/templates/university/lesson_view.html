@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">{{ course.title }}</p>
+        <h1>{{ lesson.title }}</h1>
+        <p class="muted">Lesson {{ lesson.order }} of {{ course.lessons|length if course.lessons else 0 }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('university.course_view_enhanced', course_id=course.id) }}">← Back to Course</a>
+        {% if not lesson_progress or not lesson_progress.completed %}
+        <form method="post" action="{{ url_for('university.mark_lesson_complete', lesson_id=lesson.id) }}" style="display: inline;">
+            <button type="submit" class="btn-primary">Mark as Complete</button>
+        </form>
+        {% else %}
+        <span class="badge success">✓ Completed</span>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Lesson Content -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Lesson Content</h3>
+    </div>
+    
+    {% if lesson.content %}
+    <div style="padding: 1.5rem; background: white; border-radius: 8px; margin-bottom: 1.5rem;">
+        <div style="white-space: pre-wrap; line-height: 1.6;">{{ lesson.content|safe }}</div>
+    </div>
+    {% else %}
+    <div class="empty-state" style="padding: 2rem; text-align: center;">
+        <p>No content available for this lesson.</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Lesson Resources -->
+{% if resources %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Resources</h3>
+        <span class="badge">{{ resources|length }} file(s)</span>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Resource</th>
+                    <th>Type</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for resource in resources %}
+                <tr>
+                    <td>
+                        <strong>{{ resource.display_name or resource.filename or 'Resource' }}</strong>
+                        {% if resource.filename %}
+                        <br><small class="muted">{{ resource.filename }}</small>
+                        {% endif %}
+                    </td>
+                    <td><span class="badge">{{ resource.resource_type }}</span></td>
+                    <td>
+                        {% if resource.resource_type == 'image' %}
+                        <a href="{{ url_for('static', filename=resource.url) }}" target="_blank" class="btn-ghost btn-sm">View Image</a>
+                        {% elif resource.resource_type == 'pdf' or resource.resource_type == 'document' %}
+                        <a href="{{ url_for('static', filename=resource.url) }}" target="_blank" class="btn-ghost btn-sm">View/Download</a>
+                        {% elif resource.resource_type == 'video' %}
+                        <a href="{{ resource.url if resource.url.startswith('http') else url_for('static', filename=resource.url) }}" target="_blank" class="btn-ghost btn-sm">Watch Video</a>
+                        {% elif resource.resource_type == 'link' %}
+                        <a href="{{ resource.url }}" target="_blank" class="btn-ghost btn-sm">Open Link</a>
+                        {% else %}
+                        <a href="{{ url_for('static', filename=resource.url) }}" target="_blank" class="btn-ghost btn-sm">Open</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Quiz Section -->
+{% if quiz %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Lesson Quiz</h3>
+        <span class="badge">Passing Score: {{ quiz.passing_score }}%</span>
+    </div>
+    
+    <div style="padding: 1.5rem;">
+        <p>{{ quiz.description or 'Test your understanding with this quiz.' }}</p>
+        
+        {% if latest_attempt %}
+        <div style="margin: 1rem 0; padding: 1rem; background: {% if latest_attempt.passed %}#d4edda{% else %}#f8d7da{% endif %}; border-radius: 8px;">
+            <strong>Last Attempt:</strong> Score: {{ latest_attempt.score }}% 
+            {% if latest_attempt.passed %}
+            <span class="badge success">✓ Passed</span>
+            {% else %}
+            <span class="badge danger">Failed</span>
+            {% endif %}
+            ({{ latest_attempt.submitted_at.strftime('%Y-%m-%d %H:%M') if latest_attempt.submitted_at else 'N/A' }})
+        </div>
+        {% endif %}
+        
+        <a href="{{ url_for('university.quiz_view', quiz_id=quiz.id) }}" class="btn-primary">Take Quiz</a>
+    </div>
+</section>
+{% endif %}
+
+<!-- Navigation -->
+<section class="panel" style="display: flex; justify-content: space-between; align-items: center; padding: 1rem;">
+    <div>
+        {% if prev_lesson %}
+        <a href="{{ url_for('university.lesson_view', lesson_id=prev_lesson.id) }}" class="btn-secondary">
+            ← Previous: {{ prev_lesson.title }}
+        </a>
+        {% endif %}
+    </div>
+    <div>
+        {% if next_lesson %}
+        <a href="{{ url_for('university.lesson_view', lesson_id=next_lesson.id) }}" class="btn-primary">
+            Next: {{ next_lesson.title }} →
+        </a>
+        {% else %}
+        <span class="badge success">You've completed all lessons!</span>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}
+

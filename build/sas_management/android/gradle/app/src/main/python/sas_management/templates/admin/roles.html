@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Role Management</p>
+        <h1>Roles & Permissions</h1>
+        <p class="muted">Manage user roles and their access permissions.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Back to Dashboard</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>System Roles</h3>
+        <span class="badge">{{ roles|length }} roles</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Role Name</th>
+                    <th>Permissions Count</th>
+                    <th>Users</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for role in roles %}
+                <tr>
+                    <td><strong>{{ role.name }}</strong></td>
+                    <td>
+                        {% set perm_count = role.permissions.values()|select('sameas', True)|list|length if role.permissions else 0 %}
+                        <span class="badge">{{ perm_count }} modules</span>
+                    </td>
+                    <td>
+                        {% set user_count = role.users|length if role.users else 0 %}
+                        {{ user_count }} user{{ 's' if user_count != 1 else '' }}
+                    </td>
+                    <td>{{ role.created_at.strftime('%Y-%m-%d') if role.created_at else '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('admin.role_edit', role_id=role.id) }}" class="btn-ghost btn-sm">Edit Permissions</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No roles found. Run roles_seed.py to create default roles.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>User Management</h3>
+    </div>
+    <div style="padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+        <a href="{{ url_for('admin.users_list') }}" class="btn-primary">Manage Users</a>
+        <a href="{{ url_for('admin_users.users_assign') }}" class="btn-secondary">Assign Roles to Users</a>
+    </div>
+</section>
+{% endblock %}
+

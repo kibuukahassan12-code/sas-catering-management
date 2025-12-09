@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Vendors</p>
+        <h1>{{ event.title }} - Vendor Assignments</h1>
+        <p class="muted">Manage vendor assignments for this event</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) }}">← Back to Event</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Assign Vendor</h3>
+    </div>
+    <form method="POST" action="{{ url_for('events.vendor_assign', event_id=event.id) }}" style="padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+                <label for="vendor_id" style="display: block; margin-bottom: 0.5rem;">Vendor *</label>
+                <select id="vendor_id" name="vendor_id" required class="form-control">
+                    <option value="">Select Vendor</option>
+                    {% for vendor in all_vendors %}
+                    <option value="{{ vendor.id }}">{{ vendor.name }} ({{ vendor.service_type }})</option>
+                    {% endfor %}
+                </select>
+                <small><a href="{{ url_for('events.vendors_manage') }}" target="_blank">Manage Vendors</a></small>
+            </div>
+            <div>
+                <label for="role_in_event" style="display: block; margin-bottom: 0.5rem;">Role in Event</label>
+                <input type="text" id="role_in_event" name="role_in_event" class="form-control" placeholder="e.g., Tent supplier, Decorator">
+            </div>
+            <div>
+                <label for="cost" style="display: block; margin-bottom: 0.5rem;">Cost (UGX)</label>
+                <input type="number" id="cost" name="cost" step="0.01" min="0" class="form-control" placeholder="0.00">
+            </div>
+        </div>
+        <div style="margin-top: 1rem;">
+            <label for="notes" style="display: block; margin-bottom: 0.5rem;">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="2" placeholder="Additional notes..."></textarea>
+        </div>
+        <div style="margin-top: 1rem;">
+            <button type="submit" class="btn-primary">Assign Vendor</button>
+        </div>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Assigned Vendors</h3>
+        <span class="badge">{{ assignments|length }} vendors</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Vendor Name</th>
+                    <th>Service Type</th>
+                    <th>Role in Event</th>
+                    <th>Cost</th>
+                    <th>Contact</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for assignment in assignments %}
+                <tr>
+                    <td><strong>{{ assignment.vendor.name if assignment.vendor else 'Unknown' }}</strong></td>
+                    <td>{{ assignment.vendor.service_type if assignment.vendor else 'N/A' }}</td>
+                    <td>{{ assignment.role_in_event or '—' }}</td>
+                    <td>UGX {{ "{:,.2f}".format(assignment.cost or 0) }}</td>
+                    <td>
+                        {% if assignment.vendor %}
+                        <div>{{ assignment.vendor.phone or 'N/A' }}</div>
+                        <small class="muted">{{ assignment.vendor.email or '' }}</small>
+                        {% else %}
+                        N/A
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('events.vendor_unassign', event_id=event.id, assignment_id=assignment.id) }}" style="display: inline;" onsubmit="return confirm('Remove this vendor assignment?');">
+                            <button type="submit" class="btn-ghost btn-sm" style="color: var(--danger);">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No vendors assigned yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

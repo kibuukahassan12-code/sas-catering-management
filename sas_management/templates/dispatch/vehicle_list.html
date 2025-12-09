@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Vehicle List — Dispatch & Logistics</title>
+
+
+
+    <style>
+
+        body {
+
+            background:#0f0f0f;
+
+            color:#fff;
+
+            font-family:Arial, sans-serif;
+
+            margin:0;
+
+            padding:0;
+
+        }
+
+        .container {
+
+            width:90%;
+
+            margin:auto;
+
+            padding:30px 0;
+
+        }
+
+        h1 {
+
+            color:#F26822;
+
+            margin-bottom:20px;
+
+        }
+
+        table {
+
+            width:100%;
+
+            border-collapse:collapse;
+
+            margin-top:20px;
+
+        }
+
+        th, td {
+
+            padding:14px;
+
+            border-bottom:1px solid #333;
+
+        }
+
+        th { background:#1a1a1a; }
+
+        tr:hover { background:#222; }
+
+
+
+        .badge {
+
+            padding:6px 10px;
+
+            border-radius:6px;
+
+            font-size:12px;
+
+        }
+
+        .active { background:#28a745; color:#fff; }
+
+        .maintenance { background:#ffc107; color:#000; }
+
+        .inactive { background:#dc3545; color:#fff; }
+
+
+
+        .btn {
+
+            background:#F26822;
+
+            color:#fff;
+
+            padding:10px 18px;
+
+            border-radius:8px;
+
+            text-decoration:none;
+
+        }
+
+        .top-row {
+
+            display:flex;
+
+            justify-content:space-between;
+
+            align-items:center;
+
+        }
+
+    </style>
+
+</head>
+
+
+
+<body>
+
+<div class="container">
+
+    <div class="top-row">
+
+        <h1>Fleet Vehicles</h1>
+
+        <a href="{{ url_for('dispatch.dashboard') }}" class="btn">← Back</a>
+
+    </div>
+
+
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>ID</th>
+
+                <th>Vehicle Name</th>
+
+                <th>Type</th>
+
+                <th>Plate Number</th>
+
+                <th>Status</th>
+
+                <th>Capacity</th>
+
+                <th>Last Updated</th>
+
+            </tr>
+
+        </thead>
+
+
+
+        <tbody>
+
+            {% for v in vehicles %}
+
+            <tr>
+
+                <td>{{ v.id }}</td>
+
+                <td>{{ v.name }}</td>
+
+                <td>{{ v.type }}</td>
+
+                <td>{{ v.plate_number }}</td>
+
+                <td>
+
+                    {% if v.status == 'active' %}
+
+                        <span class="badge active">Active</span>
+
+                    {% elif v.status == 'maintenance' %}
+
+                        <span class="badge maintenance">Maintenance</span>
+
+                    {% else %}
+
+                        <span class="badge inactive">Inactive</span>
+
+                    {% endif %}
+
+                </td>
+
+                <td>{{ v.capacity }} kg</td>
+
+                <td>{{ v.updated_at.strftime('%Y-%m-%d %H:%M') if v.updated_at else (v.created_at.strftime('%Y-%m-%d %H:%M') if v.created_at else 'N/A') }}</td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+</body>
+
+</html>
+

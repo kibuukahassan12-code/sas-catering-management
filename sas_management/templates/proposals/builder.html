@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .proposal-builder {
+        background: #0f0f0f;
+        min-height: 100vh;
+        padding: 0;
+    }
+    .builder-header {
+        background: linear-gradient(135deg, #1a1a1a 0%, #0f0f0f 100%);
+        border-bottom: 1px solid #333;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+    .builder-header h1 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #fff;
+    }
+    .builder-header .info {
+        color: #aaa;
+        font-size: 0.9rem;
+        margin-top: 0.25rem;
+    }
+    .builder-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+    .builder-toolbar {
+        background: #1a1a1a;
+        border-bottom: 1px solid #333;
+        padding: 1rem 2rem;
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .toolbar-btn {
+        padding: 0.6rem 1.2rem;
+        background: #2a2a2a;
+        border: 1px solid #333;
+        color: #fff;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+    .toolbar-btn:hover {
+        background: #F26822;
+        border-color: #F26822;
+    }
+    .builder-content {
+        display: flex;
+        height: calc(100vh - 180px);
+    }
+    .blocks-panel {
+        width: 280px;
+        background: #1a1a1a;
+        border-right: 1px solid #333;
+        padding: 1.5rem;
+        overflow-y: auto;
+    }
+    .blocks-panel h3 {
+        color: #fff;
+        font-size: 1rem;
+        margin: 0 0 1rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 600;
+    }
+    .block-type {
+        background: #2a2a2a;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        cursor: move;
+        transition: all 0.2s;
+    }
+    .block-type:hover {
+        background: #333;
+        border-color: #F26822;
+        transform: translateX(4px);
+    }
+    .block-type-icon {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .block-type-title {
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+    }
+    .block-type-desc {
+        color: #aaa;
+        font-size: 0.8rem;
+    }
+    .editor-area {
+        flex: 1;
+        padding: 2rem;
+        overflow-y: auto;
+        background: #0f0f0f;
+    }
+    .proposal-block {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        position: relative;
+        transition: all 0.2s;
+    }
+    .proposal-block:hover {
+        border-color: #444;
+    }
+    .proposal-block.selected {
+        border-color: #F26822;
+        box-shadow: 0 0 0 2px rgba(242, 104, 34, 0.2);
+    }
+    .block-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .block-type-badge {
+        background: #F26822;
+        color: #fff;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .block-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    .block-action-btn {
+        background: transparent;
+        border: 1px solid #444;
+        color: #aaa;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.2s;
+    }
+    .block-action-btn:hover {
+        background: #2a2a2a;
+        color: #fff;
+    }
+    .block-action-btn.delete:hover {
+        background: #c0392b;
+        border-color: #c0392b;
+        color: #fff;
+    }
+    .block-content {
+        color: #fff;
+    }
+    .block-content textarea,
+    .block-content input {
+        width: 100%;
+        padding: 0.75rem;
+        background: #0f0f0f;
+        border: 1px solid #333;
+        border-radius: 6px;
+        color: #fff;
+        font-family: inherit;
+        font-size: 0.95rem;
+    }
+    .block-content textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+    .block-content input[type="number"] {
+        width: 150px;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: #666;
+    }
+    .empty-state-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    .empty-state h3 {
+        color: #aaa;
+        margin-bottom: 0.5rem;
+    }
+    .save-status {
+        position: fixed;
+        bottom: 1.5rem;
+        right: 2rem;
+        background: #1a1a1a;
+        border: 1px solid #333;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        color: #aaa;
+        font-size: 0.9rem;
+        display: none;
+        z-index: 1000;
+    }
+    .save-status.saving {
+        display: block;
+        color: #FFBD4A;
+    }
+    .save-status.saved {
+        display: block;
+        color: #28a745;
+    }
+    .pricing-row {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    .pricing-row input {
+        flex: 1;
+    }
+    .total-display {
+        background: linear-gradient(135deg, #F26822 0%, #e55a1a 100%);
+        color: #fff;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-top: 2rem;
+        text-align: center;
+    }
+    .total-display-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        margin-bottom: 0.5rem;
+    }
+    .total-display-amount {
+        font-size: 2rem;
+        font-weight: 700;
+    }
+</style>
+
+<div class="proposal-builder">
+    <div class="builder-header">
+    <div>
+            <h1>{{ proposal.proposal_number }}</h1>
+            <div class="info">
+                {{ proposal.client.name }}{% if event %} · {{ event.event_name }}{% endif %}
+            </div>
+        </div>
+        <div class="builder-actions">
+            <button onclick="saveProposal()" class="btn-primary">Save Proposal</button>
+            <button onclick="generatePDF()" class="btn-secondary">Generate PDF</button>
+            <a href="{{ url_for('proposals.proposal_list') }}" class="btn-secondary">← Back</a>
+        </div>
+    </div>
+
+    <div class="builder-toolbar">
+        <button class="toolbar-btn" onclick="addBlock('text')">📝 Add Text</button>
+        <button class="toolbar-btn" onclick="addBlock('heading')">📋 Add Heading</button>
+        <button class="toolbar-btn" onclick="addBlock('pricing')">💰 Add Pricing</button>
+        <button class="toolbar-btn" onclick="addBlock('section')">📄 Add Section</button>
+        <button class="toolbar-btn" onclick="addBlock('list')">✓ Add List</button>
+    </div>
+
+    <div class="builder-content">
+        <div class="blocks-panel">
+            <h3>Block Types</h3>
+            <div class="block-type" draggable="true" data-type="heading" onclick="addBlock('heading')">
+                <div class="block-type-icon">📋</div>
+                <div class="block-type-title">Heading</div>
+                <div class="block-type-desc">Large title or section header</div>
+            </div>
+            <div class="block-type" draggable="true" data-type="text" onclick="addBlock('text')">
+                <div class="block-type-icon">📝</div>
+                <div class="block-type-title">Text</div>
+                <div class="block-type-desc">Rich text content</div>
+            </div>
+            <div class="block-type" draggable="true" data-type="pricing" onclick="addBlock('pricing')">
+                <div class="block-type-icon">💰</div>
+                <div class="block-type-title">Pricing</div>
+                <div class="block-type-desc">Price item with description</div>
+            </div>
+            <div class="block-type" draggable="true" data-type="section" onclick="addBlock('section')">
+                <div class="block-type-icon">📄</div>
+                <div class="block-type-title">Section</div>
+                <div class="block-type-desc">Grouped content section</div>
+            </div>
+            <div class="block-type" draggable="true" data-type="list" onclick="addBlock('list')">
+                <div class="block-type-icon">✓</div>
+                <div class="block-type-title">List</div>
+                <div class="block-type-desc">Bulleted or numbered list</div>
+            </div>
+        </div>
+
+        <div class="editor-area" id="editorArea">
+            {% if blocks|length == 0 %}
+            <div class="empty-state">
+                <div class="empty-state-icon">📄</div>
+                <h3>Start Building Your Proposal</h3>
+                <p>Click a block type on the left or use the toolbar above to add content.</p>
+            </div>
+            {% else %}
+                {% for block in blocks %}
+                <div class="proposal-block" data-block-id="{{ loop.index0 }}">
+                    <div class="block-header">
+                        <span class="block-type-badge">{{ block.type }}</span>
+                        <div class="block-actions">
+                            <button class="block-action-btn" onclick="moveBlock({{ loop.index0 }}, 'up')">↑</button>
+                            <button class="block-action-btn" onclick="moveBlock({{ loop.index0 }}, 'down')">↓</button>
+                            <button class="block-action-btn delete" onclick="removeBlock({{ loop.index0 }})">Delete</button>
+                        </div>
+                    </div>
+                    <div class="block-content">
+                        {% if block.type == 'heading' %}
+                            <input type="text" value="{{ block.content or '' }}" placeholder="Enter heading..." onchange="updateBlock({{ loop.index0 }}, 'content', this.value)">
+                        {% elif block.type == 'text' %}
+                            <textarea placeholder="Enter text content..." onchange="updateBlock({{ loop.index0 }}, 'content', this.value)">{{ block.content or '' }}</textarea>
+                        {% elif block.type == 'pricing' %}
+                            <div class="pricing-row">
+                                <input type="text" value="{{ block.description or '' }}" placeholder="Item description..." onchange="updateBlock({{ loop.index0 }}, 'description', this.value)">
+                                <input type="number" value="{{ block.price or 0 }}" placeholder="Price" step="0.01" onchange="updateBlock({{ loop.index0 }}, 'price', parseFloat(this.value))">
+                            </div>
+                        {% elif block.type == 'section' %}
+                            <input type="text" value="{{ block.title or '' }}" placeholder="Section title..." onchange="updateBlock({{ loop.index0 }}, 'title', this.value)">
+                            <textarea style="margin-top: 0.75rem;" placeholder="Section content..." onchange="updateBlock({{ loop.index0 }}, 'content', this.value)">{{ block.content or '' }}</textarea>
+                        {% elif block.type == 'list' %}
+                            <textarea placeholder="Enter list items (one per line)..." onchange="updateBlock({{ loop.index0 }}, 'content', this.value)">{{ block.content or '' }}</textarea>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="save-status" id="saveStatus"></div>
+</div>
+
+<script>
+let blocks = {{ blocks|tojson|safe }};
+let proposalId = {{ proposal.id }};
+let autoSaveInterval;
+
+function addBlock(type) {
+    const blockTemplates = {
+        'heading': { type: 'heading', content: '' },
+        'text': { type: 'text', content: '' },
+        'pricing': { type: 'pricing', description: '', price: 0 },
+        'section': { type: 'section', title: '', content: '' },
+        'list': { type: 'list', content: '' }
+    };
+    
+    blocks.push(blockTemplates[type] || { type: type, content: '' });
+    renderBlocks();
+    autoSave();
+}
+
+function removeBlock(index) {
+    if (confirm('Remove this block?')) {
+        blocks.splice(index, 1);
+        renderBlocks();
+        autoSave();
+    }
+}
+
+function moveBlock(index, direction) {
+    if (direction === 'up' && index > 0) {
+        [blocks[index], blocks[index - 1]] = [blocks[index - 1], blocks[index]];
+    } else if (direction === 'down' && index < blocks.length - 1) {
+        [blocks[index], blocks[index + 1]] = [blocks[index + 1], blocks[index]];
+    }
+    renderBlocks();
+    autoSave();
+}
+
+function updateBlock(index, field, value) {
+    if (blocks[index]) {
+        blocks[index][field] = value;
+        autoSave();
+    }
+}
+
+function renderBlocks() {
+    const editorArea = document.getElementById('editorArea');
+    
+    if (blocks.length === 0) {
+        editorArea.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📄</div>
+                <h3>Start Building Your Proposal</h3>
+                <p>Click a block type on the left or use the toolbar above to add content.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    editorArea.innerHTML = blocks.map((block, index) => {
+        let contentHtml = '';
+        
+        if (block.type === 'heading') {
+            contentHtml = `<input type="text" value="${escapeHtml(block.content || '')}" placeholder="Enter heading..." onchange="updateBlock(${index}, 'content', this.value)">`;
+        } else if (block.type === 'text') {
+            contentHtml = `<textarea placeholder="Enter text content..." onchange="updateBlock(${index}, 'content', this.value)">${escapeHtml(block.content || '')}</textarea>`;
+        } else if (block.type === 'pricing') {
+            contentHtml = `
+                <div class="pricing-row">
+                    <input type="text" value="${escapeHtml(block.description || '')}" placeholder="Item description..." onchange="updateBlock(${index}, 'description', this.value)">
+                    <input type="number" value="${block.price || 0}" placeholder="Price" step="0.01" onchange="updateBlock(${index}, 'price', parseFloat(this.value))">
+                </div>
+            `;
+        } else if (block.type === 'section') {
+            contentHtml = `
+                <input type="text" value="${escapeHtml(block.title || '')}" placeholder="Section title..." onchange="updateBlock(${index}, 'title', this.value)">
+                <textarea style="margin-top: 0.75rem;" placeholder="Section content..." onchange="updateBlock(${index}, 'content', this.value)">${escapeHtml(block.content || '')}</textarea>
+            `;
+        } else if (block.type === 'list') {
+            contentHtml = `<textarea placeholder="Enter list items (one per line)..." onchange="updateBlock(${index}, 'content', this.value)">${escapeHtml(block.content || '')}</textarea>`;
+        }
+        
+        return `
+            <div class="proposal-block" data-block-id="${index}">
+                <div class="block-header">
+                    <span class="block-type-badge">${block.type}</span>
+                    <div class="block-actions">
+                        <button class="block-action-btn" onclick="moveBlock(${index}, 'up')" ${index === 0 ? 'disabled' : ''}>↑</button>
+                        <button class="block-action-btn" onclick="moveBlock(${index}, 'down')" ${index === blocks.length - 1 ? 'disabled' : ''}>↓</button>
+                        <button class="block-action-btn delete" onclick="removeBlock(${index})">Delete</button>
+                    </div>
+                </div>
+                <div class="block-content">${contentHtml}</div>
+            </div>
+        `;
+    }).join('');
+    
+    // Add total display if there are pricing blocks
+    const pricingBlocks = blocks.filter(b => b.type === 'pricing');
+    if (pricingBlocks.length > 0) {
+        const total = pricingBlocks.reduce((sum, b) => sum + (parseFloat(b.price) || 0), 0);
+        editorArea.innerHTML += `
+            <div class="total-display">
+                <div class="total-display-label">Total Proposal Value</div>
+                <div class="total-display-amount">UGX ${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+            </div>
+        `;
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showSaveStatus(status) {
+    const statusEl = document.getElementById('saveStatus');
+    statusEl.className = 'save-status ' + status;
+    if (status === 'saving') {
+        statusEl.textContent = '💾 Saving...';
+    } else if (status === 'saved') {
+        statusEl.textContent = '✓ Saved';
+        setTimeout(() => {
+            statusEl.className = 'save-status';
+        }, 2000);
+    }
+}
+
+function autoSave() {
+    clearTimeout(autoSaveInterval);
+    autoSaveInterval = setTimeout(() => {
+        saveProposal(true);
+    }, 2000);
+}
+
+function saveProposal(silent = false) {
+    if (!silent) showSaveStatus('saving');
+    
+    fetch('{{ url_for("proposals.save") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            proposal_id: proposalId,
+            blocks: blocks,
+            status: 'Draft'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (!silent) showSaveStatus('saved');
+        } else {
+            alert('Error saving: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        if (!silent) alert('Error saving proposal');
+    });
+}
+
+function generatePDF() {
+    // Save first, then generate PDF
+    saveProposal();
+    setTimeout(() => {
+        window.open('{{ url_for("proposals.generate_pdf", proposal_id=proposal.id) }}', '_blank');
+    }, 500);
+}
+
+// Initialize
+renderBlocks();
+</script>
+{% endblock %}

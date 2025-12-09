@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Kitchen Assistant</p>
+        <h1>Kitchen Production Schedule</h1>
+        <p class="muted">AI-powered kitchen planning for Event #{{ event_id }}.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="generateSchedule()">Regenerate Schedule</button>
+        <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event_id) }}">View Event</a>
+    </div>
+</section>
+
+{% if success and schedule %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Production Schedule</h3>
+        <span class="badge">{{ schedule|length }} tasks</span>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Task</th>
+                    <th>Start Time</th>
+                    <th>Duration</th>
+                    <th>Station</th>
+                    <th>Staff Needed</th>
+                    <th>Parallel Tasks</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in schedule %}
+                <tr>
+                    <td><strong>{{ task.task }}</strong></td>
+                    <td>{{ task.start_time }}</td>
+                    <td>{{ task.duration_minutes }} mins</td>
+                    <td><span class="badge">{{ task.station }}</span></td>
+                    <td>{{ task.staff_needed }} staff</td>
+                    <td>
+                        {% if task.parallel_tasks %}
+                            {{ task.parallel_tasks|join(', ') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <p class="muted" style="text-align: center; padding: 2rem;">
+        {% if not success %}
+            Error generating schedule. Please try again.
+        {% else %}
+            No schedule available. Click "Regenerate Schedule" to create one.
+        {% endif %}
+    </p>
+</section>
+{% endif %}
+
+<script>
+function generateSchedule() {
+    // Redirect to API endpoint or reload
+    fetch('{{ url_for("ai.kitchen_assistant", event_id=event_id) }}', {
+        method: 'GET'
+    })
+    .then(() => location.reload());
+}
+</script>
+
+{% endblock %}
+

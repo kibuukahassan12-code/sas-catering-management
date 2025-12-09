@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Finance · Reports</p>
+        <h1>Financial Reports</h1>
+        <p class="muted">Advanced financial reporting with date range and category filtering, plus data export.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('reports.export_csv', start_date=summary.start_date, end_date=summary.end_date, category=summary.category, type=summary.type) }}">Export to CSV</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Financial Summary</h3>
+        <span class="badge">Filtered totals</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Income</p>
+            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.income) }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Expenses</p>
+            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.expense) }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Net Profit</p>
+            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.net) }}</h2>
+        </article>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Chart Visualization</h3>
+        <span class="badge">Placeholder</span>
+    </div>
+    <div class="chart-placeholder" style="padding: 2rem; text-align: center; background: #f5f5f5; border-radius: 8px; margin: 1rem 0;">
+        <div style="display: flex; justify-content: space-around; align-items: flex-end; height: 200px; max-width: 600px; margin: 0 auto;">
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div style="width: 60px; background: #4caf50; height: {% if summary.income > 0 %}{{ (summary.income / (summary.income + summary.expense if summary.income + summary.expense > 0 else 1) * 200) }}px{% else %}10px{% endif %}; margin-bottom: 0.5rem;"></div>
+                <span>Income</span>
+                <small>{{ CURRENCY }}{{ "{:,.0f}".format(summary.income) }}</small>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center;">
+                <div style="width: 60px; background: #ff9800; height: {% if summary.expense > 0 %}{{ (summary.expense / (summary.income + summary.expense if summary.income + summary.expense > 0 else 1) * 200) }}px{% else %}10px{% endif %}; margin-bottom: 0.5rem;"></div>
+                <span>Expenses</span>
+                <small>{{ CURRENCY }}{{ "{:,.0f}".format(summary.expense) }}</small>
+            </div>
+        </div>
+        <p style="margin-top: 1rem; color: #666;">Simple bar chart showing Income vs Expenses. Replace with interactive charts when ready.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>Filtered Transactions</h3>
+        <span class="badge">{{ pagination.total }} records</span>
+    </div>
+    <div class="filter-section" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; margin-bottom: 1rem;">
+        <form method="get" action="{{ url_for('reports.reports_index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <div>
+                <label for="start_date">Start Date:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date }}" style="padding: 0.5rem;">
+            </div>
+            <div>
+                <label for="end_date">End Date:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date }}" style="padding: 0.5rem;">
+            </div>
+            <div>
+                <label for="category">Category:</label>
+                <select id="category" name="category" style="padding: 0.5rem;">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="type">Type:</label>
+                <select id="type" name="type" style="padding: 0.5rem;">
+                    <option value="">All Types</option>
+                    <option value="Income" {% if selected_type == 'Income' %}selected{% endif %}>Income</option>
+                    <option value="Expense" {% if selected_type == 'Expense' %}selected{% endif %}>Expense</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn-primary">Filter</button>
+                <a href="{{ url_for('reports.reports_index') }}" class="btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td data-label="Type">
+                        <span class="status-pill {% if transaction.type.value == 'Income' %}success{% else %}warning{% endif %}">
+                            {{ transaction.type.value }}
+                        </span>
+                    </td>
+                    <td data-label="Category">{{ transaction.category }}</td>
+                    <td data-label="Description">{{ transaction.description }}</td>
+                    <td data-label="Date">{{ transaction.date.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Amount">{{ CURRENCY }}{{ "{:,.2f}".format(transaction.amount or 0) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No transactions found for the selected filters.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Reports pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('reports.reports_index', page=pagination.prev_num, start_date=start_date, end_date=end_date, category=selected_category, type=selected_type) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('reports.reports_index', page=pagination.next_num, start_date=start_date, end_date=end_date, category=selected_category, type=selected_type) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

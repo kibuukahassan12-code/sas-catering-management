@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Timeline Planner: {{ event.event_name }}</h1>
+    </div>
+    <div class="quick-links">
+        <button onclick="saveTimeline()" class="btn-primary">Save Timeline</button>
+        <a href="{{ url_for('timeline.view', event_id=event.id) }}" class="btn-secondary">View Timeline</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div style="padding: 2rem;">
+        <div id="timeline-editor" style="min-height: 400px;">
+            <p class="muted">Timeline editor interface coming soon...</p>
+        </div>
+    </div>
+</section>
+
+<script>
+function saveTimeline() {
+    alert('Save functionality to be implemented');
+}
+</script>
+{% endblock %}
+

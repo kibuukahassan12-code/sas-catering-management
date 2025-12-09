@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Menu Package</p>
+        <h1>{{ package.name }}</h1>
+        <p class="muted">{{ package.category or 'No category' }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('menu_builder.dashboard') }}">← Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <strong>Total Price</strong>
+            <p style="font-size: 1.5rem; margin: 0.5rem 0; color: #2d5016;">{{ CURRENCY }}{{ "{:,.0f}".format(package.total_price) }}</p>
+        </div>
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <strong>Total Cost</strong>
+            <p style="font-size: 1.5rem; margin: 0.5rem 0; color: #F26822;">{{ CURRENCY }}{{ "{:,.0f}".format(package.total_cost or 0) }}</p>
+        </div>
+        <div style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px;">
+            <strong>Profit Margin</strong>
+            <p style="font-size: 1.5rem; margin: 0.5rem 0; color: {% if package.margin_percent and package.margin_percent > 50 %}#2d5016{% elif package.margin_percent and package.margin_percent > 30 %}#F6BC38{% else %}#dc3545{% endif %};">
+                {{ package.margin_percent or 0 }}%
+            </p>
+        </div>
+    </div>
+    
+    {% if package.description %}
+    <div style="white-space: pre-wrap; margin-bottom: 1.5rem; line-height: 1.6;">{{ package.description }}</div>
+    {% endif %}
+</section>
+
+<!-- Package Items -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Items in Package</h3>
+        <button class="btn-secondary btn-sm" onclick="showAddItemForm()">+ Add Item</button>
+    </div>
+    {% if package.items %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Category</th>
+                    <th>Cost</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Subtotal</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for package_item in package.items %}
+                <tr>
+                    <td><strong>{{ package_item.menu_item.name if package_item.menu_item else 'N/A' }}</strong></td>
+                    <td>{{ package_item.menu_item.category.name if package_item.menu_item and package_item.menu_item.category else '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(package_item.menu_item.cost_per_portion) if package_item.menu_item else 0 }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(package_item.menu_item.selling_price) if package_item.menu_item else 0 }}</td>
+                    <td>{{ package_item.quantity }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(package_item.menu_item.cost_per_portion * package_item.quantity) if package_item.menu_item else 0 }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('menu_builder.package_remove_item', package_id=package.id, item_id=package_item.menu_item.id) }}" style="display: inline;" onsubmit="return confirm('Remove this item?');">
+                            <button type="submit" class="btn-ghost btn-sm">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 2rem;">No items in package yet. Add items using the button above.</p>
+    {% endif %}
+</section>
+
+<!-- Add Item Form (Hidden) -->
+<div id="addItemForm" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(17, 17, 17, 0.98); padding: 2rem; border-radius: 12px; z-index: 1000; min-width: 400px; border: 1px solid rgba(255,255,255,0.2);">
+    <h3 style="margin-top: 0;">Add Item to Package</h3>
+    <form method="POST" action="{{ url_for('menu_builder.package_add_item', package_id=package.id) }}">
+        <div class="form-grid">
+            <label class="form-control">
+                <span>Select Item *</span>
+                <select name="item_id" required>
+                    <option value="">Select Item</option>
+                    {% for item in items %}
+                    <option value="{{ item.id }}">{{ item.name }} - {{ CURRENCY }}{{ "{:,.0f}".format(item.selling_price) }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="form-control">
+                <span>Quantity *</span>
+                <input type="number" name="quantity" value="1" min="1" required>
+            </label>
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn-primary">Add Item</button>
+                <button type="button" class="btn-ghost" onclick="hideAddItemForm()">Cancel</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+function showAddItemForm() {
+    document.getElementById('addItemForm').style.display = 'block';
+}
+function hideAddItemForm() {
+    document.getElementById('addItemForm').style.display = 'none';
+}
+</script>
+{% endblock %}
+

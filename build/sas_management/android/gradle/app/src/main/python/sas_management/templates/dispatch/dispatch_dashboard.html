@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Dispatch & Logistics</h1>
+        <p class="muted">Manage deliveries, routes, and vehicles.</p>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('dispatch.vehicle_list') }}" class="btn-primary">View Vehicles</a>
+        <a href="#" class="btn-secondary">Optimize Routes</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Today's Dispatch Runs</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Run ID</th>
+                    <th>Vehicle</th>
+                    <th>Driver</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in runs %}
+                <tr>
+                    <td><strong>#{{ run.id }}</strong></td>
+                    <td>{{ run.vehicle.registration_number if run.vehicle else '—' }}</td>
+                    <td>{{ run.driver.email if run.driver else '—' }}</td>
+                    <td><span class="badge badge-{{ run.status }}">{{ run.status }}</span></td>
+                    <td><a href="{{ url_for('dispatch.loadsheet', run_id=run.id) }}" class="btn-ghost btn-sm">View Load Sheet</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

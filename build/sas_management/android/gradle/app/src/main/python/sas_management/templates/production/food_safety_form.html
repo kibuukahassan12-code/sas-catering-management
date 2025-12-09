@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>New Food Safety Log Entry</h1>
+        <p class="muted">Record food safety monitoring data.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.food_safety_list') }}">← Back to Logs</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <h3>Log Information</h3>
+        
+        <label class="form-control">
+            <span>Date</span>
+            <input type="date" name="log_date" value="{{ log.log_date.strftime('%Y-%m-%d') if log else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Time</span>
+            <input type="time" name="log_time" value="{{ log.log_time.strftime('%H:%M') if log and log.log_time else '' }}">
+        </label>
+
+        <label class="form-control">
+            <span>Event (Optional)</span>
+            <select name="event_id">
+                <option value="">-- No Event --</option>
+                {% for event in events %}
+                <option value="{{ event.id }}">{{ event.event_name }} - {{ event.event_date.strftime('%Y-%m-%d') }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Category *</span>
+            <select name="category" required>
+                <option value="">-- Select Category --</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if log and log.category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Item Description *</span>
+            <input type="text" name="item_description" value="{{ log.item_description if log else '' }}" placeholder="e.g., Refrigerator Temperature, Food Storage Area" required>
+        </label>
+
+        <label class="form-control">
+            <span>Temperature (°C)</span>
+            <input type="number" step="0.1" name="temperature" value="{{ log.temperature if log else '' }}" placeholder="e.g., 4.5">
+        </label>
+
+        <label class="form-control">
+            <span>Status</span>
+            <select name="status" required>
+                <option value="Normal" {% if log and log.status == 'Normal' %}selected{% endif %}>Normal</option>
+                <option value="Warning" {% if log and log.status == 'Warning' %}selected{% endif %}>Warning</option>
+                <option value="Critical" {% if log and log.status == 'Critical' %}selected{% endif %}>Critical</option>
+            </select>
+        </label>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Action Taken</span>
+            <textarea name="action_taken" rows="3" placeholder="What action was taken (if any)">{{ log.action_taken if log else '' }}</textarea>
+        </label>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Notes</span>
+            <textarea name="notes" rows="3" placeholder="Additional notes">{{ log.notes if log else '' }}</textarea>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Log Entry</button>
+            <a class="btn-ghost" href="{{ url_for('production.food_safety_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

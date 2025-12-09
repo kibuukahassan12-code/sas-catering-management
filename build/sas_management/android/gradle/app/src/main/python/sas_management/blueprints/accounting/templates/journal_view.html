@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Accounting Department</p>
+        <h1>Journal Entries</h1>
+        <p class="muted">View and manage accounting journal entries.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('accounting.dashboard') }}">← Back to Dashboard</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Journal Entries</h3>
+    </div>
+    {% if entries %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Reference</th>
+                    <th>Journal</th>
+                    <th>Narration</th>
+                    <th>Lines</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>{{ entry.date.strftime('%b %d, %Y') }}</td>
+                    <td><strong>{{ entry.reference or 'N/A' }}</strong></td>
+                    <td>{{ entry.journal.name if entry.journal else 'N/A' }}</td>
+                    <td>{{ entry.narration or 'N/A' }}</td>
+                    <td>{{ entry.lines|length }} lines</td>
+                    <td>
+                        <a href="#" class="btn-ghost btn-sm">View Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted">No journal entries found.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

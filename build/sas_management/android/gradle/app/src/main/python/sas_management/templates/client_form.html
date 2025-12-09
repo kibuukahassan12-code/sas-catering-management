@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">CRM · Clients</p>
+        <h1>{{ action }} Client</h1>
+        <p class="muted">Capture full client details so the sales team has visibility.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('core.clients_list') }}">← Back to Clients</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <label class="form-control">
+            <span>Name</span>
+            <input type="text" name="name" value="{{ client.name if client else '' }}" required>
+        </label>
+        <label class="form-control">
+            <span>Contact Person</span>
+            <input type="text" name="contact_person" value="{{ client.contact_person if client else '' }}" required>
+        </label>
+        <label class="form-control">
+            <span>Phone</span>
+            <input type="text" name="phone" value="{{ client.phone if client else '' }}" required>
+        </label>
+        <label class="form-control">
+            <span>Email</span>
+            <input type="email" name="email" value="{{ client.email if client else '' }}" required>
+        </label>
+        <label class="form-control">
+            <span>Company</span>
+            <input type="text" name="company" value="{{ client.company if client else '' }}">
+        </label>
+        <label class="form-control">
+            <span>Address</span>
+            <textarea name="address" rows="2">{{ client.address if client else '' }}</textarea>
+        </label>
+        <label class="form-control">
+            <span>Preferred Channel</span>
+            <select name="preferred_channel">
+                <option value="">Select...</option>
+                <option value="Email" {% if client and client.preferred_channel == 'Email' %}selected{% endif %}>Email</option>
+                <option value="Phone" {% if client and client.preferred_channel == 'Phone' %}selected{% endif %}>Phone</option>
+                <option value="WhatsApp" {% if client and client.preferred_channel == 'WhatsApp' %}selected{% endif %}>WhatsApp</option>
+            </select>
+        </label>
+        <label class="form-control">
+            <span>Tags (comma-separated)</span>
+            <input type="text" name="tags" value="{{ client.tags if client else '' }}" placeholder="VIP, Regular, High-value">
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Client</button>
+            <a class="btn-ghost" href="{{ url_for('core.clients_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

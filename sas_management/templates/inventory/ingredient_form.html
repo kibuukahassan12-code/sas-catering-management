@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Inventory · Ingredients</p>
+        <h1>{{ action }} Ingredient</h1>
+        <p class="muted">Record raw material details for accurate cost tracking.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('inventory.ingredients_list') }}">← Back to Ingredients</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <label class="form-control">
+            <span>Ingredient Name</span>
+            <input type="text" name="name" value="{{ ingredient.name if ingredient else '' }}" required>
+        </label>
+        <label class="form-control">
+            <span>Unit of Measure</span>
+            <select name="unit_of_measure" required>
+                {% for unit in units %}
+                <option value="{{ unit }}" {% if ingredient and ingredient.unit_of_measure == unit %}selected{% endif %}>{{ unit }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-control">
+            <span>Stock Count</span>
+            <input type="number" name="stock_count" min="0" step="0.01" value="{{ ingredient.stock_count if ingredient else 0 }}" required>
+        </label>
+        <label class="form-control">
+            <span>Unit Cost ({{ CURRENCY.rstrip() }})</span>
+            <input type="number" name="unit_cost" min="0" step="0.01" value="{{ ingredient.unit_cost_ugx if ingredient else '' }}" required>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Ingredient</button>
+            <a class="btn-ghost" href="{{ url_for('inventory.ingredients_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

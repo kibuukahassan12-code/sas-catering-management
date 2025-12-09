@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Cost Optimization</p>
+        <h1>Cost Optimization Suggestions</h1>
+        <p class="muted">AI-powered recommendations to reduce costs while maintaining quality.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="runOptimization()">Run Optimization</button>
+        <a class="btn-secondary" href="{{ url_for('ai.dashboard') }}">Back to Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Optimization Suggestions</h3>
+        <span class="badge">{{ optimizations|length }} suggestions</span>
+    </div>
+    
+    {% if optimizations %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Current Cost</th>
+                    <th>Suggested Cost</th>
+                    <th>Savings</th>
+                    <th>Details</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for opt in optimizations %}
+                <tr>
+                    <td><strong>{{ opt.suggestion_type }}</strong></td>
+                    <td>{{ CURRENCY }}{{ "%.2f"|format(opt.current_cost) if opt.current_cost else 'N/A' }}</td>
+                    <td>{{ CURRENCY }}{{ "%.2f"|format(opt.suggested_cost) if opt.suggested_cost else 'N/A' }}</td>
+                    <td style="color: #2ecc71; font-weight: bold;">{{ CURRENCY }}{{ "%.2f"|format(opt.savings) if opt.savings else 'N/A' }}</td>
+                    <td>{{ opt.details[:100] }}{% if opt.details and opt.details|length > 100 %}...{% endif %}</td>
+                    <td><span class="badge badge-{{ opt.status }}">{{ opt.status }}</span></td>
+                    <td>
+                        {% if opt.status == 'pending' %}
+                        <button class="btn-ghost btn-sm" onclick="applyOptimization({{ opt.id }})">Apply</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="panel-footer" style="padding: 1rem; background: #f8f9fa; border-top: 1px solid #dee2e6;">
+        <p><strong>Total Potential Savings:</strong> 
+            <span style="color: #2ecc71; font-size: 1.2em; font-weight: bold;">
+                {{ CURRENCY }}{{ "%.2f"|format(optimizations|sum(attribute='savings') or 0) }}
+            </span>
+        </p>
+    </div>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 2rem;">No optimization suggestions yet. Click "Run Optimization" to analyze your menu items.</p>
+    {% endif %}
+</section>
+
+<script>
+function runOptimization() {
+    fetch('{{ url_for("ai.api_cost_optimize") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+}
+
+function applyOptimization(id) {
+    // TODO: Implement apply action
+    alert('Apply functionality to be implemented');
+}
+</script>
+
+{% endblock %}
+

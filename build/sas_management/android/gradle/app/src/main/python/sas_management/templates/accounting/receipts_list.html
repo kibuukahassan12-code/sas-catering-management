@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Accounting Department</p>
+        <h1>Receipting System</h1>
+        <p class="muted">View and manage all receipts issued by the company.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('accounting.receipt_new') }}">➕ Create Receipt</a>
+        <a class="btn-secondary" href="{{ url_for('accounting.dashboard') }}">← Back to Accounting</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>All Receipts</h3>
+        <span class="badge">{{ pagination.total }} total</span>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Receipt #</th>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Amount</th>
+                    <th>Payment Method</th>
+                    <th>Invoice #</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for receipt in receipts %}
+                <tr>
+                    <td><strong>{{ receipt.reference }}</strong></td>
+                    <td>{{ receipt.date.strftime('%Y-%m-%d') if receipt.date else '—' }}</td>
+                    <td>
+                        {% if receipt.payment and receipt.payment.invoice and receipt.payment.invoice.event and receipt.payment.invoice.event.client %}
+                            {{ receipt.payment.invoice.event.client.name }}
+                        {% elif receipt.issued_to %}
+                            Client #{{ receipt.issued_to }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(receipt.amount) if receipt.amount else '0.00' }}</td>
+                    <td>{{ receipt.method or '—' }}</td>
+                    <td>
+                        {% if receipt.payment and receipt.payment.invoice %}
+                            {{ receipt.payment.invoice.invoice_number }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-success">Issued</span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('accounting.view_receipt', receipt_id=receipt.id) }}" class="btn-ghost btn-sm" target="_blank">View PDF</a>
+                        <a href="{{ url_for('accounting.print_receipt', receipt_id=receipt.id) }}" class="btn-ghost btn-sm">Print View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div style="padding: 1rem; text-align: center;">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}" class="btn-secondary btn-sm">← Previous</a>
+        {% endif %}
+        <span style="margin: 0 1rem;">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}" class="btn-secondary btn-sm">Next →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<style>
+.table-wrapper {
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+thead {
+    background: #f5f5f5;
+}
+th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    color: #666;
+}
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    margin-right: 0.25rem;
+}
+</style>
+{% endblock %}
+

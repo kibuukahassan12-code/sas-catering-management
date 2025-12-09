@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+:root {
+    --sas-primary: #BF360C;
+    --sas-accent: #FF7043;
+    --sas-orange: #FF6E1F;
+    --sas-dark: #121212;
+    --sas-light: #F5F5F5;
+}
+
+.venues-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.venue-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--sas-primary);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.venue-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.venue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 1rem;
+}
+
+.venue-name {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: var(--sas-primary);
+    margin: 0;
+}
+
+.venue-badge {
+    background: var(--sas-accent);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.venue-info {
+    margin: 0.75rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.venue-info strong {
+    color: var(--sas-dark);
+    display: inline-block;
+    min-width: 80px;
+}
+
+.venue-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.modern-table thead {
+    background: var(--sas-primary);
+    color: white;
+}
+
+.modern-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modern-table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modern-table tbody tr:hover {
+    background: var(--sas-light);
+}
+
+.modern-table tbody tr:last-child td {
+    border-bottom: none;
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Venues</p>
+        <h1>Venue Management</h1>
+        <p class="muted">Manage event venues and locations</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('events.venue_create') }}">+ Create Venue</a>
+</section>
+
+<!-- Card View -->
+<div style="margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h3 style="margin: 0; color: var(--sas-primary);">📍 Venues</h3>
+        <div>
+            <button onclick="toggleView('cards')" class="btn-secondary btn-sm" id="cardViewBtn">Card View</button>
+            <button onclick="toggleView('table')" class="btn-secondary btn-sm" id="tableViewBtn">Table View</button>
+        </div>
+    </div>
+    
+    <div id="cardView" class="venues-grid">
+        {% for venue in venues %}
+        <div class="venue-card">
+            <div class="venue-header">
+                <h3 class="venue-name">{{ venue.name }}</h3>
+                {% if venue.capacity %}
+                <span class="venue-badge">{{ venue.capacity }} capacity</span>
+                {% endif %}
+            </div>
+            {% if venue.address %}
+            <div class="venue-info">
+                <strong>📍 Address:</strong> {{ venue.address }}
+            </div>
+            {% endif %}
+            {% if venue.layout_description %}
+            <div class="venue-info">
+                <strong>📐 Layout:</strong> {{ venue.layout_description[:100] }}{% if venue.layout_description|length > 100 %}...{% endif %}
+            </div>
+            {% endif %}
+            {% if venue.google_maps_link %}
+            <div class="venue-info">
+                <a href="{{ venue.google_maps_link }}" target="_blank" style="color: var(--sas-primary); text-decoration: none;">🗺️ View on Maps →</a>
+            </div>
+            {% endif %}
+            <div class="venue-actions">
+                <a href="{{ url_for('events.venue_edit', venue_id=venue.id) }}" class="btn-ghost btn-sm">✏️ Edit</a>
+            </div>
+        </div>
+        {% else %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: white; border-radius: 12px;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📍</div>
+            <p class="muted" style="font-size: 1.1rem; margin-bottom: 1rem;">No venues found.</p>
+            <a href="{{ url_for('events.venue_create') }}" class="btn-primary">Create First Venue</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Table View -->
+<div id="tableView" style="display: none;">
+    <section class="panel">
+        <div class="table-wrapper table-responsive">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>Venue Name</th>
+                        <th>Address</th>
+                        <th>Capacity</th>
+                        <th>Layout</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venue in venues %}
+                    <tr>
+                        <td><strong style="color: var(--sas-primary);">{{ venue.name }}</strong></td>
+                        <td>{{ venue.address or '—' }}</td>
+                        <td>
+                            {% if venue.capacity %}
+                            <span class="badge" style="background: rgba(255, 112, 67, 0.2); color: var(--sas-accent);">{{ venue.capacity }}</span>
+                            {% else %}
+                            —
+                            {% endif %}
+                        </td>
+                        <td>{{ venue.layout_description[:50] if venue.layout_description else '—' }}{% if venue.layout_description and venue.layout_description|length > 50 %}...{% endif %}</td>
+                        <td>
+                            <a href="{{ url_for('events.venue_edit', venue_id=venue.id) }}" class="btn-ghost btn-sm">Edit</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 3rem;">
+                            <p class="muted">No venues found.</p>
+                            <a href="{{ url_for('events.venue_create') }}" class="btn-primary" style="margin-top: 1rem;">Create First Venue</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+function toggleView(view) {
+    const cardView = document.getElementById('cardView');
+    const tableView = document.getElementById('tableView');
+    const cardBtn = document.getElementById('cardViewBtn');
+    const tableBtn = document.getElementById('tableViewBtn');
+    
+    if (view === 'cards') {
+        cardView.style.display = 'grid';
+        tableView.style.display = 'none';
+        cardBtn.style.background = 'var(--sas-primary)';
+        cardBtn.style.color = 'white';
+        tableBtn.style.background = '';
+        tableBtn.style.color = '';
+    } else {
+        cardView.style.display = 'none';
+        tableView.style.display = 'block';
+        tableBtn.style.background = 'var(--sas-primary)';
+        tableBtn.style.color = 'white';
+        cardBtn.style.background = '';
+        cardBtn.style.color = '';
+    }
+}
+</script>
+{% endblock %}

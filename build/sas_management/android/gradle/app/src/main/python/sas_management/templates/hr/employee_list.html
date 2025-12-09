@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">HR Department</p>
+        <h1>Employee Management</h1>
+        <p class="muted">View and manage all employees.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hr.dashboard') }}">← Back to Dashboard</a>
+        {% if current_user.is_super_admin() %}
+        <button class="btn-secondary" onclick="document.getElementById('add-employee-modal').style.display='block'">+ Add Employee</button>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Search and Filters -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Search Employees</span>
+            <input type="text" name="search" value="{{ search }}" placeholder="Search by name or email">
+        </label>
+        <label class="form-control">
+            <span>Department</span>
+            <select name="department_id">
+                <option value="">-- All Departments --</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if department_id == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-control">
+            <span>Status</span>
+            <select name="status">
+                <option value="active" {% if status == 'active' %}selected{% endif %}>Active</option>
+                <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Inactive</option>
+                <option value="terminated" {% if status == 'terminated' %}selected{% endif %}>Terminated</option>
+            </select>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Search</button>
+            <a href="{{ url_for('hr.employee_list') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Employees Table -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Employees</h3>
+        <span class="badge">{{ employees|length }} employee(s)</span>
+    </div>
+    
+    {% if employees %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Photo</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Position</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr>
+                    <td>
+                        {% if employee.photo_url %}
+                        <img src="{{ url_for('static', filename=employee.photo_url) }}" alt="{{ employee.full_name }}" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                        <div style="width: 50px; height: 50px; border-radius: 50%; background: #e9ecef; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #6c757d;">{{ employee.first_name[0] }}{{ employee.last_name[0] }}</div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ employee.full_name }}</strong></td>
+                    <td>{{ employee.email }}</td>
+                    <td>{{ employee.phone or 'N/A' }}</td>
+                    <td>{{ employee.position.title if employee.position else 'N/A' }}</td>
+                    <td>{{ employee.department.name if employee.department else 'N/A' }}</td>
+                    <td>
+                        {% if employee.status == 'active' %}
+                        <span class="badge success">Active</span>
+                        {% elif employee.status == 'inactive' %}
+                        <span class="badge">Inactive</span>
+                        {% else %}
+                        <span class="badge danger">Terminated</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('hr.employee_profile', employee_id=employee.id) }}" class="btn-ghost btn-sm">View Profile</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="text-align: center; padding: 3rem;">
+        <p>No employees found matching your criteria.</p>
+        {% if current_user.is_super_admin() %}
+        <button class="btn-primary" onclick="document.getElementById('add-employee-modal').style.display='block'">Add First Employee</button>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<!-- Add Employee Modal -->
+{% if current_user.role in ['Admin'] %}
+<div id="add-employee-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 2rem; border-radius: 8px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h2>Add New Employee</h2>
+        <form method="post" action="{{ url_for('hr.api_create_employee') }}" enctype="multipart/form-data" id="add-employee-form">
+            <div class="form-grid">
+                <label class="form-control">
+                    <span>First Name *</span>
+                    <input type="text" name="first_name" required>
+                </label>
+                <label class="form-control">
+                    <span>Last Name *</span>
+                    <input type="text" name="last_name" required>
+                </label>
+                <label class="form-control">
+                    <span>Email *</span>
+                    <input type="email" name="email" required>
+                </label>
+                <label class="form-control">
+                    <span>Phone</span>
+                    <input type="text" name="phone">
+                </label>
+                <label class="form-control">
+                    <span>Position</span>
+                    <select name="position_id">
+                        <option value="">-- Select Position --</option>
+                        {% for pos in positions %}
+                        <option value="{{ pos.id }}">{{ pos.title }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="form-control">
+                    <span>Department</span>
+                    <select name="department_id">
+                        <option value="">-- Select Department --</option>
+                        {% for dept in departments %}
+                        <option value="{{ dept.id }}">{{ dept.name }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="form-control">
+                    <span>Contract Type</span>
+                    <select name="contract_type">
+                        <option value="Full-time">Full-time</option>
+                        <option value="Part-time">Part-time</option>
+                        <option value="Contract">Contract</option>
+                    </select>
+                </label>
+                <label class="form-control">
+                    <span>Photo</span>
+                    <input type="file" name="photo" accept="image/*">
+                </label>
+            </div>
+            <div class="form-actions" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary">Create Employee</button>
+                <button type="button" class="btn-ghost" onclick="document.getElementById('add-employee-modal').style.display='none'">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('add-employee-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch("{{ url_for('hr.api_create_employee') }}", {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Employee created successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to create employee'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+</script>
+{% endif %}
+
+{% endblock %}
+
+

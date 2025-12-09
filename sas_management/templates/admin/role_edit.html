@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Role Management</p>
+        <h1>Edit Role: {{ role.name }}</h1>
+        <p class="muted">Configure permissions for this role.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.roles_list') }}">← Back to Roles</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <div class="form-control form-control--full">
+            <span>Role Name</span>
+            <input type="text" name="name" value="{{ role.name }}" required>
+        </div>
+        
+        <div class="form-control form-control--full">
+            <span style="margin-bottom: 1rem; display: block; font-weight: 600;">Module Permissions</span>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
+                {% for module in all_modules %}
+                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; padding: 0.5rem; border-radius: 4px; transition: background 0.2s;" 
+                       onmouseover="this.style.background='rgba(242, 104, 34, 0.1)'" 
+                       onmouseout="this.style.background='transparent'">
+                    <input type="checkbox" 
+                           name="permission_{{ module }}" 
+                           {% if role.permissions and role.permissions.get(module, False) %}checked{% endif %}
+                           style="cursor: pointer;">
+                    <span style="text-transform: capitalize;">{{ module.replace('_', ' ') }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Permissions</button>
+            <a href="{{ url_for('admin.roles_list') }}" class="btn-ghost">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

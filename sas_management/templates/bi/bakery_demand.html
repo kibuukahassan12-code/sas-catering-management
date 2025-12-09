@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence</p>
+        <h1>Bakery Demand Forecasting</h1>
+        <p class="muted">Predict demand for bakery items to optimize production.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="forecastForAll()">Forecast All Items</button>
+        <a class="btn-secondary" href="{{ url_for('bi.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Generate Forecast -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Generate Demand Forecast</h3>
+    </div>
+    <form id="demand-form" style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 1rem; align-items: end;">
+        <div>
+            <label>Bakery Item</label>
+            <select name="item_id" required>
+                <option value="">Select Item</option>
+                {% for item in bakery_items %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Days Ahead</label>
+            <input type="number" name="days" value="14" min="1" max="90" required>
+        </div>
+        <div>
+            <button type="submit" class="btn-primary">Generate Forecast</button>
+        </div>
+    </form>
+</section>
+
+<!-- Demand Forecast Chart -->
+{% if upcoming_demands %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Demand Forecast Chart</h3>
+    </div>
+    <div style="padding: 2rem;">
+        <canvas id="demandChart" style="max-height: 400px;"></canvas>
+    </div>
+</section>
+{% endif %}
+
+<!-- Demand Forecasts Table -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Upcoming Demand Forecasts</h3>
+        <span class="badge">{{ upcoming_demands|length }} forecasts</span>
+    </div>
+    {% if upcoming_demands %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Date</th>
+                    <th>Predicted Qty</th>
+                    <th>Actual Qty</th>
+                    <th>Model</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for demand in upcoming_demands %}
+                <tr>
+                    <td>{{ demand.bakery_item.name if demand.bakery_item else 'N/A' }}</td>
+                    <td>{{ demand.date.strftime('%Y-%m-%d') if demand.date else '—' }}</td>
+                    <td><strong>{{ demand.predicted_qty }}</strong></td>
+                    <td>{{ demand.actual_qty or '—' }}</td>
+                    <td>{{ demand.model_name }}</td>
+                    <td>{{ "{:.0%}".format(demand.confidence) if demand.confidence else '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="padding: 2rem; text-align: center;">No demand forecasts yet. Generate forecasts using the form above.</p>
+    {% endif %}
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function forecastForAll() {
+    if (!confirm('Generate demand forecast for all bakery items? This may take a moment.')) return;
+    alert('Batch forecast feature coming soon');
+}
+
+document.getElementById('demand-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        item_id: parseInt(formData.get('item_id')),
+        days: parseInt(formData.get('days'))
+    };
+    
+    fetch('/bi/api/bakery-demand/forecast', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Forecast generated for ${data.forecasts.length} days!`);
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error generating forecast');
+    });
+});
+</script>
+{% endblock %}
+

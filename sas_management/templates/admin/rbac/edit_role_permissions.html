@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · RBAC</p>
+        <h1>Edit Role Permissions: {{ role.name }}</h1>
+        <p class="muted">Assign or remove permissions for this role.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('rbac.roles_list') }}">← Back to Roles</a>
+</section>
+
+<section class="panel">
+    <form method="POST">
+        <div class="form-group">
+            <label><strong>Role:</strong> {{ role.name }}</label>
+            {% if role.description %}
+            <p class="muted">{{ role.description }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label>Select Permissions</label>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                {% for permission in all_permissions %}
+                <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px; cursor: pointer;">
+                    <input type="checkbox" 
+                           name="permission_ids" 
+                           value="{{ permission.id }}"
+                           {% if permission.id in current_permission_ids %}checked{% endif %}>
+                    <div>
+                        <strong>{{ permission.name }}</strong>
+                        {% if permission.description %}
+                        <br><small class="muted">{{ permission.description }}</small>
+                        {% endif %}
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+            <button type="submit" class="btn-primary">Save Permissions</button>
+            <a href="{{ url_for('rbac.roles_list') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Bakery Order</p>
+        <h1>Order #{{ order.id }}</h1>
+        <p class="muted">Status: <span class="badge">{{ order.order_status }}</span></p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('bakery.orders_list') }}">← Back to Orders</a>
+    </div>
+</section>
+
+<!-- Order Details -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Order Information</h3>
+    </div>
+    <div class="form-grid">
+        <div>
+            <strong>Customer:</strong>
+            <p>{{ order.customer_name or (order.client.name if order.client else 'N/A') }}</p>
+        </div>
+        <div>
+            <strong>Phone:</strong>
+            <p>{{ order.customer_phone or 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Email:</strong>
+            <p>{{ order.customer_email or 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Pickup Date:</strong>
+            <p>{{ order.pickup_date.strftime('%Y-%m-%d') if order.pickup_date else 'Not set' }}</p>
+        </div>
+        <div>
+            <strong>Delivery Address:</strong>
+            <p>{{ order.delivery_address or 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Total Amount:</strong>
+            <p><strong>{{ CURRENCY }}{{ "{:,.0f}".format(order.total_amount) }}</strong></p>
+        </div>
+    </div>
+    
+    {% if order.bakery_notes %}
+    <div style="margin-top: 1rem;">
+        <strong>Special Instructions:</strong>
+        <p>{{ order.bakery_notes }}</p>
+    </div>
+    {% endif %}
+    
+    {% if order.reference_image %}
+    <div style="margin-top: 1rem;">
+        <strong>Reference Image:</strong>
+        <br>
+        <img src="{{ url_for('bakery.serve_upload', filename=order.reference_image.split('/')[-1]) }}" 
+             alt="Reference" style="max-width: 300px; border-radius: 8px; margin-top: 0.5rem;">
+    </div>
+    {% endif %}
+</section>
+
+<!-- Order Items -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Order Items</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Total</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td>{{ item.item_name }}</td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.custom_price) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.custom_price * item.qty) }}</td>
+                    <td>{{ item.custom_notes or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3"><strong>Total</strong></td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(order.total_amount) }}</strong></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
+
+<!-- Status Update -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Update Status</h3>
+    </div>
+    <form method="post" action="{{ url_for('bakery.orders_update_status', order_id=order.id) }}">
+        <div class="form-grid">
+            <label class="form-control">
+                <span>New Status</span>
+                <select name="status" required>
+                    <option value="Draft" {% if order.order_status == 'Draft' %}selected{% endif %}>Draft</option>
+                    <option value="Confirmed" {% if order.order_status == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                    <option value="In Production" {% if order.order_status == 'In Production' %}selected{% endif %}>In Production</option>
+                    <option value="Ready" {% if order.order_status == 'Ready' %}selected{% endif %}>Ready</option>
+                    <option value="Completed" {% if order.order_status == 'Completed' %}selected{% endif %}>Completed</option>
+                    <option value="Cancelled" {% if order.order_status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </label>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Update Status</button>
+            </div>
+        </div>
+    </form>
+</section>
+
+<!-- Production Tasks -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Production Tasks</h3>
+    </div>
+    
+    {% if order.production_tasks %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Task Type</th>
+                    <th>Assigned To</th>
+                    <th>Status</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in order.production_tasks %}
+                <tr>
+                    <td>{{ task.task_type }}</td>
+                    <td>{{ task.staff.email if task.staff else 'N/A' }}</td>
+                    <td><span class="badge">{{ task.status }}</span></td>
+                    <td>{{ task.start_time.strftime('%Y-%m-%d %H:%M') if task.start_time else 'Not started' }}</td>
+                    <td>{{ task.end_time.strftime('%Y-%m-%d %H:%M') if task.end_time else 'Not completed' }}</td>
+                    <td>
+                        {% if task.status == 'Pending' %}
+                        <form method="post" action="{{ url_for('bakery.production_task_start', task_id=task.id) }}" style="display: inline;">
+                            <button type="submit" class="btn-ghost btn-sm">Start</button>
+                        </form>
+                        {% elif task.status == 'In Progress' %}
+                        <form method="post" action="{{ url_for('bakery.production_task_complete', task_id=task.id) }}" style="display: inline;">
+                            <button type="submit" class="btn-ghost btn-sm">Complete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted">No production tasks assigned yet.</p>
+    {% endif %}
+    
+    <!-- Assign New Task -->
+    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e9ecef;">
+        <h4>Assign New Task</h4>
+        <form method="post" action="{{ url_for('bakery.orders_assign', order_id=order.id) }}">
+            <div class="form-grid">
+                <label class="form-control">
+                    <span>Staff Member</span>
+                    <select name="staff_id" required>
+                        {% for s in staff %}
+                        <option value="{{ s.id }}">{{ s.email }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                <label class="form-control">
+                    <span>Task Type</span>
+                    <select name="task_type" required>
+                        <option value="Baking">Baking</option>
+                        <option value="Decorating">Decorating</option>
+                        <option value="Packaging">Packaging</option>
+                        <option value="Quality Check">Quality Check</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </label>
+                <label class="form-control">
+                    <span>Notes</span>
+                    <textarea name="notes" rows="2"></textarea>
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Assign Task</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+{% endblock %}
+

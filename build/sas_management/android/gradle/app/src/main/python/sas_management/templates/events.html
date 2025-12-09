@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events</p>
+        <h1>Event Pipeline</h1>
+        <p class="muted">Create, monitor, and update event engagements linked to client accounts.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('core.events_add') }}">+ New Event</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>All Events</h3>
+        <span class="badge">{{ pagination.total }} total</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Client</th>
+                    <th>Date</th>
+                    <th>Guests</th>
+                    <th>Status</th>
+                    <th>Quote ({{ CURRENCY.rstrip() }})</th>
+                    <th>COGS ({{ CURRENCY.rstrip() }})</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td data-label="Event">{{ event.event_name }}</td>
+                    <td data-label="Client"><a href="{{ url_for('core.clients_edit', client_id=event.client.id) }}">{{ event.client.name }}</a></td>
+                    <td data-label="Date">{{ event.event_date.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Guests">{{ event.guest_count }}</td>
+                    <td data-label="Status">{{ event.status }}</td>
+                    <td data-label="Quote">{{ CURRENCY }}{{ "{:,.2f}".format(event.quoted_value or 0) }}</td>
+                    <td data-label="COGS">
+                        {% if event.actual_cogs_ugx %}
+                            {{ CURRENCY }}{{ "{:,.2f}".format(event.actual_cogs_ugx) }}
+                        {% else %}
+                            <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="table-actions">
+                        <a class="btn-primary" href="{{ url_for('events.event_view', event_id=event.id) }}">View Details</a>
+                        <a class="btn-ghost" href="{{ url_for('core.events_edit', event_id=event.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('core.events_delete', event_id=event.id) }}" onsubmit="return confirm('Delete this event?');" style="display: inline;">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8">No events created yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Events pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('core.events_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('core.events_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

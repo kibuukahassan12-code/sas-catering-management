@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Group Management</p>
+        <h1>{{ 'Create' if not group else 'Edit' }} Group</h1>
+        <p class="muted">{{ 'Create a new group to organize roles' if not group else 'Edit group and assign roles' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.groups_list') }}">← Back to Groups</a>
+</section>
+
+<section class="panel">
+    <form method="POST" action="{{ url_for('admin.group_create') if not group else url_for('admin.group_edit', group_id=group.id) }}">
+        <div class="form-group">
+            <label for="name">Group Name *</label>
+            <input type="text" id="name" name="name" value="{{ group.name if group else '' }}" required class="form-control" placeholder="e.g., Management, Operations, Sales">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="3" placeholder="Describe the group's purpose...">{{ group.description if group else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Roles</label>
+            <p class="muted" style="margin-bottom: 1rem;">Select the roles that belong to this group:</p>
+            
+            {% if roles %}
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                {% for role in roles %}
+                <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 1rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                    <input type="checkbox" 
+                           name="role_ids" 
+                           value="{{ role.id }}"
+                           {% if group and group_role_ids and role.id in group_role_ids %}checked{% endif %}
+                           style="width: auto; margin-top: 0.25rem;">
+                    <div style="flex: 1;">
+                        <strong style="display: block; margin-bottom: 0.25rem;">{{ role.name }}</strong>
+                        <small class="muted" style="font-size: 0.875rem; display: block; margin-bottom: 0.5rem;">{{ role.description or 'No description' }}</small>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <span class="badge" style="font-size: 0.75rem;">
+                                {{ role.permissions|length if role.permissions else 0 }} permission{{ 's' if (role.permissions|length if role.permissions else 0) != 1 else '' }}
+                            </span>
+                            <span class="badge" style="font-size: 0.75rem; background: rgba(46, 204, 113, 0.2); color: #2ecc71;">
+                                {{ role.users.count() if role.users else 0 }} user{{ 's' if (role.users.count() if role.users else 0) != 1 else '' }}
+                            </span>
+                        </div>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="padding: 2rem; text-align: center; border: 1px dashed var(--border); border-radius: 8px; background: var(--bg-secondary);">
+                <p class="muted">No roles available. Create roles first.</p>
+                <a href="{{ url_for('admin.role_create') }}" class="btn-primary" style="margin-top: 1rem;">Create Role</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+            <button type="submit" class="btn-primary">{{ 'Create Group' if not group else 'Update Group' }}</button>
+            <a href="{{ url_for('admin.groups_list') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+
+{% if group %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Group Summary</h3>
+    </div>
+    <div style="padding: 1rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                <div style="font-size: 2rem; font-weight: bold; color: var(--primary);">{{ group.roles.count() if group.roles else 0 }}</div>
+                <div class="muted">Roles</div>
+            </div>
+            <div style="padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                <div style="font-size: 2rem; font-weight: bold; color: #2ecc71;">{{ group.get_permission_count() }}</div>
+                <div class="muted">Total Permissions</div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

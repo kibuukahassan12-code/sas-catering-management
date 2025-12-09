@@ -1,0 +1,264 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Accounting Department</p>
+        <h1>Accounting Dashboard</h1>
+        <p class="muted">Financial overview and key metrics for SAS Best Foods</p>
+    </div>
+    <div class="quick-links">
+        {% if current_user.is_super_admin() or current_user.has_permission('invoices.view') or current_user.get_role_name() in ['Manager', 'Finance', 'SuperAdmin'] %}
+        <a class="btn-primary" href="{{ url_for('invoices.invoice_list') }}">View Invoices</a>
+        <a class="btn-secondary" href="{{ url_for('accounting.journal_view') }}">Journal Entries</a>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Financial Summary Cards -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Financial Summary</h3>
+        <span class="badge">Live overview</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+            <p>Total Invoices</p>
+            <h2>{{ summary.total_invoices }}</h2>
+        </article>
+        
+        <article class="summary-card" style="border-left: 4px solid #28a745;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #28a745;">✅</div>
+            <p>Paid Invoices</p>
+            <h2 style="color: #28a745;">{{ summary.paid_invoices }}</h2>
+        </article>
+        
+        <article class="summary-card" style="border-left: 4px solid #ffc107;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #ffc107;">⏳</div>
+            <p>Pending Invoices</p>
+            <h2 style="color: #ffc107;">{{ summary.pending_invoices }}</h2>
+        </article>
+        
+        <article class="summary-card" style="border-left: 4px solid #17a2b8;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #17a2b8;">🧾</div>
+            <p>Total Receipts</p>
+            <h2 style="color: #17a2b8;">{{ summary.total_receipts }}</h2>
+        </article>
+        
+        <article class="summary-card" style="border-left: 4px solid #f26822;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #f26822;">💵</div>
+            <p>Total Payments</p>
+            <h2 style="color: #f26822;">{{ summary.total_payments }}</h2>
+        </article>
+        
+        <article class="summary-card" style="border-left: 4px solid #28a745;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #28a745;">💰</div>
+            <p>Total Revenue</p>
+            <h2 style="color: #28a745;">{{ CURRENCY }}{{ "{:,.2f}".format(summary.total_revenue or 0) }}</h2>
+            <small class="muted">From paid invoices</small>
+        </article>
+        
+        <article class="summary-card" style="border-left: 4px solid #ffc107;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem; color: #ffc107;">📊</div>
+            <p>Pending Amount</p>
+            <h2 style="color: #ffc107;">{{ CURRENCY }}{{ "{:,.2f}".format(summary.pending_amount or 0) }}</h2>
+            <small class="muted">Outstanding invoices</small>
+        </article>
+        
+        <article class="summary-card">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📈</div>
+            <p>Payment Rate</p>
+            <h2>
+                {% if summary.total_invoices > 0 %}
+                {{ "{:.1f}".format((summary.paid_invoices / summary.total_invoices * 100) or 0) }}%
+                {% else %}
+                0%
+                {% endif %}
+            </h2>
+            <small class="muted">Paid vs Total</small>
+        </article>
+    </div>
+</section>
+
+<!-- Revenue Metrics -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Revenue Metrics</h3>
+    </div>
+    <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+        <article class="summary-card">
+            <p>Average Invoice Amount</p>
+            <h3>
+                {% if summary.total_invoices > 0 %}
+                {{ CURRENCY }}{{ "{:,.2f}".format((summary.total_revenue / summary.total_invoices) or 0) }}
+                {% else %}
+                {{ CURRENCY }}0.00
+                {% endif %}
+            </h3>
+        </article>
+        
+        <article class="summary-card">
+            <p>Average Payment Amount</p>
+            <h3>
+                {% if summary.total_payments > 0 %}
+                {{ CURRENCY }}{{ "{:,.2f}".format((summary.total_revenue / summary.total_payments) or 0) }}
+                {% else %}
+                {{ CURRENCY }}0.00
+                {% endif %}
+            </h3>
+        </article>
+        
+        <article class="summary-card">
+            <p>Collection Efficiency</p>
+            <h3>
+                {% if summary.total_revenue > 0 %}
+                {{ "{:.1f}".format((summary.total_revenue / (summary.total_revenue + summary.pending_amount) * 100) or 0) }}%
+                {% else %}
+                0%
+                {% endif %}
+            </h3>
+        </article>
+    </div>
+</section>
+
+<!-- Recent Payments -->
+{% if recent_payments is defined and recent_payments %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Payments</h3>
+        <a class="btn-ghost" href="{{ url_for('accounting.journal_view') }}">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Payment Reference</th>
+                    <th>Invoice</th>
+                    <th>Amount</th>
+                    <th>Method</th>
+                    <th>Receipt</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in recent_payments[:10] %}
+                <tr>
+                    <td>{{ payment.date.strftime('%b %d, %Y') }}</td>
+                    <td><strong>{{ payment.reference }}</strong></td>
+                    <td>
+                        {% if payment.invoice %}
+                        <a href="{{ url_for('invoices.invoice_view', invoice_id=payment.invoice.id) }}">{{ payment.invoice.invoice_number }}</a>
+                        {% else %}
+                        <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.2f}".format(payment.amount or 0) }}</strong></td>
+                    <td><span class="badge badge-secondary">{{ payment.method.replace('_', ' ').title() }}</span></td>
+                    <td>
+                        {% if payment.receipts %}
+                        <a href="/accounting/receipts/{{ payment.receipts[0].id }}/view" class="btn btn-outline-warning btn-sm">View Receipt</a>
+                        {% else %}
+                        <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Quick Actions -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div class="quick-links">
+        {% if current_user.is_super_admin() or current_user.has_permission('invoices.view') or current_user.get_role_name() in ['Manager', 'Finance', 'SuperAdmin'] %}
+        <a class="btn-primary" href="{{ url_for('quotes.new_quote') }}">Create Quotation</a>
+        <a class="btn-secondary" href="{{ url_for('invoices.invoice_list') }}">View Invoices</a>
+        <a class="btn-secondary" href="{{ url_for('cashbook.index') }}">Cashbook</a>
+        <a class="btn-secondary" href="{{ url_for('reports.reports_index') }}">Financial Reports</a>
+        {% endif %}
+        {% if current_user.is_super_admin() %}
+        <a class="btn-secondary" href="{{ url_for('accounting.journal_view') }}">Journal Entries</a>
+        <a class="btn-secondary" href="{{ url_for('payroll.payroll_list') }}">Payroll Management</a>
+        <a class="btn-secondary" href="{{ url_for('accounting.api_trial_balance') }}">Trial Balance</a>
+        {% endif %}
+    </div>
+</section>
+
+<!-- Account Balances (Admin Only) -->
+{% if current_user.is_super_admin() and account_balances is defined and account_balances %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Key Account Balances</h3>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Account Code</th>
+                    <th>Account Name</th>
+                    <th>Type</th>
+                    <th>Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for balance in account_balances %}
+                <tr>
+                    <td><strong>{{ balance.code }}</strong></td>
+                    <td>{{ balance.name }}</td>
+                    <td><span class="badge badge-secondary">{{ balance.type }}</span></td>
+                    <td class="{% if balance.balance < 0 %}text-danger{% elif balance.balance > 0 %}text-success{% endif %}">
+                        {{ CURRENCY }}{{ "{:,.2f}".format(balance.balance or 0) }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<style>
+.summary-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    text-align: center;
+    padding: 1.5rem;
+}
+
+.summary-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.summary-card h2, .summary-card h3 {
+    margin: 0.5rem 0;
+}
+
+.summary-card small {
+    display: block;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.text-danger {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.text-success {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+}
+</style>
+
+{% endblock %}

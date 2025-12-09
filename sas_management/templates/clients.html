@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">CRM · Clients</p>
+        <h1>Clients</h1>
+        <p class="muted">Manage key accounts and keep their contact information up-to-date.</p>
+    </div>
+    <div>
+        <a class="btn-secondary" href="{{ url_for('crm.pipeline') }}" style="margin-right: 0.5rem;">Sales Pipeline</a>
+        <a class="btn-primary" href="{{ url_for('core.clients_add') }}">+ Add Client</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>All Clients</h3>
+        <span class="badge">{{ pagination.total }} records</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Contact Person</th>
+                    <th>Phone</th>
+                    <th>Email</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr>
+                    <td data-label="Name">{{ client.name }}</td>
+                    <td data-label="Contact">{{ client.contact_person }}</td>
+                    <td data-label="Phone">{{ client.phone }}</td>
+                    <td data-label="Email"><a href="mailto:{{ client.email }}">{{ client.email }}</a></td>
+                    <td class="table-actions">
+                        <a class="btn-primary btn-sm" href="{{ url_for('crm.client_profile', client_id=client.id) }}">View Profile</a>
+                        <a class="btn-ghost btn-sm" href="{{ url_for('core.clients_edit', client_id=client.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('core.clients_delete', client_id=client.id) }}" onsubmit="return confirm('Delete this client?');" style="display: inline;">
+                            <button type="submit" class="btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No clients found. Start by adding a new client.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Clients pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('core.clients_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('core.clients_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

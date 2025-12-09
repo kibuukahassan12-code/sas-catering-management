@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Food Safety Log - {{ log.log_date.strftime('%Y-%m-%d') }}</h1>
+        <p class="muted">Category: {{ log.category }} | Status: <span class="badge {% if log.status == 'Critical' %}danger{% elif log.status == 'Warning' %}warning{% else %}success{% endif %}">{{ log.status }}</span></p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.food_safety_list') }}">← Back to Logs</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Log Details</h3>
+    </div>
+    <div class="form-grid">
+        <div>
+            <strong>Date:</strong>
+            <p>{{ log.log_date.strftime('%Y-%m-%d') }}</p>
+        </div>
+        <div>
+            <strong>Time:</strong>
+            <p>{{ log.log_time.strftime('%H:%M') if log.log_time else 'N/A' }}</p>
+        </div>
+        <div>
+            <strong>Category:</strong>
+            <p>{{ log.category }}</p>
+        </div>
+        <div>
+            <strong>Status:</strong>
+            <p><span class="badge {% if log.status == 'Critical' %}danger{% elif log.status == 'Warning' %}warning{% else %}success{% endif %}">{{ log.status }}</span></p>
+        </div>
+        <div>
+            <strong>Event:</strong>
+            <p>{{ log.event.event_name if log.event_id and log.event else 'General' }}</p>
+        </div>
+        <div>
+            <strong>Logged By:</strong>
+            <p>{{ log.logger.email if log.logged_by and log.logger else (log.creator.email if log.created_by and log.creator else 'N/A') }}</p>
+        </div>
+        {% if log.category %}
+        <div>
+            <strong>Category:</strong>
+            <p>{{ log.category }}</p>
+        </div>
+        {% endif %}
+        {% if log.item_description %}
+        <div>
+            <strong>Item Description:</strong>
+            <p>{{ log.item_description }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if log.temperature %}
+    <div style="margin-top: 1rem;">
+        <strong>Temperature:</strong>
+        <p>{{ "{:.1f}".format(log.temperature) }}°C</p>
+    </div>
+    {% endif %}
+    
+    {% if log.action_taken %}
+    <div style="margin-top: 1rem;">
+        <strong>Action Taken:</strong>
+        <p>{{ log.action_taken }}</p>
+    </div>
+    {% endif %}
+    {% if log.status %}
+    <div style="margin-top: 1rem;">
+        <strong>Status:</strong>
+        <p><span class="badge {% if log.status == 'Critical' %}danger{% elif log.status == 'Warning' %}warning{% else %}success{% endif %}">{{ log.status }}</span></p>
+    </div>
+    {% endif %}
+    
+    {% if log.notes %}
+    <div style="margin-top: 1rem;">
+        <strong>Notes:</strong>
+        <p>{{ log.notes }}</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+
+
+

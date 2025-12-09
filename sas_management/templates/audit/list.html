@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · System Management</p>
+        <h1>Audit Log</h1>
+        <p class="muted">Track all system activity and changes to critical records.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Back to Dashboard</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>System Activity</h3>
+        <span class="badge">{{ pagination.total }} entries</span>
+    </div>
+    
+    <!-- Filters Section -->
+    <div class="filter-section" style="padding: 1.5rem; border-bottom: 1px solid #e0e0e0; background: #f8f9fa;">
+        <form method="get" action="{{ url_for('audit.audit_log_list') }}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: flex-end;">
+            <div>
+                <label for="start_date" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Start Date:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date }}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+                <label for="end_date" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">End Date:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date }}" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div>
+                <label for="action" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Action:</label>
+                <select id="action" name="action" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">All Actions</option>
+                    {% for action in actions %}
+                    <option value="{{ action }}" {% if selected_action == action %}selected{% endif %}>{{ action }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="user_id" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">User:</label>
+                <select id="user_id" name="user_id" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">All Users</option>
+                    {% for user in users_with_logs %}
+                    <option value="{{ user.id }}" {% if selected_user_id == user.id %}selected{% endif %}>{{ user.email }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="resource_type" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Resource Type:</label>
+                <select id="resource_type" name="resource_type" style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">All Resources</option>
+                    {% for resource_type in resource_types %}
+                    <option value="{{ resource_type }}" {% if selected_resource_type == resource_type %}selected{% endif %}>{{ resource_type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="search" style="display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.9rem;">Search:</label>
+                <input type="text" id="search" name="search" value="{{ search_query }}" placeholder="Search actions, resources, details..." style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button type="submit" class="btn-primary" style="flex: 1;">Apply Filters</button>
+                <a href="{{ url_for('audit.audit_log_list') }}" class="btn-secondary" style="padding: 0.5rem 1rem;">Clear</a>
+            </div>
+        </form>
+    </div>
+    
+    <div class="table-wrapper">
+        <table class="responsive-table table-enhanced">
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Resource</th>
+                    <th>Resource ID</th>
+                    <th>Details</th>
+                    <th>IP Address</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                    {% for log in logs %}
+                    <tr>
+                        <td data-label="Timestamp">
+                            <div style="font-weight: 500;">{{ log.created_at.strftime('%Y-%m-%d') }}</div>
+                            <div style="font-size: 0.85rem; color: #6c757d;">{{ log.created_at.strftime('%H:%M:%S') }}</div>
+                        </td>
+                        <td data-label="User">
+                            {% if log.user %}
+                                <div style="font-weight: 500;">{{ log.user.email }}</div>
+                                <div style="font-size: 0.85rem; color: #6c757d;">{{ log.user.role.value }}</div>
+                            {% else %}
+                                <span class="muted">System</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Action">
+                            <span class="badge {% if log.action == 'CREATE' or 'CREATE' in log.action %}badge-success{% elif log.action == 'UPDATE' or 'UPDATE' in log.action %}badge-warning{% elif log.action == 'DELETE' or 'DELETE' in log.action %}badge-danger{% else %}badge-info{% endif %}">
+                                {{ log.action }}
+                            </span>
+                        </td>
+                        <td data-label="Resource">
+                            {% if log.resource_type %}
+                                <code style="background: #f8f9fa; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">{{ log.resource_type }}</code>
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Resource ID">
+                            {% if log.resource_id %}
+                                <span style="font-family: monospace; color: #495057;">#{{ log.resource_id }}</span>
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="Details" style="max-width: 300px;">
+                            {% if log.details %}
+                                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ log.details }}">
+                                    {{ log.details[:100] }}{% if log.details|length > 100 %}...{% endif %}
+                                </div>
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="IP Address">
+                            {% if log.ip_address %}
+                                <code style="background: #f8f9fa; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.85rem;">{{ log.ip_address }}</code>
+                            {% else %}
+                                <span class="muted">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" class="empty-state">
+                            <div style="text-align: center; padding: 2rem;">
+                                <p style="font-size: 1.1rem; color: #6c757d; margin-bottom: 0.5rem;">No audit log entries found.</p>
+                                {% if start_date or end_date or selected_action or selected_user_id or selected_resource_type or search_query %}
+                                    <p style="color: #6c757d; font-size: 0.9rem;">Try adjusting your filters.</p>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination and pagination.pages > 1 %}
+    <div class="pagination" style="padding: 1.5rem; border-top: 1px solid #e0e0e0;">
+        <div class="pagination-info" style="color: #6c757d; font-size: 0.9rem;">
+            Showing {{ pagination.per_page * (pagination.page - 1) + 1 }} to {{ pagination.per_page * (pagination.page - 1) + pagination.items|length }} of {{ pagination.total }} entries
+        </div>
+        <div class="pagination-controls" style="display: flex; gap: 0.5rem;">
+            {% if pagination.has_prev %}
+                <a href="{{ url_for('audit.audit_log_list', page=pagination.prev_num, start_date=start_date, end_date=end_date, action=selected_action, user_id=selected_user_id, resource_type=selected_resource_type, search=search_query) }}" class="btn-secondary">← Previous</a>
+            {% else %}
+                <span class="btn-disabled">← Previous</span>
+            {% endif %}
+            <span style="padding: 0.5rem 1rem; color: #6c757d;">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+            {% if pagination.has_next %}
+                <a href="{{ url_for('audit.audit_log_list', page=pagination.next_num, start_date=start_date, end_date=end_date, action=selected_action, user_id=selected_user_id, resource_type=selected_resource_type, search=search_query) }}" class="btn-secondary">Next →</a>
+            {% else %}
+                <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt {{ receipt.reference }} - SAS Best Foods</title>
+    <style>
+        @media print {
+            body { margin: 0; }
+            .no-print { display: none !important; }
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        .receipt-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .receipt-header {
+            border-bottom: 4px solid #000000;
+            padding-bottom: 1.5rem;
+            margin-bottom: 2rem;
+            border-top: 4px solid #FF8C00;
+        }
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .logo-section img {
+            height: 100px;
+            width: auto;
+            max-width: 200px;
+        }
+        .company-info h1 {
+            color: #000000;
+            font-size: 2rem;
+            margin-bottom: 0.25rem;
+            font-weight: bold;
+        }
+        .company-info p {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0.1rem 0;
+        }
+        .receipt-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #ddd;
+        }
+        .receipt-meta h2 {
+            color: #FF8C00;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .receipt-meta .meta-info p {
+            text-align: right;
+            margin: 0.25rem 0;
+            color: #666;
+        }
+        .receipt-body {
+            margin: 2rem 0;
+        }
+        .party-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: #f9f9f9;
+        }
+        .party-section h3 {
+            color: #FF8C00;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .party-section p {
+            margin: 0.25rem 0;
+            color: #333;
+        }
+        .receipt-details {
+            margin: 2rem 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #eee;
+        }
+        .detail-row strong {
+            color: #000000;
+        }
+        .amount-section {
+            background: #f9f9f9;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            border-top: 3px solid #FF8C00;
+            border-left: 4px solid #FF8C00;
+        }
+        .amount-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.1rem;
+            margin: 0.5rem 0;
+        }
+        .amount-total {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #000000;
+            margin-top: 0.5rem;
+            padding-top: 0.5rem;
+            border-top: 2px solid #000000;
+        }
+        .receipt-footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 0.875rem;
+        }
+        .actions {
+            text-align: center;
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            margin: 0 0.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: #FF8C00;
+            color: white;
+            border: 2px solid #000000;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <div class="receipt-header">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods Logo" style="height: 100px; width: auto; max-width: 200px; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+                <div id="logo-fallback" style="display: none; text-align: center;">
+                    <h1 style="color: #000000; font-size: 2.5rem; margin: 0;">SAS</h1>
+                    <p style="color: #FF8C00; font-size: 1.2rem; margin: 0;">BEST FOODS</p>
+                </div>
+                <div class="company-info">
+                    <h1>SAS Best Foods</h1>
+                    <p style="color: #FF8C00; font-weight: 600;"><strong>For all your Catering Solutions</strong></p>
+                    <p>Near Akamwesi Mall, Gayaza Rd, Opp Electoral Commission Kawempe Offices</p>
+                    <p>Kawempe, Kampala, Uganda</p>
+                    <p>Tel: 0702060778 / 0745705088 | Email: info@sasbestfoods.com</p>
+                    <p>Website: www.sasbestfoods.com</p>
+                </div>
+            </div>
+            <div class="receipt-meta">
+                <div>
+                    <h2>RECEIPT</h2>
+                    <p style="color: #666; margin-top: 0.5rem;">Payment Confirmation</p>
+                </div>
+                <div class="meta-info">
+                    <p><strong>Receipt Number:</strong> {{ receipt.reference }}</p>
+                    <p><strong>Date:</strong> {{ receipt.date.strftime('%B %d, %Y') if receipt.date else '—' }}</p>
+                    <p><strong>Payment Method:</strong> {{ receipt.method or '—' }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="receipt-body">
+            <div class="party-section">
+                <div>
+                    <h3>Paid By</h3>
+                    {% if client %}
+                    <p><strong>{{ client.name }}</strong></p>
+                    <p>{{ client.contact_person or '' }}</p>
+                    <p>{{ client.phone or '' }}</p>
+                    <p>{{ client.email or '' }}</p>
+                    {% elif receipt.issued_to %}
+                    <p>Client ID: {{ receipt.issued_to }}</p>
+                    {% else %}
+                    <p>—</p>
+                    {% endif %}
+                </div>
+                <div>
+                    <h3>Payment Details</h3>
+                    {% if invoice %}
+                    <p><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</p>
+                    {% if invoice.event %}
+                    <p><strong>Event:</strong> {{ invoice.event.event_name }}</p>
+                    <p><strong>Event Date:</strong> {{ invoice.event.event_date.strftime('%B %d, %Y') if invoice.event.event_date else '—' }}</p>
+                    {% endif %}
+                    {% endif %}
+                    {% if issuer %}
+                    <p><strong>Issued By:</strong> {{ issuer.email }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="receipt-details">
+                <div class="detail-row">
+                    <strong>Description</strong>
+                    <strong>Amount</strong>
+                </div>
+                <div class="detail-row">
+                    <span>
+                        {% if invoice %}
+                            Payment for Invoice {{ invoice.invoice_number }}
+                            {% if invoice.event %}
+                                - {{ invoice.event.event_name }}
+                            {% endif %}
+                        {% else %}
+                            Payment Received
+                        {% endif %}
+                        {% if receipt.notes %}
+                            <br><small style="color: #666;">{{ receipt.notes }}</small>
+                        {% endif %}
+                    </span>
+                    <span>{{ CURRENCY }}{{ "{:,.2f}".format(receipt.amount) if receipt.amount else '0.00' }}</span>
+                </div>
+            </div>
+
+            <div class="amount-section">
+                <div class="amount-row">
+                    <span>Subtotal:</span>
+                    <span>{{ CURRENCY }}{{ "{:,.2f}".format(receipt.amount) if receipt.amount else '0.00' }}</span>
+                </div>
+                <div class="amount-row amount-total">
+                    <span>Total Paid:</span>
+                    <span>{{ CURRENCY }}{{ "{:,.2f}".format(receipt.amount) if receipt.amount else '0.00' }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="receipt-footer">
+            <p><strong>Thank you for your business!</strong></p>
+            <p>This is an official receipt for the payment received.</p>
+            <p style="margin-top: 1rem;">For inquiries, please contact us at 0702060778 or info@sasbestfoods.com</p>
+        </div>
+
+        <div class="actions no-print">
+            <button onclick="window.print()" class="btn btn-primary">Print Receipt</button>
+            <a href="{{ url_for('accounting.receipts_list') }}" class="btn btn-secondary">Back to Receipts</a>
+        </div>
+    </div>
+</body>
+</html>
+

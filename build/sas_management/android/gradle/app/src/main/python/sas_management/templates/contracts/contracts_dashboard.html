@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Contracts & Legal</p>
+        <h1>Contract Management Dashboard</h1>
+        <p class="muted">Create, manage, and track event contracts and legal documents.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('contracts.contract_list') }}">View All Contracts</a>
+    </div>
+</section>
+
+<!-- Statistics -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Contract Statistics</h3>
+        <span class="badge">Live data</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Contracts</p>
+            <h2>{{ total_contracts }}</h2>
+            <small class="muted">All contracts</small>
+        </article>
+        <article class="summary-card">
+            <p>Draft</p>
+            <h2>{{ draft_contracts }}</h2>
+            <small class="muted">In progress</small>
+        </article>
+        <article class="summary-card">
+            <p>Sent</p>
+            <h2>{{ sent_contracts }}</h2>
+            <small class="muted">Awaiting signature</small>
+        </article>
+        <article class="summary-card">
+            <p>Signed</p>
+            <h2>{{ signed_contracts }}</h2>
+            <small class="muted">Completed</small>
+        </article>
+    </div>
+</section>
+
+<!-- Recent Contracts -->
+{% if recent_contracts %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Contracts</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('contracts.contract_list') }}">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Client</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for contract in recent_contracts %}
+                <tr>
+                    <td><a href="{{ url_for('events.event_view', event_id=contract.event_id) }}">{{ contract.event.event_name if contract.event else 'N/A' }}</a></td>
+                    <td>{{ contract.client.name if contract.client else 'N/A' }}</td>
+                    <td>
+                        <span class="badge {% if contract.status == 'signed' %}success{% elif contract.status == 'sent' %}warning{% else %}secondary{% endif %}">
+                            {{ contract.status|title }}
+                        </span>
+                    </td>
+                    <td>{{ contract.created_at.strftime('%Y-%m-%d') if contract.created_at else '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('contracts.contract_view', contract_id=contract.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Events Needing Contracts -->
+{% if upcoming_events %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Events Needing Contracts</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Date</th>
+                    <th>Client</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in upcoming_events %}
+                <tr>
+                    <td><strong>{{ event.event_name }}</strong></td>
+                    <td>{{ event.event_date.strftime('%Y-%m-%d') if event.event_date else '—' }}</td>
+                    <td>{{ event.client.name if event.client else 'N/A' }}</td>
+                    <td>
+                        <a href="{{ url_for('contracts.contract_new', event_id=event.id) }}" class="btn-primary btn-sm">Create Contract</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

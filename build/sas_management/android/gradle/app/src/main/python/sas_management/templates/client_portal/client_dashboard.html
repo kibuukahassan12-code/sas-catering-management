@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Client Portal Dashboard</h1>
+        <p class="muted">Welcome, {{ client.name if client else 'Client' }}</p>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('client_portal.quotes') }}" class="btn-primary">View Quotes</a>
+        <a href="{{ url_for('client_portal.contracts') }}" class="btn-secondary">View Contracts</a>
+    </div>
+</section>
+
+{% if events %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Your Events</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td><strong>{{ event.event_name }}</strong></td>
+                    <td>{{ event.event_date.strftime('%Y-%m-%d') if event.event_date else '—' }}</td>
+                    <td><span class="badge badge-{{ event.status.lower() }}">{{ event.status }}</span></td>
+                    <td><a href="#" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if quotations %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Quotations</h3>
+        <a href="{{ url_for('client_portal.quotes') }}" class="btn-secondary btn-sm">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Quote #</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for quote in quotations %}
+                <tr>
+                    <td>#{{ quote.id }}</td>
+                    <td>{{ quote.created_at.strftime('%Y-%m-%d') if quote.created_at else '—' }}</td>
+                    <td>{{ CURRENCY }}{{ "%.2f"|format(quote.total_amount) if quote.total_amount else '0.00' }}</td>
+                    <td><span class="badge badge-{{ quote.status.lower() }}">{{ quote.status }}</span></td>
+                    <td><a href="{{ url_for('client_portal.view_quote', quote_id=quote.id) }}" class="btn-ghost btn-sm">View</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+

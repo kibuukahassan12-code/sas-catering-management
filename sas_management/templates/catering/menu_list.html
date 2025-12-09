@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow" style="color: var(--accent);">Catering · Menu</p>
+        <h1 style="background: linear-gradient(120deg, var(--brand), var(--accent)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">Catering Menu Items</h1>
+        <p class="muted">Define sellable catering products with recipes for automated COGS calculation.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('catering.menu_add') }}" style="background: linear-gradient(120deg, var(--brand), var(--accent)); color: #000; border: none;">+ New Menu Item</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>Menu Items</h3>
+        <span class="badge">{{ pagination.total }} items</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Selling Price</th>
+                    <th>Estimated COGS</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td data-label="Name">{{ item.name }}</td>
+                    <td data-label="Selling Price">
+                        {% set current_price = item.get_current_price() if item.get_current_price else (item.selling_price_ugx or item.price_ugx or 0) %}
+                        {{ CURRENCY }}{{ "{:,.2f}".format(current_price) }}
+                    </td>
+                    <td data-label="Estimated COGS">
+                        {% if item.estimated_cogs_ugx %}
+                            {{ CURRENCY }}{{ "{:,.2f}".format(item.estimated_cogs_ugx) }}
+                        {% else %}
+                            <span class="muted">Not calculated</span>
+                        {% endif %}
+                    </td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('catering.recipe_builder', item_id=item.id) }}">Recipe</a>
+                        <a class="btn-ghost" href="{{ url_for('catering.menu_edit', item_id=item.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('catering.menu_delete', item_id=item.id) }}" onsubmit="return confirm('Delete this menu item?');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4">No catering menu items yet. Add your first item.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Catering menu pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('catering.menu_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('catering.menu_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

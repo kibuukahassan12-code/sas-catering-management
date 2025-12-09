@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Kitchen Checklists</h1>
+        <p class="muted">Daily kitchen operation checklists for food safety and quality assurance.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('production.kitchen_checklist_new') }}">
+        <span>+</span> New Checklist
+    </a>
+</section>
+
+<!-- Quick Stats -->
+<section class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+    <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+        <div style="font-size: 2rem; font-weight: bold;">{{ checklists|length }}</div>
+        <div style="opacity: 0.9; font-size: 0.9rem;">Total Checklists</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+        <div style="font-size: 2rem; font-weight: bold;">
+            {{ checklists|selectattr('status', 'equalto', 'Completed')|list|length }}
+        </div>
+        <div style="opacity: 0.9; font-size: 0.9rem;">Completed</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+        <div style="font-size: 2rem; font-weight: bold;">
+            {{ checklists|selectattr('status', 'equalto', 'In Progress')|list|length }}
+        </div>
+        <div style="opacity: 0.9; font-size: 0.9rem;">In Progress</div>
+    </div>
+    <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); padding: 1.5rem; border-radius: 12px; color: white;">
+        <div style="font-size: 2rem; font-weight: bold;">
+            {{ checklists|selectattr('status', 'equalto', 'Pending')|list|length }}
+        </div>
+        <div style="opacity: 0.9; font-size: 0.9rem;">Pending</div>
+    </div>
+</section>
+
+<!-- Filters -->
+<section class="panel" style="margin-bottom: 1.5rem;">
+    <form method="get" class="form-grid" style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: end;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <label class="form-control">
+                <span>Filter by Date</span>
+                <input type="date" name="date" value="{{ request.args.get('date', '') }}" style="width: 100%;">
+            </label>
+            <label class="form-control">
+                <span>Filter by Status</span>
+                <select name="status" style="width: 100%;">
+                    <option value="">All Statuses</option>
+                    <option value="Pending" {% if request.args.get('status') == 'Pending' %}selected{% endif %}>Pending</option>
+                    <option value="In Progress" {% if request.args.get('status') == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Completed" {% if request.args.get('status') == 'Completed' %}selected{% endif %}>Completed</option>
+                </select>
+            </label>
+        </div>
+        <div class="form-actions" style="display: flex; gap: 0.5rem;">
+            <button type="submit" class="btn-primary">Apply Filters</button>
+            <a href="{{ url_for('production.kitchen_checklist_list') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Checklists Grid View -->
+<section class="panel">
+    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h3>All Checklists</h3>
+        <span class="badge" style="background: var(--accent); color: white; padding: 0.5rem 1rem; border-radius: 20px;">
+            {{ checklists|length }} total
+        </span>
+    </div>
+    
+    {% if checklists %}
+    <div class="checklists-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+        {% for checklist in checklists %}
+        <div class="checklist-card" style="background: white; border: 1px solid #e9ecef; border-radius: 12px; padding: 1.5rem; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                <div>
+                    <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #2c3e50;">
+                        {% if checklist.title %}
+                            {{ checklist.title }}
+                        {% else %}
+                            Checklist #{{ checklist.id }}
+                        {% endif %}
+                    </h4>
+                    <p style="margin: 0; color: #6c757d; font-size: 0.9rem;">
+                        <i class="icon-calendar" style="margin-right: 0.25rem;"></i>
+                        {{ checklist.checklist_date.strftime('%B %d, %Y') if checklist.checklist_date else 'No date' }}
+                    </p>
+                </div>
+                <span class="status-badge status-{{ checklist.status|lower|replace(' ', '-') }}" 
+                      style="padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                    {{ checklist.status or 'Pending' }}
+                </span>
+            </div>
+            
+            <div style="margin-bottom: 1rem; padding: 0.75rem; background: #f8f9fa; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: #6c757d; font-size: 0.85rem;">Event:</span>
+                    <strong style="color: #2c3e50; font-size: 0.85rem;">
+                        {{ checklist.event.event_name if checklist.event_id and checklist.event else 'Daily Checklist' }}
+                    </strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <span style="color: #6c757d; font-size: 0.85rem;">Checked By:</span>
+                    <strong style="color: #2c3e50; font-size: 0.85rem;">
+                        {{ checklist.checker.email if checklist.checked_by and checklist.checker else 'N/A' }}
+                    </strong>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6c757d; font-size: 0.85rem;">Items:</span>
+                    <strong style="color: #2c3e50; font-size: 0.85rem;">
+                        {% if checklist._item_count is defined %}
+                            {{ checklist._item_count }} items
+                        {% elif checklist.items %}
+                            {{ checklist.items|length if checklist.items is iterable else 0 }} items
+                        {% else %}
+                            0 items
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+            
+            {% if checklist.completed_at %}
+            <div style="margin-bottom: 1rem; padding: 0.5rem; background: #d4edda; border-radius: 6px; color: #155724; font-size: 0.85rem;">
+                <i class="icon-check" style="margin-right: 0.25rem;"></i>
+                Completed: {{ checklist.completed_at.strftime('%Y-%m-%d %H:%M') }}
+            </div>
+            {% endif %}
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                <a href="{{ url_for('production.kitchen_checklist_view', checklist_id=checklist.id) }}" 
+                   class="btn-primary btn-sm" 
+                   style="flex: 1; text-align: center; padding: 0.6rem; text-decoration: none; border-radius: 6px;">
+                    View Details
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state" style="text-align: center; padding: 3rem; color: #6c757d;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+        <h3 style="color: #2c3e50; margin-bottom: 0.5rem;">No Checklists Found</h3>
+        <p style="margin-bottom: 1.5rem;">Get started by creating your first kitchen checklist.</p>
+        <a href="{{ url_for('production.kitchen_checklist_new') }}" class="btn-primary">Create First Checklist</a>
+    </div>
+    {% endif %}
+    
+    {% if pagination.pages > 1 %}
+    <div class="pagination" style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e9ecef;">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}{% if request.args.get('status') %}&status={{ request.args.get('status') }}{% endif %}" 
+           class="btn-ghost">← Previous</a>
+        {% endif %}
+        <span style="color: #6c757d; font-weight: 500;">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}{% if request.args.get('status') %}&status={{ request.args.get('status') }}{% endif %}" 
+           class="btn-ghost">Next →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<style>
+.status-pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-in-progress {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.status-completed {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.checklist-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    border-color: var(--accent);
+}
+
+@media (max-width: 768px) {
+    .checklists-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+</style>
+{% endblock %}

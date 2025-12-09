@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Event Checklists</p>
+        <h1>{{ checklist.title }}</h1>
+        <p class="muted">{{ event.event_name }} · {{ event.event_date.strftime('%b %d, %Y') }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('events.event_view', event_id=event.id) }}">← Back to Event</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Progress Overview</h3>
+        <span class="badge">{{ checklist.completed_count }}/{{ checklist.total_count }} Complete</span>
+    </div>
+    <div style="margin-top: 1rem;">
+        <div style="background: #e9ecef; border-radius: 10px; height: 20px; overflow: hidden; margin-bottom: 0.5rem;">
+            <div style="background: #2d5016; height: 100%; width: {{ checklist.completion_percentage }}%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.75rem; font-weight: 600;">
+                {{ checklist.completion_percentage }}%
+            </div>
+        </div>
+        <p style="margin: 0; color: #6c757d; font-size: 0.875rem;">
+            {% if checklist.completion_percentage == 100 %}
+                ✓ All items completed!
+            {% else %}
+                {{ checklist.total_count - checklist.completed_count }} items remaining
+            {% endif %}
+        </p>
+    </div>
+</section>
+
+<!-- Add New Item -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Add Checklist Item</h3>
+    </div>
+    <form id="add-item-form" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+        <div>
+            <label>Description</label>
+            <input type="text" name="description" required placeholder="Enter checklist item description" style="width: 100%;">
+        </div>
+        <div>
+            <label>Category</label>
+            <input type="text" name="category" placeholder="e.g., Setup, Service" list="category-list">
+            <datalist id="category-list">
+                <option value="Pre-Event">
+                <option value="Setup">
+                <option value="Service">
+                <option value="Cleanup">
+                <option value="Post-Event">
+                <option value="Planning">
+                <option value="Pre-Production">
+                <option value="Production">
+                <option value="Packaging">
+                <option value="Documentation">
+            </datalist>
+        </div>
+        <div>
+            <label>Due Date (Optional)</label>
+            <input type="date" name="due_date">
+        </div>
+        <div>
+            <button type="submit" class="btn-primary">Add Item</button>
+        </div>
+    </form>
+</section>
+
+<!-- Checklist Items by Category -->
+{% if items_by_category %}
+{% for category, items in items_by_category.items() %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>{{ category }}</h3>
+        {% set cat_completed = items | selectattr('is_completed') | list | count %}
+        <span class="badge">{{ cat_completed }}/{{ items | count }} Complete</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40px;">Status</th>
+                    <th>Description</th>
+                    <th style="width: 120px;">Due Date</th>
+                    <th style="width: 150px;">Completed By</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr {% if item.is_completed %}style="opacity: 0.7; background: #f8f9fa;"{% endif %}>
+                    <td>
+                        <input type="checkbox" 
+                               {% if item.is_completed %}checked{% endif %}
+                               onchange="toggleItem({{ item.id }}, this.checked)"
+                               style="cursor: pointer;">
+                    </td>
+                    <td>
+                        <strong {% if item.is_completed %}style="text-decoration: line-through;"{% endif %}>
+                            {{ item.description }}
+                        </strong>
+                        {% if item.notes %}
+                        <br><small style="color: #6c757d; font-style: italic;">{{ item.notes }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.due_date %}
+                        {{ item.due_date.strftime('%Y-%m-%d') if item.due_date else '—' }}
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.is_completed and item.completer %}
+                        <small>{{ item.completer.email if item.completer else '—' }}</small>
+                        <br><small style="color: #6c757d;">{{ item.completed_at.strftime('%m/%d %H:%M') if item.completed_at else '' }}</small>
+                        {% else %}
+                        —
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button onclick="editItem({{ item.id }}, '{{ item.description | replace("'", "\\'") }}', '{{ item.category or "" }}', '{{ item.due_date.strftime("%Y-%m-%d") if item.due_date else "" }}', '{{ item.notes or "" | replace("'", "\\'") }}')" 
+                                class="btn-ghost btn-sm">Edit</button>
+                        <button onclick="deleteItem({{ item.id }})" 
+                                class="btn-danger btn-sm">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endfor %}
+{% else %}
+<section class="panel">
+    <p class="muted">No checklist items yet. Add items using the form above.</p>
+</section>
+{% endif %}
+
+<!-- Edit Item Modal -->
+<div id="edit-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 2rem; border-radius: 8px; max-width: 500px; width: 90%;">
+        <h3>Edit Checklist Item</h3>
+        <form id="edit-item-form" style="margin-top: 1rem;">
+            <input type="hidden" id="edit-item-id">
+            <div style="margin-bottom: 1rem;">
+                <label>Description</label>
+                <textarea id="edit-description" required style="width: 100%; min-height: 80px;"></textarea>
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Category</label>
+                <input type="text" id="edit-category" style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Due Date</label>
+                <input type="date" id="edit-due-date" style="width: 100%;">
+            </div>
+            <div style="margin-bottom: 1rem;">
+                <label>Notes</label>
+                <textarea id="edit-notes" style="width: 100%; min-height: 60px;"></textarea>
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button type="button" onclick="closeEditModal()" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleItem(itemId, isChecked) {
+    fetch(`/events/api/{{ event.id }}/checklist/{{ checklist.checklist_type }}/item/${itemId}/toggle`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating item');
+        location.reload();
+    });
+}
+
+function editItem(id, description, category, dueDate, notes) {
+    document.getElementById('edit-item-id').value = id;
+    document.getElementById('edit-description').value = description;
+    document.getElementById('edit-category').value = category || '';
+    document.getElementById('edit-due-date').value = dueDate || '';
+    document.getElementById('edit-notes').value = notes || '';
+    document.getElementById('edit-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').style.display = 'none';
+}
+
+function deleteItem(itemId) {
+    if (!confirm('Delete this checklist item?')) return;
+    
+    fetch(`/events/api/{{ event.id }}/checklist/{{ checklist.checklist_type }}/item/${itemId}/delete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error deleting item');
+    });
+}
+
+// Handle add item form
+document.getElementById('add-item-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        description: formData.get('description'),
+        category: formData.get('category') || null,
+        due_date: formData.get('due_date') || null
+    };
+    
+    fetch(`/events/api/{{ event.id }}/checklist/{{ checklist.checklist_type }}/item/add`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding item');
+    });
+});
+
+// Handle edit item form
+document.getElementById('edit-item-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const itemId = document.getElementById('edit-item-id').value;
+    const data = {
+        description: document.getElementById('edit-description').value,
+        category: document.getElementById('edit-category').value || null,
+        due_date: document.getElementById('edit-due-date').value || null,
+        notes: document.getElementById('edit-notes').value || null
+    };
+    
+    fetch(`/events/api/{{ event.id }}/checklist/{{ checklist.checklist_type }}/item/${itemId}/update`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating item');
+    });
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Finance · Cashbook</p>
+        <h1>Cashbook & Accounting</h1>
+        <p class="muted">Track every shilling flowing in or out of SAS Best Foods and keep leadership aligned.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('cashbook.add_transaction') }}">+ Record Transaction</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Financial Summary</h3>
+        <span class="badge">Live totals</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Income</p>
+            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.income) }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Expenses</p>
+            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.expense) }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Net Profit</p>
+            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.net) }}</h2>
+        </article>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>Cashbook Entries</h3>
+        <span class="badge">{{ pagination.total }} records</span>
+    </div>
+    <div class="filter-section" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; margin-bottom: 1rem;">
+        <form method="get" action="{{ url_for('cashbook.index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <div>
+                <label for="start_date">Start Date:</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date }}" style="padding: 0.5rem;">
+            </div>
+            <div>
+                <label for="end_date">End Date:</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date }}" style="padding: 0.5rem;">
+            </div>
+            <div>
+                <label for="category">Category:</label>
+                <select id="category" name="category" style="padding: 0.5rem;">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="type">Type:</label>
+                <select id="type" name="type" style="padding: 0.5rem;">
+                    <option value="">All Types</option>
+                    <option value="Income" {% if selected_type == 'Income' %}selected{% endif %}>Income</option>
+                    <option value="Expense" {% if selected_type == 'Expense' %}selected{% endif %}>Expense</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn-primary">Filter</button>
+                <a href="{{ url_for('cashbook.index') }}" class="btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Description</th>
+                    <th>Date</th>
+                    <th>Related Event</th>
+                    <th>Amount</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td data-label="Type">
+                        <span class="status-pill {% if transaction.type.value == 'Income' %}success{% else %}warning{% endif %}">
+                            {{ transaction.type.value }}
+                        </span>
+                    </td>
+                    <td data-label="Category">{{ transaction.category }}</td>
+                    <td data-label="Description">{{ transaction.description }}</td>
+                    <td data-label="Date">{{ transaction.date.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Related Event">
+                        {% if transaction.related_event %}
+                        <a href="{{ url_for('core.events_edit', event_id=transaction.related_event.id) }}">{{ transaction.related_event.event_name }}</a>
+                        {% else %}
+                        <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td data-label="Amount">{{ CURRENCY }}{{ "{:,.2f}".format(transaction.amount or 0) }}</td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('cashbook.edit_transaction', transaction_id=transaction.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('cashbook.delete_transaction', transaction_id=transaction.id) }}" onsubmit="return confirm('Delete this transaction?');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7">No transactions recorded yet. Use the “Record Transaction” button to add your first entry.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Cashbook pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('cashbook.index', page=pagination.prev_num, start_date=start_date, end_date=end_date, category=selected_category, type=selected_type) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('cashbook.index', page=pagination.next_num, start_date=start_date, end_date=end_date, category=selected_category, type=selected_type) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

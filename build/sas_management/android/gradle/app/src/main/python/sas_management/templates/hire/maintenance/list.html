@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Maintenance Records</p>
+        <h1>All Maintenance Records</h1>
+        <p class="muted">View and manage all maintenance schedules and history.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('maintenance.schedule') }}">Schedule New</a>
+        <a class="btn-secondary" href="{{ url_for('maintenance.dashboard') }}">Dashboard</a>
+    </div>
+</section>
+
+<!-- Filter -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Filter by Status</h3>
+    </div>
+    <div style="padding: 1rem;">
+        <a href="{{ url_for('maintenance.maintenance_list', status='all') }}" class="btn-ghost btn-sm {% if status_filter == 'all' %}active{% endif %}">All</a>
+        <a href="{{ url_for('maintenance.maintenance_list', status='scheduled') }}" class="btn-ghost btn-sm {% if status_filter == 'scheduled' %}active{% endif %}">Scheduled</a>
+        <a href="{{ url_for('maintenance.maintenance_list', status='in_progress') }}" class="btn-ghost btn-sm {% if status_filter == 'in_progress' %}active{% endif %}">In Progress</a>
+        <a href="{{ url_for('maintenance.maintenance_list', status='completed') }}" class="btn-ghost btn-sm {% if status_filter == 'completed' %}active{% endif %}">Completed</a>
+        <a href="{{ url_for('maintenance.maintenance_list', status='cancelled') }}" class="btn-ghost btn-sm {% if status_filter == 'cancelled' %}active{% endif %}">Cancelled</a>
+    </div>
+</section>
+
+<!-- Maintenance List -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Maintenance Records</h3>
+        <span class="badge">{{ maintenance_records|length }} records</span>
+    </div>
+    
+    {% if maintenance_records %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Type</th>
+                    <th>Scheduled</th>
+                    <th>Completed</th>
+                    <th>Technician</th>
+                    <th>Status</th>
+                    <th>Cost</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in maintenance_records %}
+                <tr>
+                    <td><strong>#{{ m.hire_item_id }}</strong></td>
+                    <td><span class="badge badge-{{ m.maintenance_type }}">{{ m.maintenance_type|title }}</span></td>
+                    <td>{{ m.scheduled_date.strftime('%Y-%m-%d') if m.scheduled_date else '—' }}</td>
+                    <td>{{ m.completed_date.strftime('%Y-%m-%d') if m.completed_date else '—' }}</td>
+                    <td>{{ m.technician_name or '—' }}</td>
+                    <td>
+                        <span class="badge badge-{{ m.status }}">
+                            {{ m.status|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td>{{ CURRENCY }}{{ "%.2f"|format(m.cost) if m.cost else '0.00' }}</td>
+                    <td>
+                        <a href="{{ url_for('maintenance.view_maintenance', maintenance_id=m.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 2rem;">No maintenance records found.</p>
+    {% endif %}
+</section>
+
+{% endblock %}
+

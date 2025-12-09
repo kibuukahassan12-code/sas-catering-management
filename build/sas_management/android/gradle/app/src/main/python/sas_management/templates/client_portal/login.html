@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="max-width: 400px; margin: 4rem auto; padding: 2rem; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <h2 style="text-align: center; margin-bottom: 2rem;">Client Portal Login</h2>
+    <form method="POST">
+        <div style="margin-bottom: 1rem;">
+            <label><strong>Email</strong></label>
+            <input type="email" name="email" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <label><strong>Password</strong></label>
+            <input type="password" name="password" required style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+        <button type="submit" class="btn-primary" style="width: 100%;">Login</button>
+    </form>
+</div>
+{% endblock %}
+

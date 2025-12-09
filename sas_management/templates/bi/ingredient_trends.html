@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence</p>
+        <h1>Ingredient Price Trends</h1>
+        <p class="muted">Track and analyze ingredient price changes over time.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('bi.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Add Price Data -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Add Price Data</h3>
+    </div>
+    <form id="add-price-form" style="display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 1rem; align-items: end;">
+        <div>
+            <label>Ingredient</label>
+            <select name="item_id" id="ingredient-select" required>
+                <option value="">Select Ingredient</option>
+                {% for ing in ingredients %}
+                <option value="{{ ing.id }}">{{ ing.name }} ({{ ing.unit_of_measure }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Price (UGX)</label>
+            <input type="number" name="price" step="0.01" required>
+        </div>
+        <div>
+            <label>Date</label>
+            <input type="date" name="date" value="{{ today_date }}">
+        </div>
+        <div>
+            <button type="submit" class="btn-primary">Add Price</button>
+        </div>
+    </form>
+</section>
+
+<!-- Select Ingredient to View Trends -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>View Price Trend</h3>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: end; padding: 1rem;">
+        <div style="flex: 1;">
+            <label>Select Ingredient</label>
+            <select id="trend-ingredient-select" style="width: 100%; padding: 0.5rem;">
+                <option value="">Choose an ingredient...</option>
+                {% for ing in ingredients %}
+                <option value="{{ ing.id }}">{{ ing.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Days</label>
+            <select id="trend-days" style="padding: 0.5rem;">
+                <option value="7">7 days</option>
+                <option value="30" selected>30 days</option>
+                <option value="90">90 days</option>
+                <option value="365">1 year</option>
+            </select>
+        </div>
+        <button class="btn-primary" onclick="loadTrendChart()">Load Chart</button>
+    </div>
+    <div style="padding: 2rem;">
+        <canvas id="trendChart" style="max-height: 400px;"></canvas>
+    </div>
+</section>
+
+<!-- Recent Price Data -->
+{% if trend_items %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Price Entries</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Ingredient</th>
+                    <th>Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in trend_items[:50] %}
+                <tr>
+                    <td>{{ item.date.strftime('%Y-%m-%d') if item.date else '—' }}</td>
+                    <td>{{ item.inventory_item.name if item.inventory_item else 'N/A' }}</td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.2f}".format(float(item.price) if item.price else 0) }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let trendChartInstance = null;
+
+function loadTrendChart() {
+    const ingredientId = document.getElementById('trend-ingredient-select').value;
+    const days = document.getElementById('trend-days').value;
+    
+    if (!ingredientId) {
+        alert('Please select an ingredient');
+        return;
+    }
+    
+    fetch(`/bi/api/ingredient-price/trend/${ingredientId}?days=${days}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data_points) {
+                const ctx = document.getElementById('trendChart');
+                if (trendChartInstance) {
+                    trendChartInstance.destroy();
+                }
+                
+                const labels = data.data_points.map(d => d.date);
+                const prices = data.data_points.map(d => d.price);
+                const movingAvg = data.data_points.map(d => d.moving_average);
+                
+                trendChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Price',
+                            data: prices,
+                            borderColor: '#F26822',
+                            backgroundColor: 'rgba(242, 104, 34, 0.1)',
+                            tension: 0.4
+                        }, {
+                            label: '7-Day Moving Average',
+                            data: movingAvg,
+                            borderColor: '#F26822',
+                            borderDash: [5, 5],
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `Trend Direction: ${data.trend_direction || 'stable'}`,
+                                font: {size: 16}
+                            },
+                            legend: {display: true}
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {display: true, text: 'Price (UGX)'}
+                            }
+                        }
+                    }
+                });
+            } else {
+                alert('No data available for this ingredient');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading trend data');
+        });
+}
+
+// Add price form
+document.getElementById('add-price-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = {
+        item_id: parseInt(formData.get('item_id')),
+        price: parseFloat(formData.get('price')),
+        date: formData.get('date') || new Date().toISOString().split('T')[0]
+    };
+    
+    fetch('/bi/api/ingredient-price/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Price added successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error adding price');
+    });
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,403 @@
+/**
+ * Floor Plan Builder CSS - SAS Best Foods Dark Theme
+ * Colors: Deep Blue #0A1A44, Gold #D4AF37, Orange #FF7A1A
+ */
+
+.floorplan-builder {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0A0A0A 0%, #2B1500 100%);
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+}
+
+/* Action Bar */
+.action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(10, 26, 68, 0.95);
+    border-bottom: 2px solid #D4AF37;
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.action-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.action-btn {
+    padding: 0.6rem 1.2rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.action-btn:hover {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: #D4AF37;
+    transform: translateY(-2px);
+}
+
+.action-btn.btn-save {
+    background: #D4AF37;
+    border-color: #D4AF37;
+    color: #0A1A44;
+    font-weight: 600;
+}
+
+.action-btn.btn-save:hover {
+    background: #FF7A1A;
+    border-color: #FF7A1A;
+}
+
+.action-btn.btn-danger:hover {
+    background: rgba(255, 122, 26, 0.3);
+    border-color: #FF7A1A;
+}
+
+.zoom-display {
+    padding: 0 0.75rem;
+    color: #D4AF37;
+    font-size: 0.9rem;
+    font-weight: 600;
+    min-width: 60px;
+    text-align: center;
+}
+
+/* Builder Container */
+.builder-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Toolbar */
+.toolbar {
+    width: 240px;
+    background: rgba(10, 26, 68, 0.8);
+    border-right: 2px solid rgba(212, 175, 55, 0.3);
+    padding: 1.5rem;
+    overflow-y: auto;
+    backdrop-filter: blur(10px);
+}
+
+.toolbar h3 {
+    margin: 0 0 1.5rem 0;
+    color: #D4AF37;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+    padding-bottom: 0.75rem;
+}
+
+.tool {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(212, 175, 55, 0.2);
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.tool:hover {
+    background: rgba(212, 175, 55, 0.15);
+    border-color: #D4AF37;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2);
+}
+
+.tool:active {
+    transform: translateX(2px) scale(0.98);
+}
+
+.tool-icon {
+    font-size: 1.5rem;
+    width: 32px;
+    text-align: center;
+}
+
+/* Canvas Wrapper */
+.canvas-wrapper {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.canvas-container {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(212, 175, 55, 0.2);
+    padding: 1rem;
+    position: relative;
+}
+
+#floorplan-canvas {
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+/* Info Bar */
+.info-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    background: rgba(10, 26, 68, 0.95);
+    border-top: 2px solid rgba(212, 175, 55, 0.3);
+    backdrop-filter: blur(10px);
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.info-left {
+    flex: 1;
+}
+
+.event-info {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9rem;
+}
+
+.event-info strong {
+    color: #D4AF37;
+}
+
+.name-input {
+    padding: 0.6rem 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 0.95rem;
+    min-width: 300px;
+    transition: all 0.2s ease;
+}
+
+.name-input:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #D4AF37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.name-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: linear-gradient(135deg, rgba(10, 26, 68, 0.98) 0%, rgba(43, 21, 0, 0.98) 100%);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #D4AF37;
+    font-size: 1.25rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: rgba(255, 122, 26, 0.2);
+    color: #FF7A1A;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-body p {
+    margin: 0 0 1rem 0;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    border-top: 1px solid rgba(212, 175, 55, 0.3);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    color: #fff;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #D4AF37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.2);
+}
+
+.btn-primary {
+    padding: 0.75rem 1.5rem;
+    background: #D4AF37;
+    color: #0A1A44;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: #FF7A1A;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 122, 26, 0.3);
+}
+
+.btn-secondary {
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 2px solid rgba(212, 175, 55, 0.3);
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(212, 175, 55, 0.2);
+    border-color: #D4AF37;
+}
+
+/* Scrollbar Styling */
+.toolbar::-webkit-scrollbar,
+.canvas-wrapper::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.toolbar::-webkit-scrollbar-track,
+.canvas-wrapper::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.toolbar::-webkit-scrollbar-thumb,
+.canvas-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(212, 175, 55, 0.5);
+    border-radius: 4px;
+}
+
+.toolbar::-webkit-scrollbar-thumb:hover,
+.canvas-wrapper::-webkit-scrollbar-thumb:hover {
+    background: rgba(212, 175, 55, 0.7);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .builder-container {
+        flex-direction: column;
+    }
+    
+    .toolbar {
+        width: 100%;
+        max-height: 200px;
+        border-right: none;
+        border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    }
+    
+    .tool {
+        display: inline-flex;
+        width: auto;
+        min-width: 140px;
+        margin-right: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .action-group {
+        justify-content: center;
+    }
+    
+    .info-bar {
+        flex-direction: column;
+    }
+    
+    .name-input {
+        width: 100%;
+        min-width: auto;
+    }
+}
+

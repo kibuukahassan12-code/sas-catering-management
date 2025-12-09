@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Internal Communication Hub</p>
+        <h1>Communication Dashboard</h1>
+        <p class="muted">Announcements, messages, tasks, and team communication.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('communication.announcements_list') }}">View All Announcements</a>
+        <a class="btn-secondary" href="{{ url_for('communication.message_threads') }}">Messages</a>
+    </div>
+</section>
+
+<!-- Recent Announcements -->
+{% if recent_announcements %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Announcements</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('communication.announcements_list') }}">View All</a>
+    </div>
+    <div class="summary-grid">
+        {% for announcement in recent_announcements %}
+        <article class="summary-card" style="cursor: pointer;" onclick="window.location='{{ url_for('communication.announcement_view', announcement_id=announcement.id) }}'">
+            {% if announcement.image_url %}
+            <img src="{{ url_for('communication.serve_upload', filename=announcement.image_url.split('/')[-1]) }}" 
+                 alt="{{ announcement.title }}" 
+                 style="width: 100%; max-height: 150px; object-fit: cover; border-radius: 8px; margin-bottom: 0.5rem;">
+            {% endif %}
+            <h4 style="margin: 0.5rem 0;">{{ announcement.title }}</h4>
+            <p style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin: 0;">
+                {{ announcement.message[:100] }}{% if announcement.message|length > 100 %}...{% endif %}
+            </p>
+            <small class="muted">{{ announcement.created_at.strftime('%Y-%m-%d %H:%M') if announcement.created_at else '' }}</small>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Current Tasks -->
+{% if current_tasks %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Your Tasks</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('communication.staff_tasks') }}">View All Tasks</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in current_tasks %}
+                <tr>
+                    <td><strong>{{ task.title }}</strong></td>
+                    <td>
+                        <span class="badge {% if task.priority == 'high' %}danger{% elif task.priority == 'medium' %}warning{% else %}success{% endif %}">
+                            {{ task.priority|title }}
+                        </span>
+                    </td>
+                    <td>{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '—' }}</td>
+                    <td><span class="badge">{{ task.status|replace('_', ' ')|title }}</span></td>
+                    <td>
+                        <form method="POST" action="{{ url_for('communication.task_update', task_id=task.id) }}" style="display: inline;">
+                            <select name="status" onchange="this.form.submit()" style="padding: 0.25rem;">
+                                <option value="pending" {% if task.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Active Threads -->
+{% if active_threads %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Messages</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('communication.message_threads') }}">View All Threads</a>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+        {% for thread in active_threads %}
+        <a href="{{ url_for('communication.thread_view', thread_id=thread.id) }}" 
+           style="padding: 1rem; background: rgba(255,255,255,0.05); border-radius: 8px; text-decoration: none; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong>
+                    {% if thread.user_a == current_user.id %}
+                        {{ thread.participant_b.email if thread.participant_b else 'Unknown' }}
+                    {% else %}
+                        {{ thread.participant_a.email if thread.participant_a else 'Unknown' }}
+                    {% endif %}
+                </strong>
+                {% if thread.last_message %}
+                <p style="margin: 0.25rem 0 0 0; color: rgba(255,255,255,0.7); font-size: 0.9rem;">
+                    {{ thread.last_message.message[:50] }}{% if thread.last_message.message|length > 50 %}...{% endif %}
+                </p>
+                {% endif %}
+            </div>
+            <small class="muted">
+                {% if thread.last_message %}
+                    {{ thread.last_message.timestamp.strftime('%m/%d %H:%M') if thread.last_message.timestamp else '' }}
+                {% endif %}
+            </small>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Quick Actions -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1rem;">
+        <a href="{{ url_for('communication.announcement_new') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">
+            📢 New Announcement
+        </a>
+        <a href="{{ url_for('communication.message_threads') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">
+            💬 Messages
+        </a>
+        <a href="{{ url_for('communication.bulletin') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">
+            📋 Bulletin Board
+        </a>
+        <a href="{{ url_for('communication.task_new') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">
+            ✅ New Task
+        </a>
+        <a href="{{ url_for('communication.staff_tasks') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">
+            📝 All Tasks
+        </a>
+    </div>
+</section>
+{% endblock %}
+

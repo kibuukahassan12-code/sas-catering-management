@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <h1>Branch Management</h1>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('branches.create') }}" class="btn-primary">Create Branch</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Timezone</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for branch in branches %}
+                <tr>
+                    <td><strong>{{ branch.name }}</strong></td>
+                    <td>{{ branch.address or '—' }}</td>
+                    <td>{{ branch.timezone }}</td>
+                    <td><span class="badge badge-{% if branch.is_active %}success{% else %}secondary{% endif %}">{% if branch.is_active %}Active{% else %}Inactive{% endif %}</span></td>
+                    <td><a href="#" class="btn-ghost btn-sm">Edit</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

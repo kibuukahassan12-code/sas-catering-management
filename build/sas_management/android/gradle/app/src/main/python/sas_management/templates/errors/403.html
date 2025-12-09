@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="min-height: 80vh; display: flex; align-items: center; justify-content: center; background: #121212; padding: 2rem;">
+    <div style="max-width: 600px; width: 100%;">
+        <!-- Modern Card Layout -->
+        <div style="background: linear-gradient(135deg, rgba(18, 18, 18, 0.95) 0%, rgba(30, 30, 30, 0.95) 100%); border: 1px solid rgba(255, 110, 31, 0.3); border-radius: 16px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); overflow: hidden;">
+            <!-- Card Header -->
+            <div style="background: linear-gradient(135deg, #FF6E1F 0%, #BF360C 100%); padding: 2rem; text-align: center;">
+                <div style="font-size: 4rem; margin-bottom: 1rem; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));">🔒</div>
+                <h1 style="color: #ffffff; margin: 0; font-size: 2rem; font-weight: 700;">403 - Permission Denied</h1>
+            </div>
+            
+            <!-- Card Body -->
+            <div style="padding: 2.5rem;">
+                <p style="color: rgba(255, 255, 255, 0.9); margin-bottom: 1.5rem; font-size: 1.1rem; line-height: 1.6; text-align: center;">
+                    You do not have the required permission to access this resource.
+                </p>
+                
+                {% if permission %}
+                <!-- Permission Code Box -->
+                <div style="background: rgba(255, 110, 31, 0.1); border: 1px solid rgba(255, 110, 31, 0.3); border-radius: 8px; padding: 1.25rem; margin: 1.5rem 0; text-align: center;">
+                    <p style="margin: 0 0 0.75rem 0; color: rgba(255, 255, 255, 0.7); font-size: 0.9rem; font-weight: 600;">
+                        Missing Permission Code:
+                    </p>
+                    <code style="display: inline-block; padding: 0.75rem 1.5rem; background: rgba(0, 0, 0, 0.4); border-radius: 6px; color: #FF6E1F; font-size: 1rem; font-weight: 700; letter-spacing: 0.5px; border: 1px solid rgba(255, 110, 31, 0.2);">
+                        {{ permission }}
+                    </code>
+                </div>
+                {% endif %}
+                
+                <p style="color: rgba(255, 255, 255, 0.6); margin-bottom: 2rem; font-size: 0.95rem; text-align: center;">
+                    Please contact your administrator if you believe this is an error.
+                </p>
+                
+                <!-- Action Buttons -->
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <a href="{{ url_for('core.dashboard') }}" 
+                       style="background: linear-gradient(135deg, #FF6E1F 0%, #BF360C 100%); border: none; color: white; padding: 0.875rem 2rem; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s;"
+                       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(255, 110, 31, 0.4)'"
+                       onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                        Go to Dashboard
+                    </a>
+                    
+                    <button onclick="alert('Request Access feature coming soon!');" 
+                            style="background: rgba(255, 110, 31, 0.15); border: 1px solid rgba(255, 110, 31, 0.5); color: #FF6E1F; padding: 0.875rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s;"
+                            onmouseover="this.style.background='rgba(255, 110, 31, 0.25)'"
+                            onmouseout="this.style.background='rgba(255, 110, 31, 0.15)'">
+                        Request Access
+                    </button>
+                    
+                    <a href="{{ url_for('core.logout') }}" 
+                       style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); color: rgba(255, 255, 255, 0.9); padding: 0.875rem 2rem; border-radius: 8px; text-decoration: none; text-align: center; font-weight: 500; transition: background 0.2s;"
+                       onmouseover="this.style.background='rgba(255, 255, 255, 0.15)'"
+                       onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">
+                        Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+:root {
+    --sas-primary: #BF360C;
+    --sas-accent: #FF7043;
+    --sas-orange: #FF6E1F;
+    --sas-dark: #121212;
+    --sas-light: #F5F5F5;
+}
+
+.sas-card {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-left: 4px solid var(--sas-primary);
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--sas-light);
+}
+
+.section-header h3 {
+    margin: 0;
+    color: var(--sas-primary);
+    font-size: 1.25rem;
+}
+
+.section-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--sas-accent);
+    color: white;
+    border-radius: 10px;
+    font-size: 1.5rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--sas-dark);
+    font-size: 0.95rem;
+}
+
+.form-group label .tooltip {
+    margin-left: 0.5rem;
+    color: #999;
+    cursor: help;
+    font-size: 0.85rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--sas-primary);
+    box-shadow: 0 0 0 3px rgba(191, 54, 12, 0.1);
+}
+
+.form-control:hover {
+    border-color: #ccc;
+}
+
+.btn-primary {
+    background: var(--sas-primary);
+    color: white;
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.btn-primary:hover {
+    background: var(--sas-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(191, 54, 12, 0.3);
+}
+
+.btn-secondary {
+    background: white;
+    color: var(--sas-primary);
+    padding: 0.75rem 2rem;
+    border: 2px solid var(--sas-primary);
+    border-radius: 8px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    background: var(--sas-light);
+}
+
+.help-text {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 0.5rem;
+    display: block;
+}
+
+.field-hint {
+    background: var(--sas-light);
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: #666;
+    border-left: 3px solid var(--sas-accent);
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Venues</p>
+        <h1>{{ 'Edit Venue' if venue else 'Create New Venue' }}</h1>
+        <p class="muted">{{ 'Update venue information' if venue else 'Add a new event venue to your system' }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events.venues_list') }}">← Back to Venues</a>
+</section>
+
+<div class="sas-card">
+    <div class="section-header">
+        <div class="section-icon">📍</div>
+        <h3>Venue Information</h3>
+    </div>
+    
+    <form method="POST">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="name">
+                    Venue Name 
+                    <span class="tooltip" title="Enter the name of the venue (e.g., 'Kampala Serena Hotel', 'Lubiri Palace')">ℹ️</span> *
+                </label>
+                <input 
+                    type="text" 
+                    id="name" 
+                    name="name" 
+                    value="{{ venue.name if venue else '' }}" 
+                    required 
+                    class="form-control"
+                    placeholder="e.g., Kampala Serena Hotel"
+                >
+                <span class="help-text">This name will appear in event venue selection</span>
+            </div>
+            
+            <div class="form-group">
+                <label for="capacity">
+                    Capacity 
+                    <span class="tooltip" title="Maximum number of guests the venue can accommodate">ℹ️</span>
+                </label>
+                <input 
+                    type="number" 
+                    id="capacity" 
+                    name="capacity" 
+                    value="{{ venue.capacity if venue else '' }}" 
+                    min="0" 
+                    class="form-control"
+                    placeholder="e.g., 500"
+                >
+                <span class="help-text">Maximum number of guests</span>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="address">
+                Address 
+                <span class="tooltip" title="Full physical address of the venue">ℹ️</span>
+            </label>
+            <textarea 
+                id="address" 
+                name="address" 
+                class="form-control" 
+                rows="3"
+                placeholder="Enter the complete address including street, city, and country"
+            >{{ venue.address if venue else '' }}</textarea>
+            <span class="help-text">Include street address, city, and any landmarks</span>
+        </div>
+        
+        <div class="form-group">
+            <label for="layout_description">
+                Layout Description 
+                <span class="tooltip" title="Describe the venue layout, seating arrangements, and facilities">ℹ️</span>
+            </label>
+            <textarea 
+                id="layout_description" 
+                name="layout_description" 
+                class="form-control" 
+                rows="5"
+                placeholder="Describe the venue layout, seating arrangements, parking, facilities, etc."
+            >{{ venue.layout_description if venue else '' }}</textarea>
+            <div class="field-hint">
+                💡 <strong>Tip:</strong> Include details about seating arrangements, parking availability, kitchen facilities, power supply, and any special features.
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="google_maps_link">
+                Google Maps Link 
+                <span class="tooltip" title="Paste the Google Maps URL for easy navigation">ℹ️</span>
+            </label>
+            <input 
+                type="url" 
+                id="google_maps_link" 
+                name="google_maps_link" 
+                value="{{ venue.google_maps_link if venue else '' }}" 
+                class="form-control"
+                placeholder="https://maps.google.com/..."
+            >
+            <span class="help-text">Paste the full Google Maps URL for this venue</span>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--sas-light);">
+            <button type="submit" class="btn-primary">
+                {{ 'Update Venue' if venue else 'Create Venue' }}
+            </button>
+            <a href="{{ url_for('events.venues_list') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if not venue %}
+<div class="sas-card" style="background: var(--sas-light); border-left-color: var(--sas-accent);">
+    <div style="display: flex; align-items: start; gap: 1rem;">
+        <div style="font-size: 2rem;">💡</div>
+        <div>
+            <h4 style="margin: 0 0 0.5rem 0; color: var(--sas-primary);">Quick Tips</h4>
+            <ul style="margin: 0; padding-left: 1.5rem; color: #666;">
+                <li>Add detailed layout descriptions to help with event planning</li>
+                <li>Include Google Maps links for easy navigation</li>
+                <li>Set accurate capacity to help with guest count planning</li>
+                <li>You can edit this venue later if details change</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

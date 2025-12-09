@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events</p>
+        <h1>{{ event.title }}</h1>
+        <p class="muted">{{ event.client_name }} · {{ event.date.strftime('%b %d, %Y') if event.date else 'N/A' }} · {{ event.status.value }}</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a class="btn-secondary" href="{{ url_for('events.events_list') }}">← Back</a>
+        <a class="btn-primary" href="{{ url_for('events.event_edit', event_id=event.id) }}">Edit</a>
+    </div>
+</section>
+
+<!-- Status Badge & Quick Actions -->
+<section class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            {% if event.status == EventStatus.NotStarted %}
+            <span class="badge" style="background: rgba(158, 158, 158, 0.2); color: #9e9e9e; font-size: 1rem; padding: 0.5rem 1rem;">{{ event.status.value }}</span>
+            {% elif event.status == EventStatus.Planning %}
+            <span class="badge" style="background: rgba(33, 150, 243, 0.2); color: #2196f3; font-size: 1rem; padding: 0.5rem 1rem;">{{ event.status.value }}</span>
+            {% elif event.status == EventStatus.Preparing %}
+            <span class="badge" style="background: rgba(255, 152, 0, 0.2); color: #ff9800; font-size: 1rem; padding: 0.5rem 1rem;">{{ event.status.value }}</span>
+            {% elif event.status == EventStatus.InProgress %}
+            <span class="badge" style="background: rgba(76, 175, 80, 0.2); color: #4caf50; font-size: 1rem; padding: 0.5rem 1rem;">{{ event.status.value }}</span>
+            {% elif event.status == EventStatus.Done %}
+            <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71; font-size: 1rem; padding: 0.5rem 1rem;">{{ event.status.value }}</span>
+            {% endif %}
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+            <form method="POST" action="{{ url_for('events.event_update_status', event_id=event.id) }}" style="display: inline;">
+                <select name="status" onchange="this.form.submit()" style="padding: 0.5rem; border: 1px solid var(--border); border-radius: 4px;">
+                    {% for status in EventStatus %}
+                    <option value="{{ status.name }}" {% if event.status == status %}selected{% endif %}>{{ status.value }}</option>
+                    {% endfor %}
+                    </select>
+            </form>
+            <a href="{{ url_for('events.event_brief_pdf', event_id=event.id) }}" class="btn-secondary">Download Brief PDF</a>
+        </div>
+    </div>
+</section>
+
+<!-- Quick Navigation Tabs -->
+<section class="panel">
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">
+        <a href="{{ url_for('events.event_view', event_id=event.id) }}" class="btn-ghost btn-sm" style="border-bottom: 2px solid var(--brand);">Overview</a>
+        <a href="{{ url_for('events.event_timeline', event_id=event.id) }}" class="btn-ghost btn-sm">Timeline</a>
+        <a href="{{ url_for('events.event_staffing', event_id=event.id) }}" class="btn-ghost btn-sm">Staffing</a>
+        <a href="{{ url_for('events.event_costing', event_id=event.id) }}" class="btn-ghost btn-sm">Costing</a>
+        <a href="{{ url_for('events.event_checklist', event_id=event.id) }}" class="btn-ghost btn-sm">Checklist</a>
+        <a href="{{ url_for('events.event_vendors', event_id=event.id) }}" class="btn-ghost btn-sm">Vendors</a>
+        <a href="{{ url_for('events.event_logistics', event_id=event.id) }}" class="btn-ghost btn-sm">Logistics</a>
+        <a href="{{ url_for('events.event_approval', event_id=event.id) }}" class="btn-ghost btn-sm">Approval</a>
+    </div>
+</section>
+
+<!-- Event Information -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Event Information</h3>
+                </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; padding: 1.5rem;">
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Client Name</label>
+            <strong>{{ event.client_name }}</strong>
+                </div>
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Client Email</label>
+            <div>{{ event.client_email or 'N/A' }}</div>
+        </div>
+                        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Client Phone</label>
+            <div>{{ event.client_phone or 'N/A' }}</div>
+        </div>
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Event Type</label>
+            <div>{{ event.event_type or 'N/A' }}</div>
+        </div>
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Date</label>
+            <strong>{{ event.date.strftime('%B %d, %Y') if event.date else 'N/A' }}</strong>
+        </div>
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Time</label>
+            <div>
+                {% if event.start_time and event.end_time %}
+                {{ event.start_time }} - {{ event.end_time }}
+                {% elif event.start_time %}
+                {{ event.start_time }}
+            {% else %}
+                N/A
+            {% endif %}
+            </div>
+        </div>
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Guest Count</label>
+            <strong>{{ event.guest_count }}</strong>
+        </div>
+                    <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Venue</label>
+            <div>{{ event.venue_obj.name if event.venue_obj else 'Not specified' }}</div>
+        </div>
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Menu Package</label>
+            <div>{{ event.menu_package_obj.name if event.menu_package_obj else 'Not specified' }}</div>
+        </div>
+        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Budget Estimate</label>
+            <strong>UGX {{ "{:,.2f}".format(event.budget_estimate) }}</strong>
+        </div>
+                        <div>
+            <label class="muted" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem;">Actual Cost</label>
+            <strong>UGX {{ "{:,.2f}".format(event.actual_cost or 0) }}</strong>
+        </div>
+    </div>
+    
+    <!-- Cost Summary Section -->
+    <div style="padding: 1.5rem; border-top: 1px solid var(--border); margin-top: 1rem;">
+        <h4 class="mt-4">Cost Summary</h4>
+        <table class="table table-bordered">
+            <tr><th>Labor Cost</th><td>{{ event.labor_cost }}</td></tr>
+            <tr><th>Transport Cost</th><td>{{ event.transport_cost }}</td></tr>
+            <tr><th>Equipment Cost</th><td>{{ event.equipment_cost }}</td></tr>
+            <tr><th>Ingredients Cost</th><td>{{ event.ingredients_cost }}</td></tr>
+            <tr><th>Total Cost</th><td><b>{{ event.total_cost }}</b></td></tr>
+            <tr><th>Quoted Value</th><td>{{ event.quoted_value }}</td></tr>
+            <tr><th>Profit</th><td><b>{{ event.profit }}</b></td></tr>
+        </table>
+    </div>
+    
+    {% if event.notes %}
+    <div style="padding: 1.5rem; border-top: 1px solid var(--border);">
+        <label class="muted" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem;">Notes</label>
+        <p style="white-space: pre-wrap;">{{ event.notes }}</p>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Quick Stats -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Stats</h3>
+                </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
+        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--brand);">{{ event.timelines|length }}</div>
+            <div class="muted">Timeline Items</div>
+                    </div>
+        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--brand);">{{ event.staff_assignments|length }}</div>
+            <div class="muted">Staff Assigned</div>
+                </div>
+        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--brand);">{{ event.checklist_items|length }}</div>
+            <div class="muted">Checklist Items</div>
+                        </div>
+        <div style="text-align: center; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+            <div style="font-size: 2rem; font-weight: bold; color: var(--brand);">{{ event.get_checklist_progress() }}%</div>
+            <div class="muted">Checklist Progress</div>
+        </div>
+    </div>
+</section>
+{% endblock %}

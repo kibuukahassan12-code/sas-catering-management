@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Finance · Receipts</p>
+        <h1>Record Payment</h1>
+        <p class="muted">Generate a receipt for invoice {{ invoice.invoice_number }}.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('invoices.invoice_view', invoice_id=invoice.id) }}">← Go Back</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form">
+        <div class="form-group">
+            <label for="payment_date">Payment Date</label>
+            <input type="date" id="payment_date" name="payment_date" value="{{ request.form.get('payment_date', '') or default_date }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="amount_received_ugx">Amount Received (UGX)</label>
+            <input type="number" id="amount_received_ugx" name="amount_received_ugx" step="0.01" min="0.01" value="{{ request.form.get('amount_received_ugx', '') or invoice.total_amount_ugx }}" required>
+            <small class="muted">Invoice total: {{ CURRENCY }}{{ "{:,.2f}".format(invoice.total_amount_ugx or 0) }}</small>
+        </div>
+
+        <div class="form-group">
+            <label for="payment_method">Payment Method</label>
+            <select id="payment_method" name="payment_method" required>
+                <option value="Cash" {% if request.form.get('payment_method') == 'Cash' %}selected{% endif %}>Cash</option>
+                <option value="Bank Transfer" {% if request.form.get('payment_method') == 'Bank Transfer' %}selected{% endif %}>Bank Transfer</option>
+                <option value="Mobile Money" {% if request.form.get('payment_method') == 'Mobile Money' %}selected{% endif %}>Mobile Money</option>
+                <option value="Cheque" {% if request.form.get('payment_method') == 'Cheque' %}selected{% endif %}>Cheque</option>
+                <option value="Other" {% if request.form.get('payment_method') == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Generate Receipt</button>
+            <a class="btn-secondary" href="{{ url_for('invoices.invoice_view', invoice_id=invoice.id) }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

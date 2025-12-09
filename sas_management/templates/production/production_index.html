@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Production Dashboard</h1>
+        <p class="muted">Manage kitchen operations, production orders, and ingredient planning.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('production.order_create') }}">+ New Production Order</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Production Summary</h3>
+        <span class="badge">Live overview</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Orders</p>
+            <h2>{{ summary.total_orders }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Active Orders</p>
+            <h2>{{ summary.active_orders }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Completed Today</p>
+            <h2>{{ summary.completed_today }}</h2>
+        </article>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Active Production Orders</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('production.api_orders_list') }}">View All</a>
+    </div>
+    {% if active_orders %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Event</th>
+                    <th>Scheduled Prep</th>
+                    <th>Status</th>
+                    <th>Portions</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in active_orders %}
+                <tr>
+                    <td><strong>{{ order.reference }}</strong></td>
+                    <td>{{ order.event.event_name if order.event else 'Standalone' }}</td>
+                    <td>{{ order.scheduled_prep.strftime('%b %d, %Y %H:%M') if order.scheduled_prep else 'N/A' }}</td>
+                    <td><span class="badge badge-{{ order.status.lower().replace(' ', '-') }}">{{ order.status }}</span></td>
+                    <td>{{ order.total_portions }}</td>
+                    <td>
+                        <a href="{{ url_for('production.order_view', order_id=order.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted">No active production orders.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

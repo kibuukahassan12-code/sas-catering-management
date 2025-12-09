@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Analytics Dashboard - SAS Management System{% endblock %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Analytics</p>
+        <h1>Analytics Dashboard</h1>
+        <p class="muted">View system metrics and analytics (skeleton implementation)</p>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Key Metrics</h3>
+    </div>
+    <div class="kpi-grid">
+        <div class="stat-card">
+            <h3>Revenue</h3>
+            <p class="stat-value">{{ metrics.revenue }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Orders</h3>
+            <p class="stat-value">{{ metrics.orders }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Events</h3>
+            <p class="stat-value">{{ metrics.events }}</p>
+        </div>
+        <div class="stat-card">
+            <h3>Clients</h3>
+            <p class="stat-value">{{ metrics.clients }}</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

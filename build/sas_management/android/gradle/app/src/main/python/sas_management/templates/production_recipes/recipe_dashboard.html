@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Recipes</p>
+        <h1>Recipe Management Dashboard</h1>
+        <p class="muted">Advanced food costing, batch production, and waste tracking.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('recipes.recipe_new') }}">+ New Recipe</a>
+        <a class="btn-secondary" href="{{ url_for('recipes.recipe_list') }}">View All Recipes</a>
+    </div>
+</section>
+
+<!-- KPI Summary Cards -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recipe Overview</h3>
+        <span class="badge">Live stats</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Active Recipes</p>
+            <h2>{{ total_recipes }}</h2>
+            <small class="muted">Currently active</small>
+        </article>
+        <article class="summary-card">
+            <p>Total Ingredients</p>
+            <h2>{{ total_ingredients }}</h2>
+            <small class="muted">Across all recipes</small>
+        </article>
+        <article class="summary-card">
+            <p>Batch Productions</p>
+            <h2>{{ total_batches }}</h2>
+            <small class="muted">Total batches recorded</small>
+        </article>
+        <article class="summary-card">
+            <p>Total Waste Cost</p>
+            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(total_waste_cost) }}</h2>
+            <small class="muted">Cumulative waste</small>
+        </article>
+    </div>
+</section>
+
+<!-- High Cost Recipes -->
+{% if high_cost_recipes %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>High Cost Recipes</h3>
+        <span class="badge warning">Cost per serving</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Recipe Name</th>
+                    <th>Category</th>
+                    <th>Cost per Serving</th>
+                    <th>Yield %</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in high_cost_recipes %}
+                <tr>
+                    <td><strong>{{ item.recipe.name }}</strong></td>
+                    <td><span class="badge">{{ item.recipe.category or 'N/A' }}</span></td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(item.cost_per_serving) }}</strong></td>
+                    <td>{{ item.recipe.yield_percent }}%</td>
+                    <td>
+                        <a href="{{ url_for('recipes.recipe_view', recipe_id=item.recipe.id) }}" class="btn-ghost btn-sm">View Recipe</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Recent Recipes -->
+{% if recent_recipes %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Recipes</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('recipes.recipe_list') }}">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Recipe Name</th>
+                    <th>Category</th>
+                    <th>Base Servings</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recipe in recent_recipes %}
+                <tr>
+                    <td>
+                        {% if recipe.image_url %}
+                        <img src="{{ url_for('static', filename=recipe.image_url) }}" alt="{{ recipe.name }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 8px;">
+                        {% endif %}
+                        <strong>{{ recipe.name }}</strong>
+                    </td>
+                    <td><span class="badge">{{ recipe.category or 'N/A' }}</span></td>
+                    <td>{{ recipe.base_servings }} servings</td>
+                    <td>{{ recipe.created_at.strftime('%Y-%m-%d') if recipe.created_at else 'N/A' }}</td>
+                    <td>
+                        <a href="{{ url_for('recipes.recipe_view', recipe_id=recipe.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Quick Actions -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
+        <a href="{{ url_for('recipes.recipe_new') }}" class="btn-primary" style="text-align: center; padding: 1rem;">Create New Recipe</a>
+        <a href="{{ url_for('recipes.recipe_list') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">Browse All Recipes</a>
+        <a href="{{ url_for('production.index') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">Back to Production</a>
+    </div>
+</section>
+
+{% endblock %}
+

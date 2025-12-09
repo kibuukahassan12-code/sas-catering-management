@@ -1,0 +1,767 @@
+{% extends "base.html" %}
+{% block title %}Kitchen Display System — SAS Management System{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+<style>
+  .kds-page {
+    min-height: calc(100vh - 80px);
+    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  .kds-header {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.98) 0%, rgba(0, 0, 0, 1) 100%);
+    border-bottom: 2px solid rgba(242, 104, 34, 0.3);
+    padding: 1.5rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .header-title h1 {
+    color: #F26822;
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+  }
+
+  .header-title .eyebrow {
+    color: #FFBD4A;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+
+  .header-controls {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .stat-badge {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    transition: all 0.3s ease;
+  }
+
+  .stat-badge:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(242, 104, 34, 0.3);
+    transform: translateY(-2px);
+  }
+
+  .stat-badge.pending {
+    border-left: 4px solid #FFBD4A;
+  }
+
+  .stat-badge.preparing {
+    border-left: 4px solid #F26822;
+  }
+
+  .stat-badge.ready {
+    border-left: 4px solid #2ecc71;
+  }
+
+  .stat-badge.active {
+    border-left: 4px solid #4A90E2;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-btn {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .filter-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
+
+  .filter-btn.active {
+    background: #F26822;
+    color: #fff;
+    border-color: #F26822;
+  }
+
+  /* Orders Grid */
+  .kds-container {
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .kds-orders {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .kds-order-card {
+    background: linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .kds-order-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #F26822, #FFBD4A);
+  }
+
+  .kds-order-card.pending {
+    border-left: 4px solid #FFBD4A;
+    animation: pulse-border 2s infinite;
+  }
+
+  .kds-order-card.preparing {
+    border-left: 4px solid #F26822;
+  }
+
+  .kds-order-card.ready {
+    border-left: 4px solid #2ecc71;
+    opacity: 0.9;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { border-left-color: #FFBD4A; }
+    50% { border-left-color: #F26822; }
+  }
+
+  .kds-order-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(242, 104, 34, 0.3);
+    border-color: rgba(242, 104, 34, 0.5);
+  }
+
+  .order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .order-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #F26822;
+    margin: 0;
+  }
+
+  .order-status-badge {
+    padding: 0.4rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .order-status-badge.pending {
+    background: rgba(255, 189, 74, 0.2);
+    color: #FFBD4A;
+    border: 1px solid rgba(255, 189, 74, 0.3);
+  }
+
+  .order-status-badge.preparing {
+    background: rgba(242, 104, 34, 0.2);
+    color: #F26822;
+    border: 1px solid rgba(242, 104, 34, 0.3);
+  }
+
+  .order-status-badge.ready {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+  }
+
+  .order-meta {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .order-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+  }
+
+  .order-meta-item .icon {
+    font-size: 1.1rem;
+  }
+
+  .order-timer {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #FFBD4A;
+  }
+
+  .order-timer.warning {
+    color: #F26822;
+    animation: blink 1s infinite;
+  }
+
+  .order-timer.critical {
+    color: #e74c3c;
+    animation: blink 0.5s infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .order-items {
+    margin-bottom: 1rem;
+  }
+
+  .order-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border-left: 3px solid transparent;
+  }
+
+  .order-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .item-info {
+    flex: 1;
+  }
+
+  .item-name {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.25rem;
+  }
+
+  .item-note {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+    margin-top: 0.25rem;
+  }
+
+  .item-qty {
+    background: rgba(242, 104, 34, 0.2);
+    color: #F26822;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .order-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .btn {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+  }
+
+  .btn-primary {
+    background: #F26822;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #E55A1A;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.3);
+  }
+
+  .btn-success {
+    background: #2ecc71;
+    color: #fff;
+  }
+
+  .btn-success:hover {
+    background: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+  }
+
+  .btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .delivery-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    background: rgba(74, 144, 226, 0.2);
+    color: #4A90E2;
+    border: 1px solid rgba(74, 144, 226, 0.3);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+  }
+
+  .empty-state h3 {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+  }
+
+  /* Auto-refresh indicator */
+  .refresh-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    margin-left: 1rem;
+  }
+
+  .refresh-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #2ecc71;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .kds-container {
+      padding: 1rem;
+    }
+
+    .kds-header {
+      padding: 1rem;
+    }
+
+    .kds-orders {
+      grid-template-columns: 1fr;
+    }
+
+    .header-top {
+      flex-direction: column;
+      gap: 1rem;
+    }
+  }
+</style>
+
+<div class="kds-page">
+  <div class="kds-header">
+    <div class="header-top">
+      <div class="header-title">
+        <p class="eyebrow">Kitchen Operations</p>
+        <h1>🍳 Kitchen Display System</h1>
+      </div>
+      <div class="header-controls">
+        <span class="refresh-indicator">
+          <span class="refresh-dot"></span>
+          <span>Auto-refresh: <span id="refreshCountdown">30</span>s</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar">
+      <div class="stat-badge pending">
+        <div class="stat-label">Pending</div>
+        <div class="stat-value">{{ stats.pending if stats else 0 }}</div>
+      </div>
+      <div class="stat-badge preparing">
+        <div class="stat-label">Preparing</div>
+        <div class="stat-value">{{ stats.preparing if stats else 0 }}</div>
+      </div>
+      <div class="stat-badge ready">
+        <div class="stat-label">Ready</div>
+        <div class="stat-value">{{ stats.ready if stats else 0 }}</div>
+      </div>
+      <div class="stat-badge active">
+        <div class="stat-label">Active</div>
+        <div class="stat-value">{{ stats.total_active if stats else 0 }}</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <a href="{{ url_for('kds.screen', status='active') }}" 
+         class="filter-btn {% if status_filter == 'active' %}active{% endif %}">
+        🔥 Active
+      </a>
+      <a href="{{ url_for('kds.screen', status='pending') }}" 
+         class="filter-btn {% if status_filter == 'pending' %}active{% endif %}">
+        ⏳ Pending
+      </a>
+      <a href="{{ url_for('kds.screen', status='preparing') }}" 
+         class="filter-btn {% if status_filter == 'preparing' %}active{% endif %}">
+        👨‍🍳 Preparing
+      </a>
+      <a href="{{ url_for('kds.screen', status='ready') }}" 
+         class="filter-btn {% if status_filter == 'ready' %}active{% endif %}">
+        ✅ Ready
+      </a>
+      <a href="{{ url_for('kds.screen', status='all') }}" 
+         class="filter-btn {% if status_filter == 'all' %}active{% endif %}">
+        📋 All Orders
+      </a>
+    </div>
+  </div>
+
+  <div class="kds-container">
+    <div class="kds-orders">
+      {% if orders and orders|length > 0 %}
+        {% for order in orders %}
+          {% set kitchen_items = order.lines|selectattr('is_kitchen_item', 'equalto', True)|list %}
+          {% if kitchen_items|length > 0 or status_filter == 'all' %}
+            {% set elapsed_seconds = ((now - order.created_at).total_seconds()) if (order.created_at and now is defined) else 0 %}
+            {% set elapsed_minutes = (elapsed_seconds / 60)|int %}
+            <div class="kds-order-card {{ order.status }}" data-order-id="{{ order.id }}" data-created="{{ order.created_at.isoformat() if order.created_at else '' }}">
+              <div class="order-header">
+                <div>
+                  <h3 class="order-number">Order #{{ order.reference or order.id }}</h3>
+                  {% if order.client %}
+                    <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin: 0.25rem 0 0 0;">
+                      {{ order.client.name }}
+                    </p>
+                  {% endif %}
+                </div>
+                <span class="order-status-badge {{ order.status }}">{{ order.status|title }}</span>
+              </div>
+
+              <div class="order-meta">
+                <div class="order-meta-item">
+                  <span class="icon">🕐</span>
+                  <span>{{ order.created_at.strftime('%H:%M') if order.created_at else '—' }}</span>
+                </div>
+                <div class="order-meta-item">
+                  <span class="icon">⏱️</span>
+                  <span class="order-timer" data-order-id="{{ order.id }}" data-elapsed="{{ elapsed_minutes }}">
+                    {{ elapsed_minutes }}m
+                  </span>
+                </div>
+                {% if order.is_delivery %}
+                  <div class="delivery-badge">
+                    🚚 Delivery
+                  </div>
+                {% endif %}
+              </div>
+
+              {% if order.is_delivery and order.delivery_address %}
+                <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(74, 144, 226, 0.1); border-radius: 8px; border-left: 3px solid #4A90E2;">
+                  <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">
+                    <strong style="color: #4A90E2;">📍 Address:</strong> {{ order.delivery_address }}
+                  </div>
+                </div>
+              {% endif %}
+
+              <div class="order-items">
+                {% for item in kitchen_items %}
+                  <div class="order-item">
+                    <div class="item-info">
+                      <div class="item-name">{{ item.product_name }}</div>
+                      {% if item.note %}
+                        <div class="item-note">Note: {{ item.note }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="item-qty">×{{ item.qty }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+
+              <div class="order-actions">
+                {% if order.status == 'pending' %}
+                  <button class="btn btn-primary" onclick="startOrder({{ order.id }})">
+                    👨‍🍳 Start
+                  </button>
+                {% elif order.status == 'preparing' %}
+                  <button class="btn btn-success" onclick="completeOrder({{ order.id }})">
+                    ✅ Ready
+                  </button>
+                {% elif order.status == 'ready' %}
+                  <button class="btn btn-secondary" onclick="completeOrder({{ order.id }})" disabled>
+                    ✓ Completed
+                  </button>
+                {% endif %}
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">🍳</div>
+          <h3>No Orders</h3>
+          <p>No orders found for the selected filter.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+// Auto-refresh functionality
+let refreshInterval;
+let countdownInterval;
+let refreshCountdown = 30;
+
+function startAutoRefresh() {
+  refreshInterval = setInterval(() => {
+    location.reload();
+  }, 30000); // 30 seconds
+
+  countdownInterval = setInterval(() => {
+    refreshCountdown--;
+    const countdownEl = document.getElementById('refreshCountdown');
+    if (countdownEl) {
+      countdownEl.textContent = refreshCountdown;
+    }
+    if (refreshCountdown <= 0) {
+      refreshCountdown = 30;
+    }
+  }, 1000);
+}
+
+// Update timers
+function updateTimers() {
+  document.querySelectorAll('.order-timer').forEach(timer => {
+    const orderId = timer.dataset.orderId;
+    const created = timer.closest('.kds-order-card').dataset.created;
+    if (created) {
+      const createdTime = new Date(created);
+      const now = new Date();
+      const elapsedMs = now - createdTime;
+      const elapsedMinutes = Math.floor(elapsedMs / 60000);
+      
+      timer.textContent = elapsedMinutes + 'm';
+      timer.dataset.elapsed = elapsedMinutes;
+      
+      // Update timer styling based on elapsed time
+      timer.classList.remove('warning', 'critical');
+      if (elapsedMinutes >= 20) {
+        timer.classList.add('critical');
+      } else if (elapsedMinutes >= 10) {
+        timer.classList.add('warning');
+      }
+    }
+  });
+}
+
+// Order actions
+function startOrder(orderId) {
+  fetch(`/kds/orders/${orderId}/start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      // Play notification sound
+      playNotificationSound();
+      // Reload after short delay
+      setTimeout(() => location.reload(), 500);
+    } else {
+      alert('Error: ' + (data.error || 'Failed to start order'));
+    }
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    alert('Error starting order');
+  });
+}
+
+function completeOrder(orderId) {
+  fetch(`/kds/orders/${orderId}/status`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status: 'ready' })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      // Play notification sound
+      playNotificationSound();
+      // Reload after short delay
+      setTimeout(() => location.reload(), 500);
+    } else {
+      alert('Error: ' + (data.error || 'Failed to complete order'));
+    }
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    alert('Error completing order');
+  });
+}
+
+// Notification sound
+function playNotificationSound() {
+  // Create a simple beep sound using Web Audio API
+  try {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.2);
+  } catch (e) {
+    console.log('Audio notification not available');
+  }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  startAutoRefresh();
+  updateTimers();
+  setInterval(updateTimers, 60000); // Update timers every minute
+  
+  // Check for new orders periodically (every 10 seconds)
+  setInterval(() => {
+    fetch('/kds/api/orders?status={{ status_filter }}')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          // Check if there are new orders
+          const currentOrderIds = new Set(
+            Array.from(document.querySelectorAll('.kds-order-card')).map(card => card.dataset.orderId)
+          );
+          const newOrders = data.orders.filter(order => !currentOrderIds.has(String(order.id)));
+          
+          if (newOrders.length > 0) {
+            // New order detected, reload page
+            playNotificationSound();
+            setTimeout(() => location.reload(), 1000);
+          }
+        }
+      })
+      .catch(err => console.error('Error checking for new orders:', err));
+  }, 10000);
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'F5' || (e.ctrlKey && e.key === 'r')) {
+    e.preventDefault();
+    location.reload();
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Business Intelligence</p>
+        <h1>POS Sales Heatmap</h1>
+        <p class="muted">Visualize sales patterns by hour and day of week.</p>
+    </div>
+    <div class="quick-links">
+        <button class="btn-primary" onclick="refreshHeatmap()">Refresh Data</button>
+        <a class="btn-secondary" href="{{ url_for('bi.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Heatmap Visualization -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Sales Heatmap (Hour × Day)</h3>
+        <span class="badge">Last 7 days</span>
+    </div>
+    <div style="padding: 2rem; overflow-x: auto;">
+        <table style="border-collapse: collapse; width: 100%; min-width: 800px;">
+            <thead>
+                <tr>
+                    <th style="padding: 0.5rem; text-align: left;">Hour</th>
+                    {% for day in days %}
+                    <th style="padding: 0.5rem; text-align: center;">{{ day }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for hour in hours %}
+                <tr>
+                    <td style="padding: 0.5rem; font-weight: 600;">{{ hour }}:00</td>
+                    {% for day in days %}
+                    {% set sales = heatmap_matrix.get(day, {}).get(hour, {}).get('sales', 0) %}
+                    {% set intensity = (sales / 20000.0 * 100) if sales > 0 else 0 %}
+                    {% set bg_color = 'rgba(242, 104, 34, ' ~ (intensity / 100) ~ ')' if intensity > 0 else '#f8f9fa' %}
+                    <td style="padding: 1rem; text-align: center; background: {{ bg_color }}; border: 1px solid #ddd; min-width: 80px;">
+                        <strong>{{ CURRENCY }}{{ "{:,.0f}".format(sales) }}</strong>
+                        <br><small>{{ heatmap_matrix.get(day, {}).get(hour, {}).get('orders', 0) }} orders</small>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- Peak Hours Summary -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Peak Sales Hours</h3>
+    </div>
+    <div style="padding: 2rem;">
+        <canvas id="peakHoursChart" style="max-height: 300px;"></canvas>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+function refreshHeatmap() {
+    fetch('/bi/api/pos/heatmap?days=7')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Heatmap data refreshed!');
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error refreshing heatmap');
+        });
+}
+
+// Peak Hours Chart
+const ctx = document.getElementById('peakHoursChart');
+if (ctx) {
+    const heatmapData = {{ heatmap_matrix|tojson|safe }};
+    const days = {{ days|tojson|safe }};
+    const hours = {{ hours|tojson|safe }};
+    
+    // Calculate total sales per hour across all days
+    const hourlyTotals = {};
+    hours.forEach(hour => {
+        hourlyTotals[hour] = 0;
+        days.forEach(day => {
+            const sales = heatmapData[day] && heatmapData[day][hour] ? heatmapData[day][hour].sales : 0;
+            hourlyTotals[hour] += sales;
+        });
+    });
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: hours.map(h => `${h}:00`),
+            datasets: [{
+                label: 'Total Sales (UGX)',
+                data: hours.map(h => hourlyTotals[h]),
+                backgroundColor: hours.map(h => {
+                    const max = Math.max(...Object.values(hourlyTotals));
+                    const intensity = hourlyTotals[h] / max;
+                    return `rgba(242, 104, 34, ${0.3 + intensity * 0.7})`;
+                })
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {display: true, text: 'Total Sales by Hour (All Days Combined)'},
+                legend: {display: false}
+            },
+            scales: {
+                y: {beginAtZero: true, title: {display: true, text: 'Total Sales (UGX)'}}
+            }
+        }
+    });
+}
+</script>
+{% endblock %}
+

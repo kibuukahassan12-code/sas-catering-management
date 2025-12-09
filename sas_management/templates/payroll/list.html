@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Payroll</p>
+        <h1>Payroll Management</h1>
+        <p class="muted">Record staff payments and track payroll expenses.</p>
+    </div>
+    <a class="btn-primary btn-desktop-only" href="{{ url_for('payroll.payroll_add') }}">+ Record Payment</a>
+</section>
+
+<section class="panel">
+    <div class="table-header">
+        <h3>Payroll Records</h3>
+        <span class="badge">{{ pagination.total }} records</span>
+    </div>
+    
+    <!-- Desktop Table View -->
+    <div class="table-wrapper table-desktop">
+        <table class="responsive-table table-enhanced">
+            <thead>
+                <tr>
+                    <th>Staff Member</th>
+                    <th>Payment Date</th>
+                    <th>Description</th>
+                    <th>Amount (UGX)</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in payroll_records %}
+                <tr>
+                    <td data-label="Staff Member">{{ record.user.email }}</td>
+                    <td data-label="Payment Date">{{ record.pay_date.strftime('%b %d, %Y') }}</td>
+                    <td data-label="Description">{{ record.description }}</td>
+                    <td data-label="Amount">{{ CURRENCY }}{{ "{:,.2f}".format(record.amount_ugx or 0) }}</td>
+                    <td class="table-actions">
+                        <a class="btn-ghost" href="{{ url_for('payroll.payroll_edit', payroll_id=record.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('payroll.payroll_delete', payroll_id=record.id) }}" onsubmit="return confirm('Delete this payroll record?');">
+                            <button type="submit" class="btn-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No payroll records found. Record your first payment to get started.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="card-list card-list-mobile">
+        {% for record in payroll_records %}
+        <div class="payroll-card">
+            <div class="payroll-card__header">
+                <h4>{{ record.user.email }}</h4>
+                <span class="payroll-card__amount">{{ CURRENCY }}{{ "{:,.2f}".format(record.amount_ugx or 0) }}</span>
+            </div>
+            <div class="payroll-card__body">
+                <div class="payroll-card__field">
+                    <span class="payroll-card__label">Payment Date:</span>
+                    <span class="payroll-card__value">{{ record.pay_date.strftime('%b %d, %Y') }}</span>
+                </div>
+                <div class="payroll-card__field">
+                    <span class="payroll-card__label">Description:</span>
+                    <span class="payroll-card__value">{{ record.description }}</span>
+                </div>
+            </div>
+            <div class="payroll-card__actions">
+                <a class="btn-ghost" href="{{ url_for('payroll.payroll_edit', payroll_id=record.id) }}">Edit</a>
+                <form method="post" action="{{ url_for('payroll.payroll_delete', payroll_id=record.id) }}" onsubmit="return confirm('Delete this payroll record?');">
+                    <button type="submit" class="btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">No payroll records found. Record your first payment to get started.</div>
+        {% endfor %}
+    </div>
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" aria-label="Payroll pagination">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div class="pagination-controls">
+            {% if pagination.has_prev %}
+            <a class="btn-secondary" href="{{ url_for('payroll.payroll_list', page=pagination.prev_num) }}">← Previous</a>
+            {% else %}
+            <span class="btn-disabled">← Previous</span>
+            {% endif %}
+
+            {% if pagination.has_next %}
+            <a class="btn-secondary" href="{{ url_for('payroll.payroll_list', page=pagination.next_num) }}">Next →</a>
+            {% else %}
+            <span class="btn-disabled">Next →</span>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+
+<a href="{{ url_for('payroll.payroll_add') }}" class="fab" aria-label="Record Payroll Payment">
+    <span class="fab-icon">+</span>
+</a>
+{% endblock %}
+

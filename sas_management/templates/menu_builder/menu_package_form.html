@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Menu Package</p>
+        <h1>{% if package %}Edit{% else %}Create{% endif %} Menu Package</h1>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('menu_builder.dashboard') }}">← Dashboard</a>
+</section>
+
+<section class="panel">
+    <form method="POST">
+        <div class="form-grid">
+            <label class="form-control">
+                <span>Package Name *</span>
+                <input type="text" name="name" value="{{ package.name if package else '' }}" required>
+            </label>
+            <label class="form-control">
+                <span>Category</span>
+                <select name="category">
+                    <option value="">Select Category</option>
+                    <option value="Wedding" {% if package and package.category == 'Wedding' %}selected{% endif %}>Wedding</option>
+                    <option value="Corporate" {% if package and package.category == 'Corporate' %}selected{% endif %}>Corporate</option>
+                    <option value="Birthday" {% if package and package.category == 'Birthday' %}selected{% endif %}>Birthday</option>
+                    <option value="Other" {% if package and package.category == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </label>
+            <label class="form-control">
+                <span>Total Price ({{ CURRENCY.rstrip() }}) *</span>
+                <input type="number" name="total_price" step="0.01" value="{{ package.total_price if package else '' }}" required>
+            </label>
+            <label class="form-control">
+                <span>Status</span>
+                <select name="status">
+                    <option value="Active" {% if package and package.status == 'Active' or not package %}selected{% endif %}>Active</option>
+                    <option value="Inactive" {% if package and package.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                </select>
+            </label>
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Description</span>
+                <textarea name="description" rows="4">{{ package.description if package else '' }}</textarea>
+            </label>
+            
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Select Menu Items</span>
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 1rem;">
+                    {% for item in items %}
+                    <div style="display: flex; align-items: center; gap: 1rem; padding: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <input type="checkbox" name="item_ids" value="{{ item.id }}" id="item_{{ item.id }}">
+                        <label for="item_{{ item.id }}" style="flex: 1; cursor: pointer;">
+                            <strong>{{ item.name }}</strong> - {{ CURRENCY }}{{ "{:,.0f}".format(item.selling_price) }}
+                        </label>
+                        <input type="number" name="quantities" value="1" min="1" placeholder="Qty" style="width: 80px; padding: 0.25rem;">
+                    </div>
+                    {% endfor %}
+                </div>
+            </label>
+            
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn-primary">{% if package %}Update{% else %}Create{% endif %} Package</button>
+                <a class="btn-ghost" href="{{ url_for('menu_builder.dashboard') }}">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

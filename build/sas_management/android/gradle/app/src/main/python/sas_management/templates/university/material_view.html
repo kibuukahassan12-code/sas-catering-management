@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>{{ material.title }}</h1>
+        <p class="muted">Course: {{ material.course.title }}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('university.view_course', course_id=material.course.id) }}">← Back to Course</a>
+</section>
+
+<section class="panel">
+    <div class="material-detail">
+        <div class="material-detail__info">
+            <h3>Material Information</h3>
+            <dl>
+                <dt>Title</dt>
+                <dd>{{ material.title }}</dd>
+                <dt>Course</dt>
+                <dd>{{ material.course.title }}</dd>
+                <dt>File Path</dt>
+                <dd><code>{{ material.file_path }}</code></dd>
+            </dl>
+        </div>
+        <div class="material-detail__actions">
+            <a href="{{ url_for('university.download_material', material_id=material.id) }}" class="btn-primary">
+                Download Material
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

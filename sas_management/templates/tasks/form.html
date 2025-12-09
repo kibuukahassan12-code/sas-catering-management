@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Operations · Tasks</p>
+        <h1>{{ action }} Task</h1>
+        <p class="muted">{% if action == 'Add' %}Create a new task for event coordination.{% else %}Update task details and status.{% endif %}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('tasks.task_list') }}">← Go Back</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form form-modern">
+        <div class="form-grid-modern">
+            <div class="form-group-modern form-group-full">
+                <label for="title">Title *</label>
+                <input type="text" id="title" name="title" value="{{ request.form.get('title', '') or (task.title if task else '') }}" required>
+            </div>
+
+            <div class="form-group-modern form-group-full">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" rows="4">{{ request.form.get('description', '') or (task.description if task else '') }}</textarea>
+            </div>
+
+            {# ALL PERMISSIONS GRANTED - No restrictions #}
+            <div class="form-group-modern">
+                <label for="event_id">Event (Optional)</label>
+                <select id="event_id" name="event_id">
+                    <option value="">— Select Event —</option>
+                    {% for event in events %}
+                    <option value="{{ event.id }}" {% if (task and task.event_id == event.id) or (request.form.get('event_id', type=int) == event.id) %}selected{% endif %}>
+                        {{ event.event_name }} ({{ event.event_date.strftime('%b %d, %Y') }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group-modern">
+                <label for="assigned_user_id">Assign To</label>
+                <select id="assigned_user_id" name="assigned_user_id">
+                    <option value="">— Unassigned —</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}" {% if (task and task.assigned_user_id == user.id) or (request.form.get('assigned_user_id', type=int) == user.id) %}selected{% endif %}>
+                        {{ user.email }} ({{ user.role.value }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group-modern">
+                <label for="due_date">Due Date</label>
+                <input type="date" id="due_date" name="due_date" value="{{ request.form.get('due_date', '') or (task.due_date.strftime('%Y-%m-%d') if task and task.due_date else '') }}">
+            </div>
+
+            <div class="form-group-modern">
+                <label for="status">Status *</label>
+                <select id="status" name="status" required>
+                    <option value="Pending" {% if (task and task.status.value == 'Pending') or (request.form.get('status') == 'Pending') %}selected{% endif %}>Pending</option>
+                    <option value="In Progress" {% if (task and task.status.value == 'In Progress') or (request.form.get('status') == 'In Progress') %}selected{% endif %}>In Progress</option>
+                    <option value="Complete" {% if (task and task.status.value == 'Complete') or (request.form.get('status') == 'Complete') %}selected{% endif %}>Complete</option>
+                </select>
+            </div>
+            {% else %}
+            <div class="form-group-modern form-group-full">
+                <label for="status">Status *</label>
+                <select id="status" name="status" required>
+                    <option value="Pending" {% if (task and task.status.value == 'Pending') or (request.form.get('status') == 'Pending') %}selected{% endif %}>Pending</option>
+                    <option value="In Progress" {% if (task and task.status.value == 'In Progress') or (request.form.get('status') == 'In Progress') %}selected{% endif %}>In Progress</option>
+                    <option value="Complete" {% if (task and task.status.value == 'Complete') or (request.form.get('status') == 'Complete') %}selected{% endif %}>Complete</option>
+                </select>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-actions-modern">
+            <button type="submit" class="btn-primary">{{ action }} Task</button>
+            <a class="btn-secondary" href="{{ url_for('tasks.task_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

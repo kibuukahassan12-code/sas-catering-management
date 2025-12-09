@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">HR Department</p>
+        <h1>HR Dashboard</h1>
+        <p class="muted">Manage employees, attendance, shifts, leave, and payroll.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hr.employee_list') }}">Manage Employees</a>
+        <a class="btn-secondary" href="{{ url_for('hr.roster_builder') }}">Build Roster</a>
+    </div>
+</section>
+
+<!-- KPI Summary Cards -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>HR Overview</h3>
+        <span class="badge">Live stats</span>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Active Employees</p>
+            <h2>{{ total_employees }}</h2>
+            <small class="muted">Currently active</small>
+        </article>
+        <article class="summary-card">
+            <p>Departments</p>
+            <h2>{{ total_departments }}</h2>
+            <small class="muted">Active departments</small>
+        </article>
+        <article class="summary-card">
+            <p>Pending Leave Requests</p>
+            <h2>{{ pending_leave_requests }}</h2>
+            <small class="muted">Awaiting approval</small>
+        </article>
+        <article class="summary-card">
+            <p>Today's Attendance</p>
+            <h2>{{ today_attendances }}</h2>
+            <small class="muted">{{ clocked_in_now }} currently clocked in</small>
+        </article>
+    </div>
+</section>
+
+<!-- Recent Employees -->
+{% if recent_employees %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Employees</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('hr.employee_list') }}">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Position</th>
+                    <th>Department</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in recent_employees %}
+                <tr>
+                    <td>
+                        <strong>{{ employee.full_name }}</strong>
+                        {% if employee.photo_url %}
+                        <img src="{{ url_for('static', filename=employee.photo_url) }}" alt="{{ employee.full_name }}" style="width: 30px; height: 30px; border-radius: 50%; margin-left: 0.5rem; object-fit: cover;">
+                        {% endif %}
+                    </td>
+                    <td>{{ employee.email }}</td>
+                    <td>{{ employee.position.title if employee.position else 'N/A' }}</td>
+                    <td>{{ employee.department.name if employee.department else 'N/A' }}</td>
+                    <td>
+                        {% if employee.status == 'active' %}
+                        <span class="badge success">Active</span>
+                        {% else %}
+                        <span class="badge">{{ employee.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('hr.employee_profile', employee_id=employee.id) }}" class="btn-ghost btn-sm">View Profile</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Pending Leave Requests -->
+{% if recent_leave_requests %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Pending Leave Requests</h3>
+        <a class="btn-secondary btn-sm" href="{{ url_for('hr.leave_queue') }}">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Leave Type</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Days</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for leave in recent_leave_requests %}
+                <tr>
+                    <td><strong>{{ leave.employee.full_name }}</strong></td>
+                    <td><span class="badge">{{ leave.leave_type }}</span></td>
+                    <td>{{ leave.start_date.strftime('%Y-%m-%d') if leave.start_date else 'N/A' }}</td>
+                    <td>{{ leave.end_date.strftime('%Y-%m-%d') if leave.end_date else 'N/A' }}</td>
+                    <td>{{ leave.days_requested }} days</td>
+                    <td>
+                        <a href="{{ url_for('hr.leave_queue') }}" class="btn-ghost btn-sm">Review</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Quick Actions -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1.5rem;">
+        <a href="{{ url_for('hr.employee_list') }}" class="btn-primary" style="text-align: center; padding: 1rem;">Manage Employees</a>
+        <a href="{{ url_for('hr.roster_builder') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">Build Roster</a>
+        <a href="{{ url_for('hr.leave_queue') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">Review Leave Requests</a>
+        <a href="{{ url_for('hr.attendance_review') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">Review Attendance</a>
+        <a href="{{ url_for('hr.payroll_export') }}" class="btn-secondary" style="text-align: center; padding: 1rem;">Payroll Export</a>
+    </div>
+</section>
+
+{% endblock %}
+
+

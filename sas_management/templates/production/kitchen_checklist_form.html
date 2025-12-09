@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>New Kitchen Checklist</h1>
+        <p class="muted">Create a comprehensive daily kitchen operations checklist for food safety and quality.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.kitchen_checklist_list') }}">← Back to Checklists</a>
+</section>
+
+<section class="panel" style="max-width: 900px; margin: 0 auto;">
+    <form method="post" id="checklist-form" class="form-grid">
+        <div style="grid-column: 1 / -1; margin-bottom: 1rem;">
+            <h3 style="color: #2c3e50; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; margin-bottom: 1.5rem;">
+                Checklist Information
+            </h3>
+        </div>
+        
+        <label class="form-control">
+            <span>Checklist Title <small style="color: #6c757d;">(Optional)</small></span>
+            <input type="text" name="title" placeholder="e.g., Morning Prep Checklist" value="{{ checklist.title if checklist else '' }}">
+        </label>
+
+        <label class="form-control">
+            <span>Checklist Type</span>
+            <select name="checklist_type">
+                <option value="">-- Select Type --</option>
+                <option value="Daily Opening" {% if checklist and checklist.checklist_type == 'Daily Opening' %}selected{% endif %}>Daily Opening</option>
+                <option value="Pre-Service" {% if checklist and checklist.checklist_type == 'Pre-Service' %}selected{% endif %}>Pre-Service</option>
+                <option value="During Service" {% if checklist and checklist.checklist_type == 'During Service' %}selected{% endif %}>During Service</option>
+                <option value="Closing" {% if checklist and checklist.checklist_type == 'Closing' %}selected{% endif %}>Closing</option>
+                <option value="Deep Clean" {% if checklist and checklist.checklist_type == 'Deep Clean' %}selected{% endif %}>Deep Clean</option>
+                <option value="Event Specific" {% if checklist and checklist.checklist_type == 'Event Specific' %}selected{% endif %}>Event Specific</option>
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Checklist Date <span style="color: #dc3545;">*</span></span>
+            <input type="date" name="checklist_date" value="{{ checklist.checklist_date.strftime('%Y-%m-%d') if checklist else date.today().strftime('%Y-%m-%d') }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Event <small style="color: #6c757d;">(Optional)</small></span>
+            <select name="event_id">
+                <option value="">-- No Event (Daily Checklist) --</option>
+                {% for event in events %}
+                <option value="{{ event.id }}" {% if checklist and checklist.event_id == event.id %}selected{% endif %}>
+                    {{ event.event_name }} - {{ event.event_date.strftime('%Y-%m-%d') }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Initial Status <span style="color: #dc3545;">*</span></span>
+            <select name="status" required>
+                <option value="Pending" {% if checklist and checklist.status == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="In Progress" {% if checklist and checklist.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Completed" {% if checklist and checklist.status == 'Completed' %}selected{% endif %}>Completed</option>
+            </select>
+        </label>
+
+        <div style="grid-column: 1 / -1; margin-top: 2rem; margin-bottom: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="color: #2c3e50; border-bottom: 2px solid var(--accent); padding-bottom: 0.5rem; margin: 0;">
+                    Checklist Items
+                </h3>
+                <button type="button" class="btn-primary btn-sm" onclick="addChecklistItem()" style="display: flex; align-items: center; gap: 0.5rem;">
+                    <span>+</span> Add Item
+                </button>
+            </div>
+            <p style="color: #6c757d; font-size: 0.9rem; margin: 0;">Add items to check during kitchen operations. Click the checkbox to mark items as checked.</p>
+        </div>
+
+        <div id="items-container" style="grid-column: 1 / -1; display: flex; flex-direction: column; gap: 1rem;">
+            {% for default_item in default_items %}
+            <div class="checklist-item-card" style="background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 1.25rem; transition: all 0.3s ease;">
+                <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: start;">
+                    <div style="display: flex; align-items: center; padding-top: 0.5rem;">
+                        <input type="checkbox" name="item_checked[]" class="item-checkbox" style="width: 20px; height: 20px; cursor: pointer;" onchange="updateItemStatus(this)">
+                    </div>
+                    <div style="flex: 1; display: grid; gap: 0.75rem;">
+                        <input type="text" name="item_name[]" value="{{ default_item }}" required 
+                               placeholder="Item name" 
+                               style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px; font-size: 1rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                            <select name="item_status[]" class="item-status" style="padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                                <option value="Pending">Pending</option>
+                                <option value="Checked">Checked</option>
+                                <option value="Issue">Issue</option>
+                            </select>
+                            <input type="text" name="item_note[]" placeholder="Optional note" 
+                                   style="padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                        </div>
+                    </div>
+                    <button type="button" class="btn-remove" onclick="removeItem(this)" 
+                            style="background: #dc3545; color: white; border: none; border-radius: 6px; padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;">
+                        Remove
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="grid-column: 1 / -1; margin-top: 1.5rem;">
+            <label class="form-control">
+                <span>Additional Notes</span>
+                <textarea name="notes" rows="4" placeholder="Any additional notes, observations, or comments..." 
+                          style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px; font-family: inherit; resize: vertical;">{{ checklist.notes if checklist else '' }}</textarea>
+            </label>
+        </div>
+
+        <div class="form-actions" style="grid-column: 1 / -1; display: flex; gap: 1rem; margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #e9ecef;">
+            <button type="submit" class="btn-primary" style="flex: 1; padding: 0.875rem; font-size: 1rem; font-weight: 600;">
+                <span>✓</span> Save Checklist
+            </button>
+            <a class="btn-ghost" href="{{ url_for('production.kitchen_checklist_list') }}" style="padding: 0.875rem 1.5rem; text-decoration: none;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</section>
+
+<script>
+function addChecklistItem() {
+    const container = document.getElementById('items-container');
+    const newCard = document.createElement('div');
+    newCard.className = 'checklist-item-card';
+    newCard.style.cssText = 'background: #f8f9fa; border: 2px solid #e9ecef; border-radius: 8px; padding: 1.25rem; transition: all 0.3s ease;';
+    newCard.innerHTML = `
+        <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 1rem; align-items: start;">
+            <div style="display: flex; align-items: center; padding-top: 0.5rem;">
+                <input type="checkbox" name="item_checked[]" class="item-checkbox" style="width: 20px; height: 20px; cursor: pointer;" onchange="updateItemStatus(this)">
+            </div>
+            <div style="flex: 1; display: grid; gap: 0.75rem;">
+                <input type="text" name="item_name[]" required placeholder="Item name" 
+                       style="width: 100%; padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px; font-size: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <select name="item_status[]" class="item-status" style="padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                        <option value="Pending">Pending</option>
+                        <option value="Checked">Checked</option>
+                        <option value="Issue">Issue</option>
+                    </select>
+                    <input type="text" name="item_note[]" placeholder="Optional note" 
+                           style="padding: 0.75rem; border: 1px solid #dee2e6; border-radius: 6px;">
+                </div>
+            </div>
+            <button type="button" class="btn-remove" onclick="removeItem(this)" 
+                    style="background: #dc3545; color: white; border: none; border-radius: 6px; padding: 0.5rem 0.75rem; cursor: pointer; font-size: 0.9rem; transition: all 0.2s;">
+                Remove
+            </button>
+        </div>
+    `;
+    container.appendChild(newCard);
+    newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeItem(button) {
+    const card = button.closest('.checklist-item-card');
+    card.style.transition = 'all 0.3s ease';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(-20px)';
+    setTimeout(() => card.remove(), 300);
+}
+
+function updateItemStatus(checkbox) {
+    const card = checkbox.closest('.checklist-item-card');
+    const statusSelect = card.querySelector('.item-status');
+    if (checkbox.checked) {
+        statusSelect.value = 'Checked';
+        card.style.borderColor = '#28a745';
+        card.style.background = '#d4edda';
+    } else {
+        statusSelect.value = 'Pending';
+        card.style.borderColor = '#e9ecef';
+        card.style.background = '#f8f9fa';
+    }
+}
+
+// Add smooth animations
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.checklist-item-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(10px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.3s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 50);
+    });
+    
+    // Add hover effects
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.borderColor = 'var(--accent)';
+            this.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+        });
+        card.addEventListener('mouseleave', function() {
+            if (!this.querySelector('.item-checkbox').checked) {
+                this.style.borderColor = '#e9ecef';
+            }
+            this.style.boxShadow = 'none';
+        });
+    });
+});
+</script>
+
+<style>
+.checklist-item-card {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.btn-remove:hover {
+    background: #c82333 !important;
+    transform: scale(1.05);
+}
+
+.form-control input:focus,
+.form-control select:focus,
+.form-control textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+</style>
+{% endblock %}

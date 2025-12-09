@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin Panel</p>
+        <h1>Admin Dashboard</h1>
+        <p class="muted">System administration and user management</p>
+    </div>
+</section>
+
+<!-- Statistics Cards -->
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Users</h3>
+        </div>
+        <div style="padding: 1.5rem;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent); margin-bottom: 0.5rem;">
+                {{ stats.total_users or 0 }}
+            </div>
+            <div style="display: flex; gap: 1rem; font-size: 0.9rem;">
+                <span style="color: #2ecc71;">{{ stats.users_with_roles or 0 }} with roles</span>
+                <span style="color: #e74c3c;">{{ stats.users_without_roles or 0 }} unassigned</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Roles</h3>
+        </div>
+        <div style="padding: 1.5rem;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent); margin-bottom: 0.5rem;">
+                {{ stats.total_roles or 0 }}
+            </div>
+            <div style="font-size: 0.9rem; color: var(--text-muted);">
+                {{ stats.total_permissions or 0 }} permissions defined
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Clients</h3>
+        </div>
+        <div style="padding: 1.5rem;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent); margin-bottom: 0.5rem;">
+                {{ stats.total_clients or 0 }}
+            </div>
+            <div style="font-size: 0.9rem; color: var(--text-muted);">
+                Total clients in system
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Events</h3>
+        </div>
+        <div style="padding: 1.5rem;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent); margin-bottom: 0.5rem;">
+                {{ stats.total_events or 0 }}
+            </div>
+            <div style="font-size: 0.9rem; color: var(--text-muted);">
+                Total events managed
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<section class="panel" style="margin-bottom: 2rem;">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div style="padding: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <a href="{{ url_for('admin.users_list') }}" class="btn-primary">👥 Manage Users</a>
+        <a href="{{ url_for('admin.users_add') }}" class="btn-secondary">➕ Create User</a>
+        <a href="{{ url_for('admin.roles_list') }}" class="btn-secondary">🔐 Manage Roles</a>
+        <a href="{{ url_for('admin.role_create') }}" class="btn-secondary">➕ Create Role</a>
+        <a href="{{ url_for('admin.permissions_list') }}" class="btn-secondary">🔑 View Permissions</a>
+        <a href="{{ url_for('admin.groups_list') }}" class="btn-secondary">👔 Manage Groups</a>
+        <a href="{{ url_for('admin.user_roles') }}" class="btn-secondary">🔗 Assign Roles</a>
+    </div>
+</section>
+
+<!-- Setup & Seeding -->
+{% if stats.total_users == 0 or stats.total_roles == 0 %}
+<section class="panel" style="margin-bottom: 2rem; border-left: 4px solid #FF7043; background: rgba(255, 112, 67, 0.1);">
+    <div class="panel-header">
+        <h3>🚀 Initial Setup</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        <p style="margin-bottom: 1rem;"><strong>Get started by seeding roles, permissions, and sample users:</strong></p>
+        <div style="background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+            <h4 style="margin-top: 0;">Step 1: Seed Roles & Permissions</h4>
+            <code style="display: block; padding: 0.5rem; background: #f5f5f5; border-radius: 4px; margin: 0.5rem 0;">
+                python seed_rbac_complete.py
+            </code>
+        </div>
+        <div style="background: white; padding: 1rem; border-radius: 8px;">
+            <h4 style="margin-top: 0;">Step 2: Seed Sample Users</h4>
+            <code style="display: block; padding: 0.5rem; background: #f5f5f5; border-radius: 4px; margin: 0.5rem 0;">
+                python scripts/seed_sample_users.py
+            </code>
+            <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; color: #666;">
+                This will create 12 sample users with different roles. Passwords follow the pattern: &lt;email_prefix&gt;123
+            </p>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Two Column Layout -->
+<div class="grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Recent Users -->
+    <section class="panel">
+        <div class="panel-header">
+            <h3>Recent Users</h3>
+            <a href="{{ url_for('admin.users_list') }}" class="btn-ghost btn-sm">View All</a>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in recent_users %}
+                    <tr>
+                        <td><strong>{{ user.email }}</strong></td>
+                        <td>
+                            {% if user.role_obj %}
+                            <span class="badge">{{ user.role_obj.name }}</span>
+                            {% else %}
+                            <span class="muted">No role</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.force_password_change %}
+                            <span class="badge" style="background: rgba(255, 92, 92, 0.2); color: #ff5c5c;">Must Change</span>
+                            {% else %}
+                            <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">Active</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; padding: 2rem;">
+                            <p class="muted">No users found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Recent Roles -->
+    <section class="panel">
+        <div class="panel-header">
+            <h3>Recent Roles</h3>
+            <a href="{{ url_for('admin.roles_list') }}" class="btn-ghost btn-sm">View All</a>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Role Name</th>
+                        <th>Permissions</th>
+                        <th>Users</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for role in recent_roles %}
+                    <tr>
+                        <td><strong>{{ role.name }}</strong></td>
+                        <td>
+                            <span class="badge">{{ role.permissions|length }} permissions</span>
+                        </td>
+                        <td>
+                            <span class="badge">{{ users_by_role.get(role.name, 0) }} users</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; padding: 2rem;">
+                            <p class="muted">No roles found.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<!-- Activity Logs -->
+{% if recent_audit_logs %}
+<section class="panel" style="margin-top: 2rem;">
+    <div class="panel-header">
+        <h3>Recent Activity</h3>
+        <a href="{{ url_for('audit.audit_log_list') }}" class="btn-ghost btn-sm">View All Logs</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_audit_logs %}
+                <tr>
+                    <td>{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else 'N/A' }}</td>
+                    <td>{{ log.user.email if log.user else 'System' }}</td>
+                    <td><span class="badge">{{ log.action or 'N/A' }}</span></td>
+                    <td class="muted">{{ log.details[:50] if log.details else 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Users by Role Chart -->
+{% if users_by_role %}
+<section class="panel" style="margin-top: 2rem;">
+    <div class="panel-header">
+        <h3>Users by Role</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        {% for role_name, count in users_by_role.items() %}
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="flex: 1;">
+                <strong>{{ role_name }}</strong>
+            </div>
+            <div style="flex: 2; background: rgba(255,255,255,0.1); border-radius: 4px; height: 24px; position: relative;">
+                <div style="background: var(--accent); height: 100%; border-radius: 4px; width: {{ (count / stats.total_users * 100) if stats.total_users > 0 else 0 }}%; transition: width 0.3s;"></div>
+            </div>
+            <div style="min-width: 60px; text-align: right;">
+                <strong>{{ count }}</strong>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}
+

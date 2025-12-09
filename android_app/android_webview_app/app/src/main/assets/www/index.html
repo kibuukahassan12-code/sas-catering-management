@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover">
+    <meta name="theme-color" content="#D97706">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SAS">
+    <meta name="description" content="SAS Management System - Complete event management and catering system">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/static/manifest.json">
+    
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/images/icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/static/images/icon-512x512.png">
+    <link rel="apple-touch-icon" href="/static/images/icon-192x192.png">
+    
+    <title>SAS Management System</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="pwa-body">
+    <!-- Loading Skeleton -->
+    <div id="loading-skeleton" class="loading-skeleton">
+        <div class="skeleton-header"></div>
+        <div class="skeleton-content">
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+            <div class="skeleton-card"></div>
+        </div>
+    </div>
+
+    <!-- App Shell: Sticky Top Bar -->
+    <header class="app-topbar" id="app-topbar">
+        
+        <button class="app-menu-toggle" id="app-menu-toggle" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        
+        <a href="/dashboard" class="app-brand">
+            <img src="/static/images/ssas_logo.png" alt="SAS" class="app-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+            <span class="app-logo-text" style="display: none;">SAS</span>
+            <span class="app-brand-name">SAS</span>
+        </a>
+        
+        <div class="app-search-container">
+            <form action="/search" method="GET">
+                <input type="search" 
+                       name="q" 
+                       id="app-search-input"
+                       placeholder="Search..." 
+                       value=""
+                       autocomplete="off"
+                       class="app-search-input">
+                <span class="app-search-icon">🔍</span>
+                <div id="app-search-suggestions" class="app-search-suggestions"></div>
+            </form>
+        </div>
+        <div class="app-user-menu-wrapper">
+            <button class="app-user-btn" onclick="toggleAppUserMenu()" aria-label="User menu">
+                <span class="app-user-avatar">A</span>
+            </button>
+            <div id="app-user-menu" class="app-user-menu">
+                <div class="app-user-info">
+                    <strong>admin@sas.com</strong>
+                    <small>Unassigned</small>
+                </div>
+                <a href="/auth/set-new-password">🔒 Change Password</a>
+                <a href="/logout">🚪 Logout</a>
+            </div>
+        </div>
+        
+    </header>
+
+    
+    <!-- Super Admin Badge -->
+    <div class="super-admin-badge" style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%); color: white; padding: 8px 16px; text-align: center; font-weight: bold; font-size: 14px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: sticky; top: 60px; z-index: 999;">
+        ⚡ SUPER ADMIN MODE — full access enabled
+    </div>
+    
+
+    
+    <!-- Side Navigation Drawer -->
+    <div class="app-drawer-overlay" id="app-drawer-overlay"></div>
+    <nav class="app-drawer" id="app-drawer">
+        <div class="app-drawer-header">
+            <h3>Navigation</h3>
+            <button class="app-drawer-close" id="app-drawer-close" aria-label="Close">×</button>
+        </div>
+        <div class="app-drawer-content">
+            
+        </div>
+    </nav>
+    
+
+    <!-- Flash Messages -->
+    
+        
+    
+
+    <!-- Main Content -->
+    <main class="app-main" id="app-main">
+        
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>Available Courses</h1>
+        <p class="muted">Access training materials and resources tailored to your role.</p>
+    </div>
+</section>
+
+<section class="panel">
+    
+    <div class="course-grid">
+        
+        <article class="course-card">
+            <div class="course-card__header">
+                <h3>Team Onboarding</h3>
+                
+                <span class="badge">Staff</span>
+                
+                
+                <span class="badge badge-secondary">Easy</span>
+                
+            </div>
+            <p class="course-card__description">Introduction to company operations.</p>
+            <div class="course-card__meta">
+                <span>3 items</span>
+                
+                <span>• 30 min</span>
+                
+            </div>
+            <div class="course-card__actions">
+                <a class="btn-primary" href="/university/course/1">View Course</a>
+            </div>
+        </article>
+        
+    </div>
+    
+</section>
+
+    </main>
+
+    
+    <!-- Bottom Navigation Bar (Mobile) -->
+    <nav class="app-bottom-nav" id="app-bottom-nav">
+        <a href="/dashboard" class="app-bottom-nav-item" data-page="dashboard">
+            <span class="app-bottom-nav-icon">📊</span>
+            <span class="app-bottom-nav-label">Dashboard</span>
+        </a>
+        <a href="/events/list" class="app-bottom-nav-item" data-page="events">
+            <span class="app-bottom-nav-icon">📅</span>
+            <span class="app-bottom-nav-label">Events</span>
+        </a>
+        <a href="/catering/menu" class="app-bottom-nav-item" data-page="catering">
+            <span class="app-bottom-nav-icon">🍽️</span>
+            <span class="app-bottom-nav-label">Catering</span>
+        </a>
+        <a href="/hire/orders" class="app-bottom-nav-item" data-page="hire">
+            <span class="app-bottom-nav-icon">📦</span>
+            <span class="app-bottom-nav-label">Hire</span>
+        </a>
+        <a href="/admin/users" class="app-bottom-nav-item" data-page="profile">
+            <span class="app-bottom-nav-icon">👤</span>
+            <span class="app-bottom-nav-label">Profile</span>
+        </a>
+    </nav>
+    
+
+    <!-- Service Worker Registration -->
+    <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/static/service-worker.js')
+                .then((registration) => {
+                    console.log('Service Worker registered:', registration.scope);
+                    
+                    // Check for updates
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New service worker available
+                                if (confirm('New version available! Reload to update?')) {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    });
+                })
+                .catch((error) => {
+                    console.error('Service Worker registration failed:', error);
+                });
+        });
+    }
+
+    // App Shell Functions
+    function toggleAppDrawer() {
+        const drawer = document.getElementById('app-drawer');
+        const overlay = document.getElementById('app-drawer-overlay');
+        const toggle = document.getElementById('app-menu-toggle');
+        
+        if (drawer && overlay && toggle) {
+            const isOpen = drawer.classList.contains('active');
+            if (isOpen) {
+                drawer.classList.remove('active');
+                overlay.classList.remove('active');
+                toggle.classList.remove('active');
+                document.body.style.overflow = '';
+            } else {
+                drawer.classList.add('active');
+                overlay.classList.add('active');
+                toggle.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    }
+
+    function toggleAppSubmenu(button) {
+        const item = button.closest('.app-nav-item');
+        if (item) {
+            item.classList.toggle('active');
+        }
+    }
+
+    function toggleAppUserMenu() {
+        const menu = document.getElementById('app-user-menu');
+        if (menu) {
+            menu.classList.toggle('active');
+        }
+    }
+
+    // Hide loading skeleton when page loads
+    window.addEventListener('load', () => {
+        const skeleton = document.getElementById('loading-skeleton');
+        if (skeleton) {
+            skeleton.style.opacity = '0';
+            setTimeout(() => {
+                skeleton.style.display = 'none';
+            }, 300);
+        }
+    });
+
+    // Initialize app
+    document.addEventListener('DOMContentLoaded', function() {
+        // Drawer controls
+        const overlay = document.getElementById('app-drawer-overlay');
+        const closeBtn = document.getElementById('app-drawer-close');
+        const toggle = document.getElementById('app-menu-toggle');
+        
+        if (overlay) overlay.addEventListener('click', toggleAppDrawer);
+        if (closeBtn) closeBtn.addEventListener('click', toggleAppDrawer);
+        if (toggle) toggle.addEventListener('click', toggleAppDrawer);
+        
+        // Close user menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const userMenu = document.getElementById('app-user-menu');
+            const userMenuBtn = document.querySelector('.app-user-btn');
+            if (userMenu && userMenuBtn && 
+                !userMenu.contains(event.target) && 
+                !userMenuBtn.contains(event.target)) {
+                userMenu.classList.remove('active');
+            }
+        });
+
+        // Highlight active bottom nav item
+        const currentPath = window.location.pathname;
+        const bottomNavItems = document.querySelectorAll('.app-bottom-nav-item');
+        bottomNavItems.forEach(item => {
+            if (currentPath.includes(item.getAttribute('data-page'))) {
+                item.classList.add('active');
+            }
+        });
+
+        // Search functionality
+        const searchInput = document.getElementById('app-search-input');
+        if (searchInput) {
+            searchInput.addEventListener('input', function(e) {
+                performAppSearch(e.target.value);
+            });
+        }
+    });
+
+    // App search function
+    function performAppSearch(query) {
+        const suggestionsDiv = document.getElementById('app-search-suggestions');
+        if (!suggestionsDiv) return;
+        
+        if (!query || query.length < 2) {
+            suggestionsDiv.innerHTML = '';
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        if (window.searchTimeout) {
+            clearTimeout(window.searchTimeout);
+        }
+        
+        window.searchTimeout = setTimeout(() => {
+            fetch(`/search/api/quick?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success || !data.results || data.results.length === 0) {
+                        suggestionsDiv.innerHTML = '<div class="app-search-empty">No results found</div>';
+                        suggestionsDiv.style.display = 'block';
+                        return;
+                    }
+                    
+                    let html = '<div class="app-search-results">';
+                    data.results.forEach(item => {
+                        html += `
+                            <a href="${item.url}" class="app-search-result">
+                                <span class="app-search-icon">${item.icon || '🔍'}</span>
+                                <div>
+                                    <div class="app-search-title">${item.text || 'Item'}</div>
+                                    ${item.subtext ? `<div class="app-search-subtitle">${item.subtext}</div>` : ''}
+                                </div>
+                            </a>
+                        `;
+                    });
+                    html += '</div>';
+                    suggestionsDiv.innerHTML = html;
+                    suggestionsDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                    suggestionsDiv.innerHTML = '<div class="app-search-empty">Unable to load results</div>';
+                    suggestionsDiv.style.display = 'block';
+                });
+        }, 300);
+    }
+
+    // Close search suggestions when clicking outside
+    document.addEventListener('click', function(event) {
+        const suggestionsDiv = document.getElementById('app-search-suggestions');
+        const searchInput = document.getElementById('app-search-input');
+        if (suggestionsDiv && searchInput && 
+            !suggestionsDiv.contains(event.target) && 
+            !searchInput.contains(event.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+    </script>
+    
+</body>
+</html>

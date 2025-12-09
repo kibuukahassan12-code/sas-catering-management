@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Delivery QC Checklists</h1>
+        <p class="muted">Quality control checklists for food deliveries.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('production.delivery_qc_new') }}">+ New QC Checklist</a>
+</section>
+
+<!-- Date Filter -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Filter by Date</span>
+            <input type="date" name="date" value="{{ request.args.get('date', '') }}">
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Filter</button>
+            <a href="{{ url_for('production.delivery_qc_list') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Checklists List -->
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Event</th>
+                    <th>Delivery Time</th>
+                    <th>Temperature</th>
+                    <th>Packaging</th>
+                    <th>Presentation</th>
+                    <th>Customer Satisfaction</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for checklist in checklists %}
+                <tr>
+                    <td>{{ checklist.delivery_date.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ checklist.event.event_name if checklist.event_id and checklist.event else 'N/A' }}</td>
+                    <td>{{ checklist.delivery_time.strftime('%H:%M') if checklist.delivery_time else 'N/A' }}</td>
+                    <td>{{ checklist.temperature_check or 'N/A' }}</td>
+                    <td><span class="badge">{{ checklist.packaging_integrity }}</span></td>
+                    <td><span class="badge">{{ checklist.presentation }}</span></td>
+                    <td>{{ checklist.customer_satisfaction or 'N/A' }}</td>
+                    <td>
+                        <a href="{{ url_for('production.delivery_qc_view', checklist_id=checklist.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center muted">No delivery QC checklists found. <a href="{{ url_for('production.delivery_qc_new') }}">Create your first checklist</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}" class="btn-ghost">Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if request.args.get('date') %}&date={{ request.args.get('date') }}{% endif %}" class="btn-ghost">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+
+
+

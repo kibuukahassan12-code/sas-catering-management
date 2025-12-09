@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Finance · Invoices</p>
+        <h1>Invoice {{ invoice.invoice_number }}</h1>
+        <p class="muted">View invoice details and record payments.</p>
+    </div>
+    <div class="quick-links">
+        <a href="{{ url_for('invoices.invoice_pdf', invoice_id=invoice.id) }}" class="btn-primary" target="_blank">
+            📄 Download PDF
+        </a>
+        <button class="btn-secondary" onclick="showInvoicePrintPreview()">Print Preview</button>
+        <button class="btn-secondary" onclick="window.print()">Print Invoice</button>
+        {% if invoice.status.value != 'Paid' %}
+        <a class="btn-secondary" href="{{ url_for('invoices.receipt_new', invoice_id=invoice.id) }}">Record Payment</a>
+        {% endif %}
+        <a class="btn-secondary" href="{{ url_for('invoices.invoice_list') }}">← Back to Invoices</a>
+    </div>
+</section>
+
+<section class="panel invoice-print">
+    <header class="invoice-header">
+        <div>
+            <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods Logo" class="invoice-logo" style="height: 100px; width: auto; max-width: 200px; margin-bottom: 1rem; object-fit: contain;" onerror="this.style.display='none'; document.getElementById('invoice-logo-fallback').style.display='block';">
+            <div id="invoice-logo-fallback" style="display: none; text-align: center; margin-bottom: 1rem;">
+                <h1 style="color: #000000; font-size: 2.5rem; margin: 0;">SAS</h1>
+                <p style="color: #FF8C00; font-size: 1.2rem; margin: 0;">BEST FOODS</p>
+            </div>
+            <h2 style="color: #000000; font-size: 2rem; margin-bottom: 0.5rem; font-weight: bold;">SAS Best Foods</h2>
+            <p style="font-weight: 600; color: #FF8C00; margin-bottom: 0.5rem;">For all your Catering Solutions</p>
+            <p style="color: #666; margin: 0.25rem 0;">Near Akamwesi Mall, Gayaza Rd, Opp Electoral Commission Kawempe Offices</p>
+            <p style="color: #666; margin: 0.25rem 0;">Kawempe, Kampala, Uganda</p>
+            <p style="color: #666; margin: 0.25rem 0;">Tel: 0702060778 / 0745705088</p>
+            <p style="color: #666; margin: 0.25rem 0;">Email: info@sasbestfoods.com | Website: www.sasbestfoods.com</p>
+        </div>
+        <div class="invoice-meta">
+            <p><strong>Invoice Number:</strong> {{ invoice.invoice_number }}</p>
+            <p><strong>Issue Date:</strong> {{ invoice.issue_date.strftime('%b %d, %Y') }}</p>
+            <p><strong>Due Date:</strong> {{ invoice.due_date.strftime('%b %d, %Y') }}</p>
+            <p><strong>Status:</strong> <span class="badge badge-{{ invoice.status.value.lower() }}">{{ invoice.status.value }}</span></p>
+        </div>
+    </header>
+
+    <section class="invoice-party">
+        <div>
+            <h4>Bill To</h4>
+            {% if invoice.event and invoice.event.client %}
+            <p><strong>{{ invoice.event.client.name }}</strong></p>
+            <p>{{ invoice.event.client.contact_person }}</p>
+            <p>{{ invoice.event.client.phone }}</p>
+            <p>{{ invoice.event.client.email }}</p>
+            {% else %}
+            <p class="muted">No client information available</p>
+            {% endif %}
+        </div>
+        <div>
+            <h4>Event Details</h4>
+            {% if invoice.event %}
+            <p><strong>{{ invoice.event.event_name }}</strong></p>
+            <p>{{ invoice.event.event_date.strftime('%b %d, %Y') }}</p>
+            <p>{{ invoice.event.guest_count }} guests</p>
+            {% else %}
+            <p class="muted">No event linked</p>
+            {% endif %}
+        </div>
+    </section>
+
+    <div class="invoice-summary">
+        <div class="invoice-totals">
+            <div>
+                <p class="muted">Total Amount Due</p>
+                <h3>{{ CURRENCY }}{{ "{:,.2f}".format(invoice.total_amount_ugx or 0) }}</h3>
+            </div>
+        </div>
+    </div>
+
+    {% if invoice.receipts %}
+    <section class="invoice-payments">
+        <h4>Payment History</h4>
+        <div class="table-wrapper">
+            <table class="responsive-table">
+                <thead>
+                    <tr>
+                        <th>Receipt #</th>
+                        <th>Payment Date</th>
+                        <th>Amount ({{ CURRENCY.rstrip() }})</th>
+                        <th>Method</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for receipt in invoice.receipts %}
+                    <tr>
+                        <td>{{ receipt.receipt_number }}</td>
+                        <td>{{ receipt.payment_date.strftime('%b %d, %Y') }}</td>
+                        <td>{{ CURRENCY }}{{ "{:,.2f}".format(receipt.amount_received_ugx or 0) }}</td>
+                        <td>{{ receipt.payment_method }}</td>
+                        <td>
+                            <a class="btn-ghost" href="{{ url_for('invoices.receipt_view', receipt_id=receipt.id) }}">View Receipt</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+    {% endif %}
+
+    <footer class="invoice-footer">
+        <p>Payment terms: 30 days from invoice date. Please make payment to the account details provided above.</p>
+    </footer>
+</section>
+
+<!-- Print Preview Modal -->
+<div id="invoice-print-preview-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;">
+        <div class="modal-header" style="flex-shrink: 0;">
+            <h2>Invoice Print Preview</h2>
+            <button class="modal-close" onclick="closeInvoicePrintPreview()">&times;</button>
+        </div>
+        <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 1.5rem; background: white; color: #333;">
+            <iframe id="invoice-print-preview-frame" style="width: 100%; height: 100%; border: none; min-height: 600px;"></iframe>
+        </div>
+        <div class="modal-footer" style="flex-shrink: 0; padding: 1rem 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 1rem; justify-content: center;">
+            <button class="btn-primary" onclick="printInvoiceFromPreview()" style="min-width: 120px;">Print</button>
+            <button class="btn-secondary" onclick="closeInvoicePrintPreview()" style="min-width: 120px;">Close</button>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .page-header, .quick-links, .no-print {
+        display: none !important;
+    }
+    .invoice-print {
+        margin: 0;
+        padding: 0;
+    }
+}
+.invoice-print {
+    background: white;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+.invoice-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    border-bottom: 4px solid #000000;
+    border-top: 4px solid #FF8C00;
+    padding-bottom: 1.5rem;
+    padding-top: 1rem;
+}
+.invoice-logo {
+    max-width: 150px;
+    height: auto;
+    margin-bottom: 1rem;
+}
+.invoice-meta {
+    text-align: right;
+}
+.invoice-party {
+    display: flex;
+    justify-content: space-between;
+    margin: 2rem 0;
+}
+.invoice-summary {
+    margin: 2rem 0;
+}
+.invoice-totals {
+    text-align: right;
+    background: #f9f9f9;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+}
+.invoice-payments {
+    margin: 2rem 0;
+}
+.invoice-footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ddd;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+}
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: #1a1a1a;
+    border-radius: 1rem;
+    padding: 0;
+    max-width: 800px;
+    width: 90%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    overflow: hidden;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+}
+.modal-footer {
+    flex-shrink: 0;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    background: rgba(17, 17, 17, 0.95);
+}
+</style>
+
+<script>
+function showInvoicePrintPreview() {
+    const modal = document.getElementById('invoice-print-preview-modal');
+    const iframe = document.getElementById('invoice-print-preview-frame');
+    
+    // Get the invoice content
+    const invoiceContent = document.querySelector('.invoice-print');
+    
+    // Create print-ready HTML
+    const printHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Invoice {{ invoice.invoice_number }} - Print Preview</title>
+            <meta charset="UTF-8">
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: Arial, sans-serif; 
+                    padding: 2rem; 
+                    background: white;
+                    color: #333;
+                    line-height: 1.6;
+                }
+                .invoice-print {
+                    background: white;
+                    padding: 2rem;
+                    max-width: 900px;
+                    margin: 0 auto;
+                }
+                .invoice-header {
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 2rem;
+                    border-bottom: 2px solid #f26822;
+                    padding-bottom: 1rem;
+                }
+                .invoice-logo {
+                    max-width: 150px;
+                    height: auto;
+                    margin-bottom: 1rem;
+                }
+                .invoice-meta {
+                    text-align: right;
+                }
+                .invoice-party {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 2rem 0;
+                }
+                .invoice-summary {
+                    margin: 2rem 0;
+                }
+                .invoice-totals {
+                    text-align: right;
+                    background: #f9f9f9;
+                    padding: 1.5rem;
+                    border-radius: 0.5rem;
+                }
+                .invoice-payments {
+                    margin: 2rem 0;
+                }
+                .invoice-footer {
+                    margin-top: 2rem;
+                    padding-top: 1rem;
+                    border-top: 1px solid #ddd;
+                    text-align: center;
+                    color: #666;
+                    font-size: 0.9rem;
+                }
+                table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+                th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #ddd; }
+                th { background: #f9f9f9; font-weight: bold; }
+                h2 { color: #FF8C00; margin-bottom: 0.5rem; font-weight: bold; }
+                h3 { color: #333; margin-bottom: 0.5rem; }
+                h4 { color: #FF8C00; margin-bottom: 0.5rem; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            ${invoiceContent.innerHTML}
+        </body>
+        </html>
+    `;
+    
+    // Write to iframe
+    iframe.onload = function() {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(printHTML);
+        iframeDoc.close();
+    };
+    
+    // Trigger load
+    iframe.src = 'about:blank';
+    modal.style.display = 'flex';
+}
+
+function closeInvoicePrintPreview() {
+    const modal = document.getElementById('invoice-print-preview-modal');
+    modal.style.display = 'none';
+}
+
+function printInvoiceFromPreview() {
+    const iframe = document.getElementById('invoice-print-preview-frame');
+    if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.focus();
+        iframe.contentWindow.print();
+    } else {
+        // Fallback to regular print
+        window.print();
+    }
+}
+</script>
+{% endblock %}
+

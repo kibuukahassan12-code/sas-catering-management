@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Bakery</p>
+        <h1>Bakery Items</h1>
+        <p class="muted">Manage your bakery menu items, pricing, and availability.</p>
+    </div>
+    <a class="btn-primary" href="{{ url_for('bakery.items_new') }}">+ Add Item</a>
+</section>
+
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Selling Price</th>
+                    <th>Cost Price</th>
+                    <th>Prep Time</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>
+                        {% if item.image_url %}
+                        <img src="{{ url_for('bakery.serve_upload', filename=item.image_url.split('/')[-1]) }}" 
+                             alt="{{ item.name }}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 8px;">
+                        {% endif %}
+                        {{ item.name }}
+                    </td>
+                    <td>{{ item.category }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.selling_price) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.cost_price) }}</td>
+                    <td>{{ item.preparation_time }} min{% if item.preparation_time %}s{% endif %}</td>
+                    <td><span class="badge">{{ item.status }}</span></td>
+                    <td>
+                        <a href="{{ url_for('bakery.items_edit', item_id=item.id) }}" class="btn-ghost btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center muted">No bakery items found. <a href="{{ url_for('bakery.items_new') }}">Add your first item</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}" class="btn-ghost">Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}" class="btn-ghost">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

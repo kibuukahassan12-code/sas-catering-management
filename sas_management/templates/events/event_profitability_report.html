@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Events · Analysis</p>
+        <h1>Event Profitability Analysis Report</h1>
+        <p class="muted">Generated on {{ timestamp.strftime('%B %d, %Y at %I:%M %p') }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('events.events_list') }}">← Back to Events</a>
+    </div>
+</section>
+
+{% if not events %}
+<section class="panel">
+    <div style="padding: 3rem; text-align: center;">
+        <p class="muted" style="font-size: 1.1rem; margin-bottom: 0.5rem;">No events with financial data found</p>
+        <p class="muted">Please add events with quoted values to generate profitability analysis.</p>
+    </div>
+</section>
+{% else %}
+
+<!-- Summary Cards -->
+<section class="panel kpi-bar">
+    <div class="kpi-grid">
+        <article class="kpi-card kpi-primary">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-content">
+                <p>Total Revenue</p>
+                <h2>{{ CURRENCY }}{{ "{:,.0f}".format(total_revenue) }}</h2>
+            </div>
+        </article>
+        <article class="kpi-card kpi-danger">
+            <div class="kpi-icon">📉</div>
+            <div class="kpi-content">
+                <p>Total Expenses</p>
+                <h2>{{ CURRENCY }}{{ "{:,.0f}".format(total_expenses) }}</h2>
+            </div>
+        </article>
+        <article class="kpi-card kpi-warning">
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-content">
+                <p>Total COGS</p>
+                <h2>{{ CURRENCY }}{{ "{:,.0f}".format(total_cogs) }}</h2>
+            </div>
+        </article>
+        <article class="kpi-card kpi-success">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-content">
+                <p>Net Profit</p>
+                <h2 style="color: {% if net_profit > 0 %}#2ecc71{% else %}#e74c3c{% endif %};">
+                    {{ CURRENCY }}{{ "{:,.0f}".format(net_profit) }}
+                </h2>
+            </div>
+        </article>
+        <article class="kpi-card kpi-info">
+            <div class="kpi-icon">📈</div>
+            <div class="kpi-content">
+                <p>Average Margin</p>
+                <h2>{{ "{:.1f}".format(average_margin) }}%</h2>
+            </div>
+        </article>
+    </div>
+</section>
+
+<!-- Charts Section -->
+{% if chart_paths.profit_chart or chart_paths.trend_chart %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Visual Analysis</h3>
+        <div style="display: flex; gap: 0.75rem;">
+            {% if chart_paths.profit_chart %}
+            <a href="{{ url_for('static', filename='analysis/event_profit_chart.png') }}" download class="btn-secondary btn-sm">
+                📥 Download Profit Chart
+            </a>
+            {% endif %}
+            {% if chart_paths.trend_chart %}
+            <a href="{{ url_for('static', filename='analysis/profit_trend.png') }}" download class="btn-secondary btn-sm">
+                📥 Download Trend Chart
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(600px, 1fr)); gap: 2rem; padding: 1.5rem;">
+        {% if chart_paths.profit_chart %}
+        <div>
+            <h4 style="margin-bottom: 1rem; color: #495057;">Revenue vs COGS vs Profit</h4>
+            <img src="{{ url_for('static', filename='analysis/event_profit_chart.png') }}" 
+                 alt="Event Profitability Chart" 
+                 style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        </div>
+        {% endif %}
+        {% if chart_paths.trend_chart %}
+        <div>
+            <h4 style="margin-bottom: 1rem; color: #495057;">Profitability Trend Over Time</h4>
+            <img src="{{ url_for('static', filename='analysis/profit_trend.png') }}" 
+                 alt="Profitability Trend Chart" 
+                 style="width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endif %}
+
+<!-- Event Breakdown Table -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Event Breakdown</h3>
+        <span class="badge badge-info">{{ events|length }} events</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event Name</th>
+                    <th>Date</th>
+                    <th>Revenue</th>
+                    <th>Expenses</th>
+                    <th>COGS</th>
+                    <th>Profit</th>
+                    <th>Profit Margin %</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td>
+                        <strong>{{ event.name }}</strong>
+                    </td>
+                    <td>{{ event.date.strftime('%Y-%m-%d') if event.date else '—' }}</td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(event.revenue) }}</strong></td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(event.expenses) }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(event.cogs) }}</td>
+                    <td>
+                        <strong style="color: {% if event.profit > 0 %}#2ecc71{% else %}#e74c3c{% endif %};">
+                            {{ CURRENCY }}{{ "{:,.0f}".format(event.profit) }}
+                        </strong>
+                    </td>
+                    <td>
+                        <span class="badge {% if event.margin > 30 %}badge-success{% elif event.margin > 15 %}badge-warning{% else %}badge-danger{% endif %}">
+                            {{ "{:.1f}".format(event.margin) }}%
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('events.event_view', event_id=event.id) }}" class="btn-ghost btn-sm">
+                            View Event
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- Export Section -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Export Options</h3>
+    </div>
+    <div style="display: flex; gap: 1rem; padding: 1.5rem; flex-wrap: wrap;">
+        {% if chart_paths.profit_chart %}
+        <a href="{{ url_for('static', filename='analysis/event_profit_chart.png') }}" download class="btn-primary">
+            📥 Download Profit Chart (PNG)
+        </a>
+        {% endif %}
+        {% if chart_paths.trend_chart %}
+        <a href="{{ url_for('static', filename='analysis/profit_trend.png') }}" download class="btn-primary">
+            📥 Download Trend Chart (PNG)
+        </a>
+        {% endif %}
+        <button onclick="window.print()" class="btn-secondary">
+            🖨️ Print Report
+        </button>
+    </div>
+</section>
+
+{% endif %}
+
+<style>
+.kpi-bar {
+    margin-bottom: 1.5rem;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+
+.kpi-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.kpi-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.kpi-icon {
+    font-size: 2.5rem;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+.kpi-primary .kpi-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.kpi-success .kpi-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.kpi-info .kpi-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.kpi-warning .kpi-icon {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.kpi-danger .kpi-icon {
+    background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+}
+
+.kpi-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.kpi-content p {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.kpi-content h2 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #212529;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table thead {
+    background: #f8f9fa;
+}
+
+table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+table td {
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.badge-info {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.muted {
+    color: #6c757d;
+}
+
+@media print {
+    .quick-links,
+    .btn-primary,
+    .btn-secondary,
+    .btn-ghost {
+        display: none;
+    }
+    
+    .panel {
+        page-break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
+

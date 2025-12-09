@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Equipment Maintenance</p>
+        <h1>Maintenance Dashboard</h1>
+        <p class="muted">Track maintenance schedules, condition reports, and depreciation for all equipment.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('maintenance.schedule') }}">Schedule Maintenance</a>
+        <a class="btn-secondary" href="{{ url_for('maintenance.condition_report') }}">New Condition Report</a>
+    </div>
+</section>
+
+<!-- Statistics Cards -->
+<div class="kpi-grid" style="margin-bottom: 2rem;">
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">📅</div>
+        <div class="kpi-content">
+            <p>Upcoming Maintenance</p>
+            <h2>{{ stats.upcoming_count }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">🔧</div>
+        <div class="kpi-content">
+            <p>In Progress</p>
+            <h2>{{ stats.in_progress_count }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-content">
+            <p>Completed This Month</p>
+            <h2>{{ stats.completed_this_month }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-content">
+            <p>Items Need Attention</p>
+            <h2 style="color: {% if stats.items_need_attention > 0 %}#e74c3c{% else %}#2ecc71{% endif %};">{{ stats.items_need_attention }}</h2>
+        </div>
+    </article>
+</div>
+
+<!-- Upcoming Maintenance -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Upcoming Maintenance (Next 30 Days)</h3>
+        <div>
+            <a href="{{ url_for('maintenance.maintenance_list') }}" class="btn-secondary btn-sm">View All</a>
+        </div>
+    </div>
+    
+    {% if upcoming_maintenance %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Type</th>
+                    <th>Scheduled Date</th>
+                    <th>Technician</th>
+                    <th>Status</th>
+                    <th>Cost</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in upcoming_maintenance %}
+                <tr>
+                    <td><strong>#{{ m.hire_item_id }}</strong></td>
+                    <td><span class="badge badge-{{ m.maintenance_type }}">{{ m.maintenance_type|title }}</span></td>
+                    <td>{{ m.scheduled_date.strftime('%Y-%m-%d') if m.scheduled_date else '—' }}</td>
+                    <td>{{ m.technician_name or '—' }}</td>
+                    <td>
+                        <span class="badge badge-{{ m.status }}">
+                            {{ m.status|replace('_', ' ')|title }}
+                        </span>
+                    </td>
+                    <td>{{ CURRENCY }}{{ "%.2f"|format(m.cost) if m.cost else '0.00' }}</td>
+                    <td>
+                        <a href="{{ url_for('maintenance.view_maintenance', maintenance_id=m.id) }}" class="btn-ghost btn-sm">View</a>
+                        {% if m.status != 'completed' %}
+                        <form method="POST" action="{{ url_for('maintenance.update_status', maintenance_id=m.id) }}" style="display: inline;">
+                            <select name="status" onchange="this.form.submit()" style="padding: 0.25rem; font-size: 0.875rem;">
+                                <option value="scheduled" {% if m.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                                <option value="in_progress" {% if m.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="completed" {% if m.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="cancelled" {% if m.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 2rem;">No upcoming maintenance scheduled.</p>
+    {% endif %}
+</section>
+
+<!-- Items Needing Attention -->
+{% if critical_items %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Items Needing Attention (Low Condition Rating)</h3>
+        <span class="badge" style="background: #e74c3c;">{{ critical_items|length }} items</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Condition Rating</th>
+                    <th>Report Date</th>
+                    <th>Issues Found</th>
+                    <th>Recommended Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in critical_items %}
+                <tr>
+                    <td><strong>#{{ item.hire_item_id }}</strong></td>
+                    <td>
+                        <span class="badge" style="background: {% if item.condition_rating <= 3 %}#e74c3c{% elif item.condition_rating <= 5 %}#f39c12{% else %}#3498db{% endif %};">
+                            {{ item.condition_rating }}/10
+                        </span>
+                    </td>
+                    <td>{{ item.report_date.strftime('%Y-%m-%d') if item.report_date else '—' }}</td>
+                    <td>{{ item.issues_found[:100] }}{% if item.issues_found and item.issues_found|length > 100 %}...{% endif %}</td>
+                    <td>{{ item.recommended_action[:100] }}{% if item.recommended_action and item.recommended_action|length > 100 %}...{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Recent Condition Reports -->
+{% if recent_reports %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Condition Reports</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item ID</th>
+                    <th>Rating</th>
+                    <th>Date</th>
+                    <th>Issues</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in recent_reports %}
+                <tr>
+                    <td><strong>#{{ r.hire_item_id }}</strong></td>
+                    <td>
+                        <span class="badge" style="background: {% if r.condition_rating <= 3 %}#e74c3c{% elif r.condition_rating <= 5 %}#f39c12{% elif r.condition_rating <= 7 %}#3498db{% else %}#2ecc71{% endif %};">
+                            {{ r.condition_rating }}/10
+                        </span>
+                    </td>
+                    <td>{{ r.report_date.strftime('%Y-%m-%d') if r.report_date else '—' }}</td>
+                    <td>{{ r.issues_found[:80] }}{% if r.issues_found and r.issues_found|length > 80 %}...{% endif %}</td>
+                    <td>{{ r.recommended_action[:80] }}{% if r.recommended_action and r.recommended_action|length > 80 %}...{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% endblock %}
+

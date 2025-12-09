@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Staff Tasks</p>
+        <h1>Task Management</h1>
+        <p class="muted">Assign and track tasks across your team.</p>
+    </div>
+    <div class="quick-links">
+        {% if current_user.is_super_admin() or current_user.has_permission('tasks.*') or current_user.get_role_name() in ['Manager', 'SuperAdmin'] %}
+        <a class="btn-primary" href="{{ url_for('communication.task_new') }}">+ New Task</a>
+        {% endif %}
+        <a class="btn-secondary" href="{{ url_for('communication.dashboard') }}">← Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Filter Tasks</h3>
+    </div>
+    <div style="display: flex; gap: 0.5rem; padding: 1rem;">
+        <a href="{{ url_for('communication.staff_tasks') }}" 
+           class="btn-ghost {% if not status_filter %}active{% endif %}">All</a>
+        <a href="{{ url_for('communication.staff_tasks', status='pending') }}" 
+           class="btn-ghost {% if status_filter == 'pending' %}active{% endif %}">Pending</a>
+        <a href="{{ url_for('communication.staff_tasks', status='in_progress') }}" 
+           class="btn-ghost {% if status_filter == 'in_progress' %}active{% endif %}">In Progress</a>
+        <a href="{{ url_for('communication.staff_tasks', status='completed') }}" 
+           class="btn-ghost {% if status_filter == 'completed' %}active{% endif %}">Completed</a>
+    </div>
+</section>
+
+<section class="panel">
+    {% if tasks %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Assigned To</th>
+                    <th>Assigned By</th>
+                    <th>Priority</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr>
+                    <td>
+                        <strong>{{ task.title }}</strong>
+                        {% if task.details %}
+                        <br><small class="muted">{{ task.details[:50] }}{% if task.details|length > 50 %}...{% endif %}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ task.assignee.email if task.assignee else 'Unknown' }}</td>
+                    <td>{{ task.assigner.email if task.assigner else 'Unknown' }}</td>
+                    <td>
+                        <span class="badge {% if task.priority == 'high' %}danger{% elif task.priority == 'medium' %}warning{% else %}success{% endif %}">
+                            {{ task.priority|title }}
+                        </span>
+                    </td>
+                    <td>{{ task.due_date.strftime('%Y-%m-%d') if task.due_date else '—' }}</td>
+                    <td><span class="badge">{{ task.status|replace('_', ' ')|title }}</span></td>
+                    <td>
+                        {% if task.assigned_to == current_user.id or current_user.is_super_admin() %}
+                        <form method="POST" action="{{ url_for('communication.task_update', task_id=task.id) }}" style="display: inline;">
+                            <select name="status" onchange="this.form.submit()" style="padding: 0.25rem;">
+                                <option value="pending" {% if task.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                <option value="completed" {% if task.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="cancelled" {% if task.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                            </select>
+                        </form>
+                        {% else %}
+                        <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted" style="text-align: center; padding: 2rem;">No tasks found.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

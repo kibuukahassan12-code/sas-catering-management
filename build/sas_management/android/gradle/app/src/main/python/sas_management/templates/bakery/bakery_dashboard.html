@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Bakery Department</p>
+        <h1>Bakery Dashboard</h1>
+        <p class="muted">Manage bakery orders, production, and sales.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('bakery.orders_new') }}">+ New Order</a>
+        <a class="btn-secondary" href="{{ url_for('bakery.items_list') }}">Manage Items</a>
+    </div>
+</section>
+
+<!-- Summary Cards -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Overview</h3>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Orders</p>
+            <h2>{{ total_orders }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Pending Orders</p>
+            <h2>{{ pending_orders }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>In Production</p>
+            <h2>{{ in_production }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Ready for Pickup</p>
+            <h2>{{ ready_orders }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Today's Sales</p>
+            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(today_sales.total_sales or 0) }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Orders Today</p>
+            <h2>{{ today_sales.order_count or 0 }}</h2>
+        </article>
+    </div>
+</section>
+
+<!-- Top Items -->
+{% if top_items %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Top Selling Items</h3>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Quantity Sold</th>
+                    <th>Revenue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in top_items %}
+                <tr>
+                    <td>{{ item.item_name }}</td>
+                    <td>{{ item.total_qty }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(item.total_revenue) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+<!-- Recent Orders -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Orders</h3>
+        <a href="{{ url_for('bakery.orders_list') }}" class="btn-ghost btn-sm">View All</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Customer</th>
+                    <th>Status</th>
+                    <th>Amount</th>
+                    <th>Pickup Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in recent_orders %}
+                <tr>
+                    <td>#{{ order.id }}</td>
+                    <td>{{ order.customer_name or (order.client.name if order.client else 'N/A') }}</td>
+                    <td><span class="badge">{{ order.order_status }}</span></td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(order.total_amount) }}</td>
+                    <td>{{ order.pickup_date.strftime('%Y-%m-%d') if order.pickup_date else 'N/A' }}</td>
+                    <td>
+                        <a href="{{ url_for('bakery.orders_view', order_id=order.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center muted">No recent orders</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

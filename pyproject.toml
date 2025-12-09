@@ -1,0 +1,22 @@
+[project]
+name = "sas_management"
+version = "1.0.0"
+description = "Catering Management System"
+authors = [{name = "SAS Best Foods", email = "support@sasbestfoods.com"}]
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+
+[tool.briefcase]
+project_name = "SAS Management System"
+bundle = "com.sas.management"
+url = "https://sasbestfoods.com"
+
+[tool.briefcase.app.sas_management]
+formal_name = "SAS Management"
+description = "Catering Management System"
+bundle = "com.sas.management"
+sources = ["sas_management"]
+requires = ["flask"]
+
+[tool.briefcase.app.sas_management.android]
+require_android_sdk = true
