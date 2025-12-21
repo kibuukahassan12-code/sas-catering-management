@@ -4,13 +4,13 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
 
-from models import (
+from sas_management.models import (
     db, User, UserRole, Event,
     Announcement, BulletinPost, DirectMessageThread, DirectMessage,
     DepartmentMessage, EventMessageThread, EventMessage, StaffTask
 )
-from utils import role_required
-from services.communication_service import (
+from sas_management.utils import role_required
+from sas_management.services.communication_service import (
     create_announcement, list_announcements, get_announcement,
     add_bulletin_post, get_bulletin,
     get_or_create_thread, send_direct_message, get_thread_messages, get_user_threads,
@@ -281,8 +281,8 @@ def staff_tasks():
     try:
         status_filter = request.args.get('status', None)
         
-        # Admin can see all tasks, others see only their own
-        if current_user.is_super_admin() or current_user.role == UserRole.Admin:
+        # Admin can see all tasks, others see only their own - Admin bypass
+        if (hasattr(current_user, 'is_admin') and current_user.is_admin) or current_user.is_super_admin() or current_user.role == UserRole.Admin:
             query = StaffTask.query
             if status_filter:
                 query = query.filter_by(status=status_filter)
@@ -341,10 +341,12 @@ def task_update(task_id):
     try:
         task = StaffTask.query.get_or_404(task_id)
         
-        # Verify user can update this task
-        if task.assigned_to != current_user.id and current_user.role != UserRole.Admin:
-            flash("You do not have permission to update this task.", "danger")
-            return redirect(url_for("communication.staff_tasks"))
+        # Verify user can update this task - Admin bypass
+        if task.assigned_to != current_user.id:
+            if not (hasattr(current_user, 'is_admin') and current_user.is_admin):
+                if current_user.role != UserRole.Admin:
+                    flash("You do not have permission to update this task.", "danger")
+                    return redirect(url_for("communication.staff_tasks"))
         
         status = request.form.get('status', task.status)
         result = update_task_status(task_id, status, current_user.id)

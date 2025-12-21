@@ -3,7 +3,7 @@ from decimal import Decimal
 from functools import wraps
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_user, logout_user
+from flask_login import current_user, login_user, logout_user, login_required
 from functools import wraps
 
 # No-op login_required - all access allowed
@@ -13,7 +13,7 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-from models import (
+from sas_management.models import (
     CateringItem,
     Client,
     ClientActivity,
@@ -37,8 +37,15 @@ from models import (
     UserRole,
     db,
 )
-from utils import get_decimal, paginate_query, role_required, has_permission, require_permission
-from utils.permissions import no_rbac
+from sas_management.utils import (
+    get_decimal,
+    paginate_query,
+    role_required,
+    has_permission,
+    require_permission,
+    no_rbac
+)
+from sas_management.utils.helpers import get_or_404
 
 core_bp = Blueprint("core", __name__)
 
@@ -104,7 +111,9 @@ def login():
     
     # If user is already authenticated, go directly to dashboard WITHOUT checking role or permissions
     if current_user.is_authenticated:
-        if getattr(current_user, "force_password_change", False) or getattr(current_user, "first_login", True):
+        # Admin is exempt from first login password change requirement
+        is_admin = hasattr(current_user, 'is_admin') and current_user.is_admin
+        if not is_admin and (getattr(current_user, "force_password_change", False) or getattr(current_user, "first_login", True)):
             return redirect(url_for("core.force_change_password"))
         return redirect(url_for("core.dashboard"))
     
@@ -122,8 +131,11 @@ def login():
             login_user(user)
             flash("Login successful.", "success")
             
-            # Check if user must change password or first login
-            if getattr(user, 'must_change_password', False) or getattr(user, 'force_password_change', False) or getattr(user, 'first_login', True):
+            # Admin is exempt from first login password change requirement
+            is_admin = hasattr(user, 'is_admin') and user.is_admin
+            
+            # Check if user must change password or first login (admin exempt)
+            if not is_admin and (getattr(user, 'must_change_password', False) or getattr(user, 'force_password_change', False) or getattr(user, 'first_login', True)):
                 return redirect(url_for("core.force_change_password"))
             
             # Redirect directly to dashboard WITHOUT checking role or permissions
@@ -135,34 +147,55 @@ def login():
 
 
 @core_bp.route("/force-change-password", methods=["GET", "POST"])
+@core_bp.route("/change-password", methods=["GET", "POST"])
 @login_required
 def force_change_password():
-    """Force password change on first login."""
+    """Force password change on first login. Requires old password for first_login users."""
+    # Admin is exempt from first login password change requirement
+    is_admin = hasattr(current_user, 'is_admin') and current_user.is_admin
+    if is_admin and not (getattr(current_user, 'must_change_password', False) or getattr(current_user, 'force_password_change', False)):
+        # Admin not required to change password, redirect to dashboard
+        return redirect(url_for("core.dashboard"))
+    
+    is_first_login = getattr(current_user, 'first_login', True)
+    
     if request.method == "POST":
-        new_password = request.form.get("new_password", "")
-        confirm_password = request.form.get("confirm_password", "")
+        old_password = request.form.get("old_password", "").strip()
+        new_password = request.form.get("new_password", "").strip()
+        confirm_password = request.form.get("confirm_password", "").strip()
+        
+        # For first login, require old password
+        if is_first_login:
+            if not old_password:
+                flash("Please provide your current password.", "danger")
+                return render_template("auth/force_change_password.html", is_first_login=True)
+            
+            if not current_user.check_password(old_password):
+                flash("Current password is incorrect.", "danger")
+                return render_template("auth/force_change_password.html", is_first_login=True)
         
         if not new_password or not confirm_password:
-            flash("Both password fields are required.", "danger")
-            return render_template("auth/force_change_password.html")
+            flash("Both new password fields are required.", "danger")
+            return render_template("auth/force_change_password.html", is_first_login=is_first_login)
         
         if new_password != confirm_password:
-            flash("Passwords do not match.", "danger")
-            return render_template("auth/force_change_password.html")
+            flash("New passwords do not match.", "danger")
+            return render_template("auth/force_change_password.html", is_first_login=is_first_login)
         
         if len(new_password) < 8:
             flash("Password must be at least 8 characters long.", "danger")
-            return render_template("auth/force_change_password.html")
+            return render_template("auth/force_change_password.html", is_first_login=is_first_login)
         
+        # Update password and clear flags
         current_user.set_password(new_password)
         current_user.first_login = False
         current_user.must_change_password = False
         current_user.force_password_change = False
         db.session.commit()
-        flash("Password changed successfully. Please login again.", "success")
-        return redirect(url_for("core.login"))
+        flash("Password changed successfully!", "success")
+        return redirect(url_for("core.dashboard"))
     
-    return render_template("auth/force_change_password.html")
+    return render_template("auth/force_change_password.html", is_first_login=is_first_login)
 
 
 @core_bp.route("/dashboard")
@@ -235,7 +268,7 @@ def dashboard():
         
         # Pipeline metrics with error handling
         try:
-            from models import IncomingLead
+            from sas_management.models import IncomingLead
             from datetime import datetime, timedelta
             stages = ["New Lead", "Qualified", "Proposal Sent", "Negotiation", "Awaiting Payment", "Confirmed", "Completed", "Lost"]
             for stage in stages:
@@ -261,7 +294,7 @@ def dashboard():
         
         # Invoice metrics with error handling
         try:
-            from models import Invoice, InvoiceStatus, InventoryItem, Task, TaskStatus
+            from sas_management.models import Invoice, InvoiceStatus, InventoryItem, Task, TaskStatus
             paid_invoices = Invoice.query.filter_by(status=InvoiceStatus.Paid).count()
             pending_invoices = Invoice.query.filter(Invoice.status.in_([InvoiceStatus.Issued, InvoiceStatus.Draft])).count()
             overdue_invoices = Invoice.query.filter_by(status=InvoiceStatus.Overdue).count()
@@ -338,7 +371,7 @@ def dashboard():
         
         # Announcements with error handling
         try:
-            from models import Announcement
+            from sas_management.models import Announcement
             from sqlalchemy.orm import joinedload
             announcements = Announcement.query.options(joinedload(Announcement.creator)).order_by(Announcement.created_at.desc()).all()
         except Exception as e:
@@ -369,17 +402,41 @@ def dashboard():
             "url": url_for("events.events_list"),
             "children": events_children
         })
+        
         # Hire Department - ALL ACCESS GRANTED
         hire_children = [
             {"name": "Hire Overview", "url": url_for("hire.index")},
             {"name": "Hire Inventory", "url": url_for("hire.inventory_list")},
             {"name": "Hire Orders", "url": url_for("hire.orders_list")},
-            {"name": "Equipment Maintenance", "url": url_for("maintenance.dashboard")},
+            {"name": "Equipment Maintenance", "url": url_for("hire.maintenance_list")},
         ]
         modules.append({
             "name": "Hire Department",
             "url": url_for("hire.index"),
             "children": hire_children
+        })
+        
+        # Event Service Department - Execution, tracking, and reporting features only
+        event_service_children = [
+            {"name": "Services Overview", "url": url_for("service.dashboard")},
+            {"name": "All Events", "url": url_for("service.events")},
+            # Removed duplicate menu items (routes remain functional):
+            # {"name": "Create Event", "url": url_for("service.event_new")},
+            # {"name": "Service Orders", "url": url_for("service.events")},
+            # {"name": "Costing & Quotations", "url": url_for("service.dashboard")},
+            # {"name": "Staff Assignments", "url": url_for("service.events")},
+            # {"name": "Vendors", "url": url_for("events.vendors_manage")},
+            {"name": "Timeline", "url": url_for("event_service.timeline_index")},
+            {"name": "Documents", "url": url_for("event_service.documents_index")},
+            {"name": "Checklists", "url": url_for("event_service.service_checklists")},
+            {"name": "Messages", "url": url_for("event_service.service_messages")},
+            {"name": "Reports", "url": url_for("event_service.service_reports")},
+            {"name": "Analytics", "url": url_for("event_service.service_analytics")},
+        ]
+        modules.append({
+            "name": "🧾 Event Service",
+            "url": url_for("service.dashboard"),
+            "children": event_service_children
         })
         
         modules.extend([
@@ -435,16 +492,83 @@ def dashboard():
             },
         ])
         
+        # Check if Employee University is available (safe check)
+        # Only show to authenticated admin users
+        show_employee_university = False
+        if current_user.is_authenticated:
+            # Check if user is admin
+            is_admin = False
+            try:
+                if hasattr(current_user, 'is_super_admin') and current_user.is_super_admin():
+                    is_admin = True
+                elif hasattr(current_user, 'role') and current_user.role == UserRole.Admin:
+                    is_admin = True
+            except Exception:
+                pass
+            
+            if is_admin:
+                show_employee_university = True
+        
+        # Add Employee University module right after HR Department if enabled
+        if show_employee_university:
+            hr_index = next((i for i, m in enumerate(modules) if m.get("name") == "HR Department"), -1)
+            if hr_index >= 0:
+                modules.insert(hr_index + 1, {
+                    "name": "🎓 Employee University",
+                    "url": url_for("university.dashboard"),
+                })
+        
         # Add admin-only modules - ALL ACCESS GRANTED
         admin_module = {
-            "name": "Admin",
-            "url": url_for("admin.roles_list"),
-            "children": [
-                {"name": "Roles & Permissions", "url": url_for("admin.roles_list")},
-                {"name": "User Role Assignment", "url": url_for("admin_users.users_assign")},
-            ]
+        "name": "Admin",
+        "url": url_for("admin.roles_list"),
+        "children": [
+        {"name": "Admin Dashboard", "url": url_for("admin.dashboard")},
+        {"name": "Roles & Permissions", "url": url_for("admin.roles_list")},
+        {"name": "🤖 AI Permissions", "url": url_for("admin.ai_permissions")},
+        ]
         }
         modules.append(admin_module)
+        
+        # Add SAS AI Module (always visible if enabled, defaults to True)
+        # Check both AI_MODULE_ENABLED and SAS_AI_ENABLED config flags
+        ai_module_enabled = current_app.config.get("AI_MODULE_ENABLED", True)
+        sas_ai_enabled = current_app.config.get("SAS_AI_ENABLED", True)
+        
+        if ai_module_enabled or sas_ai_enabled:
+            try:
+                from sas_management.ai.state import is_enabled
+                
+                sas_ai_children = [
+                {"name": "AI Dashboard", "url": url_for("ai.dashboard")},
+                ]
+                
+                # Always add AI Chat - it's the main entry point
+                sas_ai_children.append({"name": "AI Chat", "url": url_for("ai.chat")})
+                
+                # Note: feature_list route may not exist, using chat as fallback
+                try:
+                    sas_ai_children.append({"name": "All Features", "url": url_for("ai.chat")})
+                except:
+                    pass
+                
+                sas_ai_module = {
+                "name": "🤖 SAS AI",
+                "url": url_for("ai.chat"),  # Main entry point is chat
+                "children": sas_ai_children,
+                }
+                modules.append(sas_ai_module)
+            except Exception as e:
+                # Log error but don't break navigation
+                current_app.logger.warning(f"SAS AI module not available: {e}")
+                # Still add a basic SAS AI link if blueprint exists
+                try:
+                    modules.append({
+                    "name": "🤖 SAS AI",
+                    "url": url_for("ai.chat"),
+                    })
+                except Exception:
+                    pass
         
         # Add Payroll to Accounting Department children if not already there
         accounting_dept = next((m for m in modules if m.get("name") == "Accounting Department"), None)
@@ -482,6 +606,7 @@ def dashboard():
             recent_tasks=recent_tasks,
             announcements=announcements,
             CURRENCY=current_app.config.get("CURRENCY_PREFIX", "UGX "),
+            show_employee_university=show_employee_university,
         )
     except Exception as e:
         current_app.logger.exception(f"Critical error in dashboard: {e}")
@@ -773,7 +898,7 @@ def clients_add():
 def clients_edit(client_id):
     from datetime import datetime
     
-    client = Client.query.get_or_404(client_id)
+    client = get_or_404(Client, client_id)
 
     if request.method == "POST":
         client.name = request.form.get("name", client.name).strip()
@@ -807,7 +932,7 @@ def clients_edit(client_id):
 @login_required
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def clients_delete(client_id):
-    client = Client.query.get_or_404(client_id)
+    client = get_or_404(Client, client_id)
     db.session.delete(client)
     db.session.commit()
     flash("Client deleted.", "info")
@@ -924,7 +1049,7 @@ def _calculate_event_cogs(event):
 
     # Calculate ingredient costs and deplete stock
     for ing_id, qty_needed in ingredient_usage.items():
-        ingredient = Ingredient.query.get(ing_id)
+        ingredient = db.session.get(Ingredient, ing_id)
         if ingredient:
             # Check stock availability
             if Decimal(ingredient.stock_count) < qty_needed:
@@ -965,7 +1090,7 @@ def _calculate_event_cogs(event):
 @login_required
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def events_edit(event_id):
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     clients = Client.query.order_by(Client.name.asc()).all()
     old_status = event.status
 
@@ -1074,7 +1199,7 @@ def events_edit(event_id):
 @login_required
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def events_delete(event_id):
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     db.session.delete(event)
     db.session.commit()
     flash("Event deleted.", "info")
@@ -1127,11 +1252,18 @@ def api_new_lead():
 # These routes forward requests to the POS blueprint functions
 
 def pos_role_required(*roles):
-    """Role check for POS proxy routes."""
-    from models import UserRole
+    """
+    Role check for POS proxy routes.
+    Admin users bypass all role checks and are always allowed.
+    """
+    from sas_management.models import UserRole
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            # Admin bypass: If user is Admin, allow access immediately
+            if current_user.is_authenticated and hasattr(current_user, 'is_admin') and current_user.is_admin:
+                return func(*args, **kwargs)
+            # For non-admin users, check role
             if current_user.role not in roles:
                 if request.is_json or request.path.startswith('/api/'):
                     return jsonify({"status": "error", "message": "You do not have permission to access this resource."}), 403

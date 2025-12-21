@@ -14,7 +14,7 @@ from flask import (
 from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
 
-from models import (
+from sas_management.models import (
     CateringItem,
     Ingredient,
     PriceHistory,
@@ -22,7 +22,7 @@ from models import (
     UserRole,
     db,
 )
-from utils import get_decimal, paginate_query, role_required
+from sas_management.utils import get_decimal, paginate_query, role_required
 
 catering_bp = Blueprint("catering", __name__, url_prefix="/catering")
 
@@ -250,7 +250,7 @@ def recipe_builder(item_id):
                         if qty <= 0:
                             continue
 
-                        ingredient = Ingredient.query.get(ing_id_int)
+                        ingredient = db.session.get(Ingredient, ing_id_int)
                         if not ingredient:
                             continue
 

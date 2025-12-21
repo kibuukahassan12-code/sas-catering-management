@@ -5,13 +5,13 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
 
-from models import (
+from sas_management.models import (
     db, BIEventProfitability, BIIngredientPriceTrend, BISalesForecast,
     BIStaffPerformance, BIBakeryDemand, BICustomerBehavior, BIPOSHeatmap,
     Event, Ingredient, Employee, Client, BakeryItem, UserRole
 )
-from utils import role_required
-from services.bi_service import (
+from sas_management.utils import role_required
+from sas_management.services.bi_service import (
     calculate_event_profitability, ingest_ingredient_price,
     generate_price_trend_history, run_sales_forecasting,
     generate_staff_performance, generate_bakery_demand_forecast,
@@ -330,7 +330,7 @@ def api_generate_event_profitability():
 def event_profitability_pdf():
     """Generate and download Event Profitability Analysis PDF report."""
     from flask import send_file, flash, redirect
-    from services.bi_service import generate_profitability_pdf_report
+    from sas_management.services.bi_service import generate_profitability_pdf_report
     from datetime import datetime
     
     try:

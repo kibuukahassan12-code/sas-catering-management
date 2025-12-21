@@ -7,6 +7,9 @@
         <p class="muted">Select a device and start your shift to begin processing sales.</p>
     </div>
     <div class="quick-links">
+        {% if current_user.role in ['Admin'] %}
+        <a class="btn-secondary" href="{{ url_for('pos.terminals_list') }}">Manage Terminals</a>
+        {% endif %}
         <a class="btn-secondary" href="{{ url_for('pos.index') }}">← Dashboard</a>
     </div>
 </section>

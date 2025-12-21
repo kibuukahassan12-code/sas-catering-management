@@ -4,13 +4,13 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 
-from models import UserRole
+from sas_management.models import UserRole
 
-from utils import role_required
+from sas_management.utils import role_required
 
 # Safe import of integration manager
 try:
-    from services.integration_manager import integration_manager
+    from sas_management.services.integration_manager import integration_manager
     INTEGRATION_MANAGER_AVAILABLE = True
 except Exception as e:
     current_app.logger.warning(f"Integration manager not available: {e}") if 'current_app' in globals() else None

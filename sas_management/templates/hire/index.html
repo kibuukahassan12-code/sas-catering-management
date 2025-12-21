@@ -1,1 +1,107 @@
-<h2>Hire Department Overview</h2>
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire Department</p>
+        <h1>Hire Overview</h1>
+        <p class="muted">Manage equipment rentals, orders, and maintenance.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hire.new_order') }}">+ New Order</a>
+        <a class="btn-secondary" href="{{ url_for('hire.inventory_list') }}">View Inventory</a>
+    </div>
+</section>
+
+<!-- KPI Cards -->
+<div class="kpi-grid" style="margin-bottom: 2rem;">
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">📦</div>
+        <div class="kpi-content">
+            <p>Total Equipment</p>
+            <h2>{{ total_items }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-content">
+            <p>Available</p>
+            <h2>{{ available_items }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-content">
+            <p>Currently Rented</p>
+            <h2>{{ rented_items }}</h2>
+        </div>
+    </article>
+    <article class="kpi-card kpi-primary" style="{% if maintenance_items > 0 %}border-color: #ff5c5c;{% endif %}">
+        <div class="kpi-icon">⚠️</div>
+        <div class="kpi-content">
+            <p>Maintenance</p>
+            <h2 style="color: {% if maintenance_items > 0 %}#ff5c5c{% else %}var(--accent){% endif %};">{{ maintenance_items }}</h2>
+        </div>
+    </article>
+</div>
+
+<!-- Quick Actions -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quick Actions</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; padding: 1rem;">
+        <a href="{{ url_for('hire.inventory_list') }}" class="btn-secondary" style="text-align: center; padding: 1.5rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📦</div>
+            <strong>View Inventory</strong>
+        </a>
+        <a href="{{ url_for('hire.new_item') }}" class="btn-secondary" style="text-align: center; padding: 1.5rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">➕</div>
+            <strong>Add Equipment</strong>
+        </a>
+        <a href="{{ url_for('hire.orders_list') }}" class="btn-secondary" style="text-align: center; padding: 1.5rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+            <strong>View Orders</strong>
+        </a>
+        <a href="{{ url_for('hire.maintenance_list') }}" class="btn-secondary" style="text-align: center; padding: 1.5rem;">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔧</div>
+            <strong>Maintenance</strong>
+        </a>
+    </div>
+</section>
+
+<!-- Maintenance Alerts -->
+{% if maintenance_alerts %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Maintenance Alerts</h3>
+        <span class="badge" style="background: #ff5c5c;">{{ maintenance_alerts|length }} items</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Equipment</th>
+                    <th>Category</th>
+                    <th>Condition</th>
+                    <th>Location</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in maintenance_alerts %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td><span class="badge" style="background: #ff5c5c;">{{ item.condition }}</span></td>
+                    <td>{{ item.location or '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('hire.inventory_list') }}?status=Maintenance" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

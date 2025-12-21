@@ -17,8 +17,8 @@ def calculate_proposal_total(blocks_json, markup_percent=0):
 def generate_proposal_pdf(proposal_id):
     """Generate PDF for proposal."""
     try:
-        from models import Proposal
-        proposal = Proposal.query.get(proposal_id)
+        from sas_management.models import Proposal, db
+        proposal = db.session.get(Proposal, proposal_id)
         if not proposal:
             return {'success': False, 'error': 'Proposal not found'}
         

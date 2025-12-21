@@ -4,7 +4,7 @@ from flask_login import login_required
 from datetime import datetime, timedelta
 from sqlalchemy import or_
 
-from models import db, POSOrder, POSOrderLine
+from sas_management.models import db, POSOrder, POSOrderLine
 
 kds_bp = Blueprint("kds", __name__, url_prefix="/kds")
 

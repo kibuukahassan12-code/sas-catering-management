@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 import os
 from flask_login import current_user, login_required
 
-from models import (
+from sas_management.models import (
     Client,
     POSDevice,
     POSOrder,
@@ -19,7 +19,7 @@ from models import (
     UserRole,
     db,
 )
-from services.pos_service import (
+from sas_management.services.pos_service import (
     add_payment,
     close_shift,
     create_order,
@@ -29,7 +29,7 @@ from services.pos_service import (
     reserve_inventory_for_order,
     sync_orders_for_offline,
 )
-from utils import role_required, permission_required, paginate_query
+from sas_management.utils import role_required, permission_required, paginate_query
 
 pos_bp = Blueprint("pos", __name__, url_prefix="/pos")
 
@@ -434,7 +434,7 @@ def api_shift_close(shift_id):
         except (ValueError, TypeError) as e:
             return jsonify({"status": "error", "message": f"Invalid ending cash amount: {str(e)}"}), 400
         
-        shift = POSShift.query.get(shift_id)
+        shift = db.session.get(POSShift, shift_id)
         if not shift:
             return jsonify({"status": "error", "message": "Shift not found"}), 404
         
@@ -535,7 +535,7 @@ def api_order_create():
         if shift_id:
             try:
                 shift_id = int(shift_id)
-                shift = POSShift.query.get(shift_id)
+                shift = db.session.get(POSShift, shift_id)
                 if not shift:
                     return jsonify({"status": "error", "message": f"Shift with ID {shift_id} not found"}), 404
                 if shift.status != "open":
@@ -605,8 +605,8 @@ def api_order_detail(order_id):
                     "id": payment.id,
                     "amount": float(payment.amount),
                     "method": payment.method,
-                    "ref": payment.ref,
-                    "payment_time": payment.payment_time.isoformat() if payment.payment_time else None,
+                    "ref": payment.reference,
+                    "payment_time": payment.created_at.isoformat() if payment.created_at else None,
                     "created_at": payment.created_at.isoformat() if payment.created_at else None,
                     "receipt_id": payment.receipt.id if payment.receipt else None,
                     "receipt_ref": payment.receipt.receipt_ref if payment.receipt else None,
@@ -671,7 +671,7 @@ def api_order_payment(order_id):
         ref = data.get("ref")
         
         # Validate order exists (service will also check, but check here first for better error)
-        order = POSOrder.query.get(order_id)
+        order = db.session.get(POSOrder, order_id)
         if not order:
             return jsonify({"status": "error", "message": f"Order with ID {order_id} not found"}), 404
         
@@ -691,14 +691,14 @@ def api_order_payment(order_id):
         db.session.refresh(order)
         
         # Get all payment records for this order to track payment history
-        all_payments = POSPayment.query.filter_by(order_id=order_id).order_by(POSPayment.payment_time.asc()).all()
+        all_payments = POSPayment.query.filter_by(order_id=order_id).order_by(POSPayment.created_at.asc()).all()
         payment_history = [
             {
                 "id": p.id,
                 "amount": float(p.amount),
                 "method": p.method,
-                "ref": p.ref,
-                "payment_time": p.payment_time.isoformat() if p.payment_time else None,
+                "ref": p.reference,  # Use 'reference' field from model
+                "payment_time": p.created_at.isoformat() if p.created_at else None,
                 "receipt_ref": p.receipt.receipt_ref if p.receipt else None,
             }
             for p in all_payments
@@ -715,8 +715,8 @@ def api_order_payment(order_id):
                 "id": payment.id,
                 "amount": float(payment.amount),
                 "method": payment.method,
-                "ref": payment.ref,
-                "payment_time": payment.payment_time.isoformat() if payment.payment_time else None,
+                "ref": payment.reference,  # Use 'reference' field from model
+                "payment_time": payment.created_at.isoformat() if payment.created_at else None,
             },
             "receipt": {
                 "id": receipt.id,
@@ -782,7 +782,7 @@ def api_order_release(order_id):
 def api_order_receipt(order_id):
     """API: Get receipt for order."""
     order = POSOrder.query.get_or_404(order_id)
-    payment = POSPayment.query.filter_by(order_id=order_id).order_by(POSPayment.payment_time.desc()).first()
+    payment = POSPayment.query.filter_by(order_id=order_id).order_by(POSPayment.created_at.desc()).first()
     
     if not payment:
         return jsonify({"status": "error", "message": "No payment found for this order"}), 404
@@ -814,7 +814,7 @@ def receipt_print(receipt_id):
     order = payment.order
     
     # Get all payment records for this order
-    all_payments = POSPayment.query.filter_by(order_id=order.id).order_by(POSPayment.payment_time.asc()).all()
+    all_payments = POSPayment.query.filter_by(order_id=order.id).order_by(POSPayment.created_at.asc()).all()
     total_paid = sum(Decimal(str(p.amount)) for p in all_payments)
     
     payment_summary = {
@@ -842,14 +842,14 @@ def api_receipt_detail(receipt_id):
     order = payment.order
     
     # Get all payment records for this order to show payment history
-    all_payments = POSPayment.query.filter_by(order_id=order.id).order_by(POSPayment.payment_time.asc()).all()
+    all_payments = POSPayment.query.filter_by(order_id=order.id).order_by(POSPayment.created_at.asc()).all()
     payment_history = [
         {
             "id": p.id,
             "amount": float(p.amount),
             "method": p.method,
-            "ref": p.ref,
-            "payment_time": p.payment_time.isoformat() if p.payment_time else None,
+            "ref": p.reference,
+            "payment_time": p.created_at.isoformat() if p.created_at else None,
             "receipt_ref": p.receipt.receipt_ref if p.receipt else None,
         }
         for p in all_payments
@@ -867,9 +867,9 @@ def api_receipt_detail(receipt_id):
             "order_reference": order.reference,
             "amount": float(payment.amount),
             "method": payment.method,
-            "payment_ref": payment.ref,
+            "payment_ref": payment.reference,
             "issued_at": receipt.issued_at.isoformat() if receipt.issued_at else None,
-            "payment_time": payment.payment_time.isoformat() if payment.payment_time else None,
+            "payment_time": payment.created_at.isoformat() if payment.created_at else None,
             "created_at": payment.created_at.isoformat() if payment.created_at else None,
         },
         "order": {
@@ -908,7 +908,7 @@ def api_order_payments_list(order_id):
     order = POSOrder.query.get_or_404(order_id)
     
     # Get all payment records with receipts
-    payments = POSPayment.query.filter_by(order_id=order_id).order_by(POSPayment.payment_time.asc()).all()
+    payments = POSPayment.query.filter_by(order_id=order_id).order_by(POSPayment.created_at.asc()).all()
     
     payment_records = []
     total_paid = Decimal("0.00")
@@ -921,8 +921,8 @@ def api_order_payments_list(order_id):
             "id": payment.id,
             "amount": float(payment.amount),
             "method": payment.method,
-            "ref": payment.ref,
-            "payment_time": payment.payment_time.isoformat() if payment.payment_time else None,
+            "ref": payment.reference,
+            "payment_time": payment.created_at.isoformat() if payment.created_at else None,
             "created_at": payment.created_at.isoformat() if payment.created_at else None,
             "receipt": {
                 "id": payment.receipt.id if payment.receipt else None,
@@ -964,7 +964,7 @@ def get_image_url(item, item_type):
 def api_products():
     """API: Get all products available for POS (Catering, Bakery, and custom POS products)."""
     try:
-        from models import CateringItem, BakeryItem
+        from sas_management.models import CateringItem, BakeryItem
         from decimal import Decimal
         
         # Get catering items with current prices
@@ -1016,7 +1016,7 @@ def api_products():
                 continue
         
         # Get custom POS products
-        pos_products = POSProduct.query.filter_by(is_active=True).all()
+        pos_products = POSProduct.query.filter_by(is_available=True).all()
         custom_products = []
         for item in pos_products:
             try:
@@ -1028,6 +1028,8 @@ def api_products():
                     "category": item.category or "Custom",
                     "image_url": item.image_url if item.image_url else url_for('static', filename='images/product-placeholder.png'),
                     "description": item.description,
+                    "barcode": item.barcode,
+                    "sku": item.sku,
                 })
             except Exception as e:
                 current_app.logger.warning(f"Error processing POS product {item.id}: {e}")
@@ -1117,7 +1119,7 @@ def api_product_create():
             return jsonify({"status": "error", "message": f"Invalid price: {str(e)}"}), 400
         
         # Check for duplicate name
-        existing = POSProduct.query.filter_by(name=name, is_active=True).first()
+        existing = POSProduct.query.filter_by(name=name, is_available=True).first()
         if existing:
             return jsonify({"status": "error", "message": f"Product with name '{name}' already exists"}), 400
         
@@ -1131,7 +1133,8 @@ def api_product_create():
             barcode=data.get("barcode"),
             sku=data.get("sku"),
             tax_rate=Decimal(str(data.get("tax_rate", 18.0))),
-            is_active=True,
+            is_available=True,
+            is_active=True,  # Set both for compatibility
             created_by=current_user.id,
         )
         
@@ -1166,7 +1169,8 @@ def api_product_manage(product_id):
         product = POSProduct.query.get_or_404(product_id)
         
         if request.method == "DELETE":
-            # Soft delete - set is_active to False
+            # Soft delete - set is_available and is_active to False
+            product.is_available = False
             product.is_active = False
             db.session.commit()
             
@@ -1205,7 +1209,13 @@ def api_product_manage(product_id):
             if "tax_rate" in data:
                 product.tax_rate = Decimal(str(data.get("tax_rate", 18.0)))
             if "is_active" in data:
-                product.is_active = bool(data.get("is_active"))
+                is_active_val = bool(data.get("is_active"))
+                product.is_active = is_active_val
+                product.is_available = is_active_val  # Keep both in sync
+            if "is_available" in data:
+                is_available_val = bool(data.get("is_available"))
+                product.is_available = is_available_val
+                product.is_active = is_available_val  # Keep both in sync
             
             db.session.commit()
             
@@ -1250,4 +1260,223 @@ def api_sync():
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
+
+# ============================
+# TERMINAL MANAGEMENT ROUTES
+# ============================
+
+@pos_bp.route("/terminals")
+@login_required
+@role_required(UserRole.Admin, UserRole.SalesManager)
+def terminals_list():
+    """List all POS terminals."""
+    try:
+        terminals = POSDevice.query.order_by(POSDevice.created_at.desc()).all()
+        
+        # Get statistics for each terminal
+        from sqlalchemy import func
+        from datetime import date, timedelta
+        
+        today = date.today()
+        this_week_start = today - timedelta(days=today.weekday())
+        
+        terminal_stats = []
+        for terminal in terminals:
+            # Count orders for this terminal
+            today_orders = POSOrder.query.filter(
+                POSOrder.device_id == terminal.id,
+                db.func.date(POSOrder.order_time) == today,
+                POSOrder.status == "paid"
+            ).count()
+            
+            week_orders = POSOrder.query.filter(
+                POSOrder.device_id == terminal.id,
+                db.func.date(POSOrder.order_time) >= this_week_start,
+                POSOrder.status == "paid"
+            ).count()
+            
+            today_revenue = db.session.query(func.sum(POSOrder.total_amount)).filter(
+                POSOrder.device_id == terminal.id,
+                db.func.date(POSOrder.order_time) == today,
+                POSOrder.status == "paid"
+            ).scalar() or Decimal("0.00")
+            
+            week_revenue = db.session.query(func.sum(POSOrder.total_amount)).filter(
+                POSOrder.device_id == terminal.id,
+                db.func.date(POSOrder.order_time) >= this_week_start,
+                POSOrder.status == "paid"
+            ).scalar() or Decimal("0.00")
+            
+            # Check for open shifts
+            open_shifts = POSShift.query.filter_by(
+                device_id=terminal.id,
+                status="open"
+            ).count()
+            
+            terminal_stats.append({
+                "terminal": terminal,
+                "today_orders": today_orders,
+                "week_orders": week_orders,
+                "today_revenue": today_revenue,
+                "week_revenue": week_revenue,
+                "open_shifts": open_shifts,
+            })
+        
+        return render_template(
+            "pos/terminals_list.html",
+            terminal_stats=terminal_stats,
+        )
+    except Exception as e:
+        current_app.logger.exception("Error loading terminals list")
+        flash(f"Error loading terminals: {str(e)}", "danger")
+        return redirect(url_for("pos.index"))
+
+@pos_bp.route("/terminals/new", methods=["GET", "POST"])
+@login_required
+@role_required(UserRole.Admin)
+def terminal_new():
+    """Create a new POS terminal."""
+    if request.method == "POST":
+        try:
+            name = request.form.get("name", "").strip()
+            terminal_code = request.form.get("terminal_code", "").strip()
+            location = request.form.get("location", "").strip()
+            is_active = request.form.get("is_active") == "on"
+            
+            # Validation
+            if not name:
+                flash("Terminal name is required.", "danger")
+                return render_template("pos/terminal_form.html")
+            
+            if not terminal_code:
+                flash("Terminal code is required.", "danger")
+                return render_template("pos/terminal_form.html")
+            
+            # Check for duplicate terminal code
+            existing = POSDevice.query.filter_by(terminal_code=terminal_code).first()
+            if existing:
+                flash(f"Terminal code '{terminal_code}' already exists.", "danger")
+                return render_template("pos/terminal_form.html")
+            
+            # Create terminal
+            terminal = POSDevice(
+                name=name,
+                terminal_code=terminal_code,
+                location=location or None,
+                is_active=is_active,
+            )
+            db.session.add(terminal)
+            db.session.commit()
+            
+            flash(f"Terminal '{name}' created successfully.", "success")
+            return redirect(url_for("pos.terminals_list"))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception("Error creating terminal")
+            flash(f"Error creating terminal: {str(e)}", "danger")
+            return render_template("pos/terminal_form.html")
+    
+    return render_template("pos/terminal_form.html")
+
+@pos_bp.route("/terminals/<int:terminal_id>/edit", methods=["GET", "POST"])
+@login_required
+@role_required(UserRole.Admin)
+def terminal_edit(terminal_id):
+    """Edit a POS terminal."""
+    terminal = POSDevice.query.get_or_404(terminal_id)
+    
+    # Get terminal statistics for display
+    from sqlalchemy import func
+    terminal_stats = {
+        "total_orders": POSOrder.query.filter_by(device_id=terminal.id).count(),
+        "total_revenue": db.session.query(func.sum(POSOrder.total_amount)).filter(
+            POSOrder.device_id == terminal.id,
+            POSOrder.status == "paid"
+        ).scalar() or Decimal("0.00"),
+        "open_shifts": POSShift.query.filter_by(device_id=terminal.id, status="open").count(),
+    }
+    
+    if request.method == "POST":
+        try:
+            name = request.form.get("name", "").strip()
+            terminal_code = request.form.get("terminal_code", "").strip()
+            location = request.form.get("location", "").strip()
+            is_active = request.form.get("is_active") == "on"
+            
+            # Validation
+            if not name:
+                flash("Terminal name is required.", "danger")
+                return render_template("pos/terminal_form.html", terminal=terminal)
+            
+            if not terminal_code:
+                flash("Terminal code is required.", "danger")
+                return render_template("pos/terminal_form.html", terminal=terminal)
+            
+            # Check for duplicate terminal code (excluding current terminal)
+            existing = POSDevice.query.filter(
+                POSDevice.terminal_code == terminal_code,
+                POSDevice.id != terminal_id
+            ).first()
+            if existing:
+                flash(f"Terminal code '{terminal_code}' already exists.", "danger")
+                return render_template("pos/terminal_form.html", terminal=terminal)
+            
+            # Update terminal
+            terminal.name = name
+            terminal.terminal_code = terminal_code
+            terminal.location = location or None
+            terminal.is_active = is_active
+            
+            db.session.commit()
+            
+            flash(f"Terminal '{name}' updated successfully.", "success")
+            return redirect(url_for("pos.terminals_list"))
+            
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.exception("Error updating terminal")
+            flash(f"Error updating terminal: {str(e)}", "danger")
+            return render_template("pos/terminal_form.html", terminal=terminal, terminal_stats=terminal_stats)
+    
+    return render_template("pos/terminal_form.html", terminal=terminal, terminal_stats=terminal_stats)
+
+@pos_bp.route("/terminals/<int:terminal_id>/delete", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin)
+def terminal_delete(terminal_id):
+    """Delete a POS terminal."""
+    terminal = POSDevice.query.get_or_404(terminal_id)
+    
+    try:
+        # Check for open shifts
+        open_shifts = POSShift.query.filter_by(
+            device_id=terminal.id,
+            status="open"
+        ).count()
+        
+        if open_shifts > 0:
+            flash(f"Cannot delete terminal '{terminal.name}'. It has {open_shifts} open shift(s). Please close all shifts first.", "danger")
+            return redirect(url_for("pos.terminals_list"))
+        
+        # Check for orders
+        order_count = POSOrder.query.filter_by(device_id=terminal.id).count()
+        if order_count > 0:
+            # Soft delete - deactivate instead
+            terminal.is_active = False
+            db.session.commit()
+            flash(f"Terminal '{terminal.name}' deactivated (has {order_count} order(s)).", "warning")
+        else:
+            # Hard delete - no orders exist
+            db.session.delete(terminal)
+            db.session.commit()
+            flash(f"Terminal '{terminal.name}' deleted successfully.", "success")
+        
+        return redirect(url_for("pos.terminals_list"))
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("Error deleting terminal")
+        flash(f"Error deleting terminal: {str(e)}", "danger")
+        return redirect(url_for("pos.terminals_list"))
 

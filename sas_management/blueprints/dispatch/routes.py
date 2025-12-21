@@ -3,8 +3,8 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required, current_user
 from datetime import date
 
-from models import db, Vehicle, DispatchRun, LoadSheetItem, User, UserRole
-from utils import role_required
+from sas_management.models import db, Vehicle, DispatchRun, LoadSheetItem, User, UserRole
+from sas_management.utils import role_required
 
 dispatch_bp = Blueprint("dispatch", __name__, url_prefix="/dispatch")
 

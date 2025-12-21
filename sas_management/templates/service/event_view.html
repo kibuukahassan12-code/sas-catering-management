@@ -1,0 +1,656 @@
+{% extends "base.html" %}
+{% block content %}
+{% if schema_error %}
+<div class="alert alert-danger" style="margin: 1rem; padding: 1rem; background: #fee; border: 1px solid #fcc; border-radius: 6px;">
+    <strong>⚠️ Database Schema Issue</strong>
+    <p style="margin: 0.5rem 0 0 0;">{{ schema_error }}</p>
+</div>
+{% endif %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Operations · Event Service</p>
+        <h1>{{ event.title }}</h1>
+        <p class="muted">Service event workspace - manage items, staff, and checklist.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('service.event_edit', event_id=event.id) }}">Edit Event</a>
+        <a class="btn-secondary" href="{{ url_for('service.events') }}">← Back to Events</a>
+    </div>
+</section>
+
+<!-- Event Summary Card -->
+<section class="panel">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div style="flex: 1; min-width: 300px;">
+            <h3 style="margin: 0 0 1rem 0;">Event Details</h3>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem;">
+                <strong>Type:</strong>
+                <span>{{ event.event_type or '—' }}</span>
+                
+                <strong>Date:</strong>
+                <span>{{ event.event_date.strftime('%B %d, %Y') if event.event_date else '—' }}</span>
+                
+                <strong>Venue:</strong>
+                <span>{{ event.venue or '—' }}</span>
+                
+                <strong>Guests:</strong>
+                <span>{{ event.guest_count or '—' }}</span>
+                
+                {% if event.client %}
+                <strong>Client:</strong>
+                <span><a href="{{ url_for('core.clients_edit', client_id=event.client.id) }}">{{ event.client.name }}</a></span>
+                {% endif %}
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div style="margin-bottom: 0.5rem;">
+                <span class="badge" style="background: {% if event.status == 'Completed' %}#2ecc71{% elif event.status == 'In Progress' %}#9b59b6{% elif event.status == 'Confirmed' %}#f39c12{% else %}#3498db{% endif %}; color: white; font-size: 1rem; padding: 0.5rem 1rem;">
+                    {{ event.status }}
+                </span>
+            </div>
+            <form method="post" action="{{ url_for('service.event_status_update', event_id=event.id) }}" style="display: inline;">
+                <select name="status" onchange="this.form.submit()" style="padding: 0.5rem;">
+                    <option value="Planned" {% if event.status == 'Planned' %}selected{% endif %}>Planned</option>
+                    <option value="Confirmed" {% if event.status == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                    <option value="In Progress" {% if event.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                    <option value="Completed" {% if event.status == 'Completed' %}selected{% endif %}>Completed</option>
+                </select>
+            </form>
+        </div>
+    </div>
+</section>
+
+<!-- Tabs Navigation -->
+<section class="panel">
+    <div style="border-bottom: 2px solid #e9ecef; margin-bottom: 1.5rem;">
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button class="tab-button {% if active_tab == 'overview' %}active{% endif %}" onclick="showTab('overview')">Overview</button>
+                <button class="tab-button {% if active_tab == 'items' %}active{% endif %}" onclick="showTab('items')">Items & Costs</button>
+                <button class="tab-button {% if active_tab == 'checklist' %}active{% endif %}" onclick="showTab('checklist')">Checklist</button>
+                <button class="tab-button {% if active_tab == 'items-movement' %}active{% endif %}" onclick="showTab('items-movement')">Items Movement</button>
+                <button class="tab-button {% if active_tab == 'team' %}active{% endif %}" onclick="showTab('team')">Service Team</button>
+                <button class="tab-button {% if active_tab == 'staff' %}active{% endif %}" onclick="showTab('staff')">Staff Assignment</button>
+                <button class="tab-button {% if active_tab == 'logistics' %}active{% endif %}" onclick="showTab('logistics')">Logistics & Notes</button>
+            </div>
+    </div>
+    
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-content {% if active_tab == 'overview' or not active_tab %}active{% endif %}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+            <div class="summary-card" style="border-left: 4px solid #3498db;">
+                <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">Total Cost</p>
+                <h2 style="margin: 0.5rem 0 0 0; color: #3498db;">{{ CURRENCY }}{{ "{:,.2f}".format(total_cost or 0) }}</h2>
+            </div>
+            <div class="summary-card" style="border-left: 4px solid #2ecc71;">
+                <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">Checklist Progress</p>
+                <h2 style="margin: 0.5rem 0 0 0; color: #2ecc71;">{{ new_checklist_completed }}/{{ new_checklist_total }}</h2>
+                <div style="margin-top: 0.5rem; background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden;">
+                    <div style="background: #2ecc71; height: 100%; width: {{ new_checklist_percentage }}%; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            {% if unreturned_items|length > 0 %}
+            <div class="summary-card" style="border-left: 4px solid #e74c3c;">
+                <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">⚠️ Unreturned Items</p>
+                <h2 style="margin: 0.5rem 0 0 0; color: #e74c3c;">{{ unreturned_items|length }}</h2>
+            </div>
+            {% endif %}
+            <div class="summary-card" style="border-left: 4px solid #f39c12;">
+                <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">Items</p>
+                <h2 style="margin: 0.5rem 0 0 0; color: #f39c12;">{{ event.items|length if event.items else 0 }}</h2>
+            </div>
+            <div class="summary-card" style="border-left: 4px solid #9b59b6;">
+                <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">Staff Assigned</p>
+                <h2 style="margin: 0.5rem 0 0 0; color: #9b59b6;">{{ event.staff_assignments|length if event.staff_assignments else 0 }}</h2>
+            </div>
+        </div>
+        
+        {% if event.notes %}
+        <div style="background: #f8f9fa; padding: 1rem; border-radius: 6px; margin-top: 1rem;">
+            <h4 style="margin: 0 0 0.5rem 0;">Notes</h4>
+            <p style="margin: 0; white-space: pre-wrap;">{{ event.notes }}</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Items & Costs Tab -->
+    <div id="tab-items" class="tab-content {% if active_tab == 'items' %}active{% endif %}">
+        <div style="margin-bottom: 1.5rem;">
+            <h3 style="margin: 0 0 1rem 0;">Add Item</h3>
+            <form method="post" action="{{ url_for('service.event_items_add', event_id=event.id) }}" class="form-grid" style="grid-template-columns: 2fr 1fr 1fr 1fr auto;">
+                <input type="text" name="item_name" placeholder="Item name" required>
+                <select name="category">
+                    <option value="">Category</option>
+                    <option value="Food">Food</option>
+                    <option value="Equipment">Equipment</option>
+                    <option value="Staff">Staff</option>
+                    <option value="Logistics">Logistics</option>
+                </select>
+                <input type="number" name="quantity" placeholder="Qty" value="1" min="1" required>
+                <input type="number" name="unit_cost" placeholder="Unit Cost" step="0.01" min="0" required>
+                <button type="submit" class="btn-primary">Add</button>
+            </form>
+        </div>
+        
+        {% if event.items and event.items|length > 0 %}
+        <div class="table-wrapper">
+            <table class="responsive-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Category</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                        <th>Total Cost</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in event.items %}
+                    <tr>
+                        <td><strong>{{ item.item_name }}</strong></td>
+                        <td>{{ item.category or '—' }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.unit_cost or 0) }}</td>
+                        <td><strong>{{ CURRENCY }}{{ "{:,.2f}".format(item.total_cost or 0) }}</strong></td>
+                        <td>
+                            <form method="post" action="{{ url_for('service.event_item_delete', event_id=event.id, item_id=item.id) }}" style="display: inline;" onsubmit="return confirm('Delete this item?');">
+                                <button type="submit" class="btn-danger btn-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background: #f8f9fa; font-weight: bold;">
+                        <td colspan="4" style="text-align: right;">Total:</td>
+                        <td>{{ CURRENCY }}{{ "{:,.2f}".format(total_cost or 0) }}</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #6c757d;">
+            <p>No items added yet. Add items above to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Staff Assignment Tab -->
+    <div id="tab-staff" class="tab-content {% if active_tab == 'staff' %}active{% endif %}">
+        <div style="margin-bottom: 1.5rem;">
+            <h3 style="margin: 0 0 1rem 0;">Assign Staff</h3>
+            <form method="post" action="{{ url_for('service.event_staff_add', event_id=event.id) }}" class="form-grid" style="grid-template-columns: 1fr 1fr 1fr 1fr auto;">
+                <select name="staff_id">
+                    <option value="">Select Staff</option>
+                    {% for user in users %}
+                    <option value="{{ user.id }}">{{ user.name }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="role" placeholder="Role">
+                <select name="shift">
+                    <option value="">Shift</option>
+                    <option value="Morning">Morning</option>
+                    <option value="Afternoon">Afternoon</option>
+                    <option value="Evening">Evening</option>
+                    <option value="Full Day">Full Day</option>
+                </select>
+                <input type="text" name="notes" placeholder="Notes">
+                <button type="submit" class="btn-primary">Assign</button>
+            </form>
+        </div>
+        
+        {% if event.staff_assignments and event.staff_assignments|length > 0 %}
+        <div class="table-wrapper">
+            <table class="responsive-table">
+                <thead>
+                    <tr>
+                        <th>Staff</th>
+                        <th>Role</th>
+                        <th>Shift</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in event.staff_assignments %}
+                    <tr>
+                        <td>
+                            {% if assignment.staff %}
+                            <strong>{{ assignment.staff.name }}</strong>
+                            {% else %}
+                            <span class="muted">Manual Entry</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ assignment.role or '—' }}</td>
+                        <td>{{ assignment.shift or '—' }}</td>
+                        <td>{{ assignment.notes or '—' }}</td>
+                        <td>
+                            <form method="post" action="{{ url_for('service.event_staff_delete', event_id=event.id, assignment_id=assignment.id) }}" style="display: inline;" onsubmit="return confirm('Remove this staff assignment?');">
+                                <button type="submit" class="btn-danger btn-sm">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #6c757d;">
+            <p>No staff assigned yet. Assign staff above to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Checklist Tab - New Operational System -->
+    <div id="tab-checklist" class="tab-content {% if active_tab == 'checklist' %}active{% endif %}">
+        <div style="margin-bottom: 1.5rem;">
+            <h3 style="margin: 0 0 1rem 0;">Create Checklist</h3>
+            <form method="post" action="{{ url_for('service.checklist_create', event_id=event.id) }}" class="form-grid" style="grid-template-columns: 2fr 1fr 1fr auto;">
+                <input type="text" name="title" placeholder="Checklist title (e.g., Pre-Event Setup)" required>
+                <select name="phase" required>
+                    <option value="pre_event">Pre-Event</option>
+                    <option value="on_site">On-Site</option>
+                    <option value="post_event">Post-Event</option>
+                </select>
+                <input type="text" name="assigned_staff" placeholder="Assigned Staff">
+                <button type="submit" class="btn-primary">Create</button>
+            </form>
+        </div>
+        
+        {% if event.checklists and event.checklists|length > 0 %}
+        <div style="display: grid; gap: 1.5rem;">
+            {% for checklist in event.checklists %}
+            <div style="background: {% if checklist.is_completed %}#f0fdf4{% else %}#fff{% endif %}; border: 1px solid #e9ecef; border-radius: 6px; padding: 1.5rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0;">{{ checklist.title }}</h4>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <span class="badge" style="background: {% if checklist.phase == 'pre_event' %}#3498db{% elif checklist.phase == 'on_site' %}#f39c12{% else %}#2ecc71{% endif %}; color: white;">
+                                {{ checklist.phase|replace('_', ' ')|title }}
+                            </span>
+                            {% if checklist.is_completed %}
+                            <span class="badge" style="background: #2ecc71; color: white;">✓ Completed</span>
+                            {% endif %}
+                            {% if checklist.assigned_staff %}
+                            <span class="badge" style="background: #e9ecef; color: #495057;">👤 {{ checklist.assigned_staff }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if not checklist.is_completed %}
+                    <form method="post" action="{{ url_for('service.checklist_complete', event_id=event.id, checklist_id=checklist.id) }}" style="display: inline;">
+                        <button type="submit" class="btn-primary btn-sm">Mark Complete</button>
+                    </form>
+                    {% endif %}
+                </div>
+                
+                <form method="post" action="{{ url_for('service.checklist_item_add', event_id=event.id, checklist_id=checklist.id) }}" style="margin-bottom: 1rem;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" name="description" placeholder="Add checklist item..." style="flex: 1;" required>
+                        <button type="submit" class="btn-secondary btn-sm">Add Item</button>
+                    </div>
+                </form>
+                
+                {% if checklist.items and checklist.items|length > 0 %}
+                <div style="display: grid; gap: 0.5rem;">
+                    {% for item in checklist.items %}
+                    <div style="display: flex; align-items: center; gap: 1rem; padding: 0.75rem; background: {% if item.is_done %}#f0fdf4{% else %}#f8f9fa{% endif %}; border-radius: 4px;">
+                        <input type="checkbox" {% if item.is_done %}checked{% endif %} 
+                               onchange="toggleChecklistItem({{ event.id }}, {{ checklist.id }}, {{ item.id }})" 
+                               style="width: 20px; height: 20px; cursor: pointer;">
+                        <span style="flex: 1; {% if item.is_done %}text-decoration: line-through; color: #6c757d;{% endif %}">{{ item.description }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="muted" style="text-align: center; padding: 1rem;">No items in this checklist yet.</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #6c757d;">
+            <p>No checklists created yet. Create a checklist above to get started.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Items Movement Tab -->
+    <div id="tab-items-movement" class="tab-content {% if active_tab == 'items-movement' %}active{% endif %}">
+        <div style="margin-bottom: 1.5rem;">
+            <h3 style="margin: 0 0 1rem 0;">Record Item Movement</h3>
+            <form method="post" action="{{ url_for('service.item_movement_create', event_id=event.id) }}" class="form-grid" style="grid-template-columns: 2fr 1fr 1fr 1fr auto;">
+                <input type="text" name="item_name" placeholder="Item name" required>
+                <input type="number" name="quantity_taken" placeholder="Qty Taken" min="0" value="0" required>
+                <input type="number" name="quantity_returned" placeholder="Qty Returned" min="0" value="0" required>
+                <input type="text" name="condition_notes" placeholder="Condition notes">
+                <button type="submit" class="btn-primary">Record</button>
+            </form>
+        </div>
+        
+        {% if event.item_movements and event.item_movements|length > 0 %}
+        <div class="table-wrapper">
+            <table class="responsive-table">
+                <thead>
+                    <tr>
+                        <th>Item Name</th>
+                        <th>Qty Taken</th>
+                        <th>Qty Returned</th>
+                        <th>Status</th>
+                        <th>Condition Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for movement in event.item_movements %}
+                    <tr style="{% if movement.status == 'missing' %}background: #fee;{% elif movement.status == 'partial' %}background: #fff3cd;{% endif %}">
+                        <td><strong>{{ movement.item_name }}</strong></td>
+                        <td>{{ movement.quantity_taken }}</td>
+                        <td>{{ movement.quantity_returned }}</td>
+                        <td>
+                            <span class="badge" style="background: {% if movement.status == 'returned' %}#2ecc71{% elif movement.status == 'partial' %}#f39c12{% else %}#e74c3c{% endif %}; color: white;">
+                                {{ movement.status|title }}
+                            </span>
+                        </td>
+                        <td>{{ movement.condition_notes or '—' }}</td>
+                        <td>
+                            <button class="btn-secondary btn-sm" onclick="showReturnModal({{ movement.id }}, '{{ movement.item_name }}', {{ movement.quantity_taken }}, {{ movement.quantity_returned }})">Update Return</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 2rem; color: #6c757d;">
+            <p>No item movements recorded yet. Record item movements above.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Service Team Tab -->
+    <div id="tab-team" class="tab-content {% if active_tab == 'team' %}active{% endif %}">
+        <!-- Team Leader Section -->
+        <div style="margin-bottom: 2rem;">
+            <h3 style="margin: 0 0 1rem 0;">Team Leader</h3>
+            {% if event.team_leaders and event.team_leaders|length > 0 %}
+            {% for leader in event.team_leaders %}
+            <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h4 style="margin: 0 0 0.5rem 0;">{{ leader.staff_name }}</h4>
+                        {% if leader.phone %}
+                        <p style="margin: 0 0 0.5rem 0; color: #6b7280;">📞 {{ leader.phone }}</p>
+                        {% endif %}
+                        {% if leader.responsibilities %}
+                        <div style="margin-top: 0.75rem;">
+                            <strong>Responsibilities:</strong>
+                            <p style="margin: 0.5rem 0 0 0; white-space: pre-wrap;">{{ leader.responsibilities }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('service.team_leader_update', event_id=event.id, leader_id=leader.id) }}" class="btn-secondary btn-sm">Edit</a>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <form method="post" action="{{ url_for('service.team_leader_create', event_id=event.id) }}" class="form-grid" style="grid-template-columns: 2fr 1fr auto;">
+                <input type="text" name="staff_name" placeholder="Team Leader Name" required>
+                <input type="text" name="phone" placeholder="Phone">
+                <button type="submit" class="btn-primary">Assign</button>
+            </form>
+            <form method="post" action="{{ url_for('service.team_leader_create', event_id=event.id) }}" style="margin-top: 0.5rem;">
+                <textarea name="responsibilities" placeholder="Responsibilities (optional)" rows="3" style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;"></textarea>
+            </form>
+            {% endif %}
+        </div>
+        
+        <!-- Part-Time Team Assignment -->
+        <div>
+            <h3 style="margin: 0 0 1rem 0;">Part-Time Team</h3>
+            <form method="post" action="{{ url_for('service.team_assign', event_id=event.id) }}" class="form-grid" style="grid-template-columns: 2fr 1fr auto;">
+                <select name="staff_id" required>
+                    <option value="">Select Part-Time Staff</option>
+                    {% for staff in part_time_staff %}
+                    <option value="{{ staff.id }}">{{ staff.full_name }} {% if staff.role %}({{ staff.role }}){% endif %}</option>
+                    {% endfor %}
+                </select>
+                <select name="attendance_status">
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                </select>
+                <button type="submit" class="btn-primary">Assign</button>
+            </form>
+            
+            {% if event.team_assignments and event.team_assignments|length > 0 %}
+            <div style="margin-top: 1.5rem;">
+                <div class="table-wrapper">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Staff Name</th>
+                                <th>Role</th>
+                                <th>Phone</th>
+                                <th>Attendance Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for assignment in event.team_assignments %}
+                            <tr>
+                                <td><strong>{{ assignment.staff.full_name }}</strong></td>
+                                <td>{{ assignment.staff.role or '—' }}</td>
+                                <td>{{ assignment.staff.phone or '—' }}</td>
+                                <td>
+                                    <select onchange="updateAttendance({{ event.id }}, {{ assignment.id }}, this.value)" style="padding: 0.25rem 0.5rem;">
+                                        <option value="pending" {% if assignment.attendance_status == 'pending' %}selected{% endif %}>Pending</option>
+                                        <option value="confirmed" {% if assignment.attendance_status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                        <option value="present" {% if assignment.attendance_status == 'present' %}selected{% endif %}>Present</option>
+                                        <option value="absent" {% if assignment.attendance_status == 'absent' %}selected{% endif %}>Absent</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <form method="post" action="{{ url_for('service.team_assign_remove', event_id=event.id, assignment_id=assignment.id) }}" style="display: inline;" onsubmit="return confirm('Remove this assignment?');">
+                                        <button type="submit" class="btn-danger btn-sm">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% else %}
+            <div style="text-align: center; padding: 2rem; color: #6c757d; margin-top: 1rem;">
+                <p>No part-time staff assigned yet. Assign staff above.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Logistics & Notes Tab -->
+    <div id="tab-logistics" class="tab-content {% if active_tab == 'logistics' %}active{% endif %}">
+        <div style="display: grid; gap: 1.5rem;">
+            <!-- Event Notes Section -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 6px;">
+                <h3 style="margin: 0 0 1rem 0;">Event Notes</h3>
+                {% if event.notes %}
+                <div style="background: white; padding: 1rem; border-radius: 4px; white-space: pre-wrap;">{{ event.notes }}</div>
+                {% else %}
+                <p class="muted">No notes added yet. Edit the event to add notes.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Timeline Section -->
+            <div style="background: #f8f9fa; padding: 1.5rem; border-radius: 6px;">
+                <h3 style="margin: 0 0 1rem 0;">Event Timeline</h3>
+                {% if timeline_entries %}
+                <div style="position: relative; padding-left: 2rem;">
+                    <div style="position: absolute; left: 0.5rem; top: 0; bottom: 0; width: 2px; background: #e9ecef;"></div>
+                    {% for entry in timeline_entries %}
+                    <div style="position: relative; margin-bottom: 1.5rem;">
+                        <div style="position: absolute; left: -1.75rem; top: 0.25rem; width: 12px; height: 12px; background: #F26822; border-radius: 50%; border: 2px solid white;"></div>
+                        <div style="background: white; padding: 1rem; border-radius: 4px; border: 1px solid #e9ecef;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                <strong style="color: #F26822;">{{ entry.action }}</strong>
+                                <small class="muted">{{ entry.date.strftime('%b %d, %Y at %I:%M %p') if entry.date else '—' }}</small>
+                            </div>
+                            <p style="margin: 0; color: #6b7280;">{{ entry.description }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="muted">No timeline entries yet. Timeline will show event creation and updates.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.tab-button {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    color: #6b7280;
+    transition: all 0.2s;
+}
+
+.tab-button:hover {
+    color: #F26822;
+}
+
+.tab-button.active {
+    color: #F26822;
+    border-bottom-color: #F26822;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.summary-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 1.5rem;
+}
+</style>
+
+<script>
+function showTab(tabName) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    const tabElement = document.getElementById('tab-' + tabName);
+    if (tabElement) {
+        tabElement.classList.add('active');
+    }
+    
+    // Update active button
+    event.target.classList.add('active');
+    
+    // Update URL without reload
+    const url = new URL(window.location);
+    url.searchParams.set('tab', tabName);
+    window.history.pushState({}, '', url);
+}
+
+function toggleChecklistItem(eventId, checklistId, itemId) {
+    fetch(`/service/events/${eventId}/checklists/${checklistId}/items/${itemId}/toggle`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Failed to update checklist item');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update checklist item');
+    });
+}
+
+function updateAttendance(eventId, assignmentId, status) {
+    fetch(`/service/events/${eventId}/team/${assignmentId}/attendance`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ attendance_status: status })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Optionally show a success message
+        } else {
+            alert('Failed to update attendance');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update attendance');
+    });
+}
+
+function showReturnModal(movementId, itemName, qtyTaken, qtyReturned) {
+    // Simple prompt for now - can be enhanced with a modal
+    const newQty = prompt(`Update returned quantity for "${itemName}"\n\nTaken: ${qtyTaken}\nCurrent Returned: ${qtyReturned}\n\nEnter new returned quantity:`, qtyReturned);
+    if (newQty !== null && !isNaN(newQty)) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/service/events/{{ event.id }}/items/${movementId}/return`;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'quantity_returned';
+        input.value = newQty;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function toggleChecklist(itemId) {
+    fetch('{{ url_for("service.event_checklist_toggle", event_id=event.id, item_id=0) }}'.replace('0', itemId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to update checklist item');
+    });
+}
+</script>
+{% endblock %}
+
+

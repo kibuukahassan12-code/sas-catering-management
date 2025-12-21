@@ -3,9 +3,9 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_login import current_user, login_required
 from datetime import datetime
 
-from models import db, Contract, ContractTemplate, Event, Client, UserRole
-from utils import role_required
-from services.contracts_service import (
+from sas_management.models import db, Contract, ContractTemplate, Event, Client, UserRole
+from sas_management.utils import role_required
+from sas_management.services.contracts_service import (
     create_contract, get_contract, list_contracts, mark_as_signed,
     load_contract_template, list_contract_templates, create_contract_template,
     apply_template_variables, generate_contract_pdf, get_pdf_folder
@@ -196,7 +196,7 @@ def contract_edit(contract_id):
             contract_body = request.form.get('contract_body', '').strip()
             status = request.form.get('status')
             
-            from services.contracts_service import update_contract as update_contract_service
+            from sas_management.services.contracts_service import update_contract as update_contract_service
             result = update_contract_service(contract_id, contract_body, status)
             
             if result['success']:

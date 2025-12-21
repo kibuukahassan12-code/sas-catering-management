@@ -1,0 +1,227 @@
+/* ====================================================================
+   SAS Management System - Global Brand Theme
+   Standardized CSS Variables for Consistent Branding
+   ==================================================================== */
+
+:root {
+  /* === SAS BRAND CORE === */
+  --sas-primary: #ff8c1a;        /* SAS Orange */
+  --sas-primary-hover: #e67600;
+  --sas-secondary: #1f1f1f;      /* Dark UI base */
+  --sas-bg-dark: #121212;
+  --sas-bg-card: #1a1a1a;
+  --sas-bg-elevated: #202020;
+
+  /* === TEXT COLORS === */
+  --sas-text-primary: #ffffff;
+  --sas-text-secondary: #cfcfcf;
+  --sas-text-muted: #9e9e9e;
+
+  /* === STATUS COLORS === */
+  --sas-success: #28c76f;
+  --sas-warning: #ff9f43;
+  --sas-danger: #ea5455;
+  --sas-info: #00cfe8;
+
+  /* === BORDERS & EFFECTS === */
+  --sas-border: rgba(255, 140, 26, 0.35);
+  --sas-glow: rgba(255, 140, 26, 0.55);
+}
+
+/* ====================================================================
+   GLOBAL BODY & TEXT STYLES
+   ==================================================================== */
+body {
+  background-color: var(--sas-bg-dark);
+  color: var(--sas-text-primary);
+}
+
+a {
+  color: var(--sas-primary);
+}
+a:hover {
+  color: var(--sas-primary-hover);
+}
+
+/* ====================================================================
+   BUTTON STYLES
+   ==================================================================== */
+.btn-primary {
+  background-color: var(--sas-primary);
+  border-color: var(--sas-primary);
+  color: #000;
+}
+.btn-primary:hover {
+  background-color: var(--sas-primary-hover);
+  border-color: var(--sas-primary-hover);
+}
+
+.btn-outline-warning {
+  border-color: var(--sas-primary);
+  color: var(--sas-primary);
+}
+.btn-outline-warning:hover {
+  background-color: var(--sas-primary);
+  color: #000;
+}
+
+/* ====================================================================
+   CARD & MODAL STYLES
+   ==================================================================== */
+.card,
+.modal-content,
+.dropdown-menu {
+  background-color: var(--sas-bg-card);
+  border-color: var(--sas-border);
+}
+
+/* ====================================================================
+   BADGE & STATUS COLORS
+   ==================================================================== */
+.badge-warning,
+.bg-warning {
+  background-color: var(--sas-warning) !important;
+  color: #000;
+}
+
+.badge-success,
+.bg-success {
+  background-color: var(--sas-success) !important;
+}
+
+.badge-danger,
+.bg-danger {
+  background-color: var(--sas-danger) !important;
+}
+
+/* ====================================================================
+   INPUT & FORM CONTROLS
+   ==================================================================== */
+input,
+select,
+textarea {
+  background-color: var(--sas-bg-elevated);
+  color: var(--sas-text-primary);
+  border-color: var(--sas-border);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--sas-primary);
+  box-shadow: 0 0 0 0.15rem var(--sas-glow);
+}
+
+/* ====================================================================
+   NAVBAR & SIDEBAR STYLES
+   ==================================================================== */
+.navbar,
+.sidebar {
+  background-color: var(--sas-secondary);
+}
+
+.navbar-brand,
+.sidebar a {
+  color: var(--sas-text-primary);
+}
+
+.sidebar a.active {
+  color: var(--sas-primary);
+  border-left: 3px solid var(--sas-primary);
+}
+
+/* =========================================================
+   SAS AI – BRANDING (SCOPED ONLY TO AI)
+   ========================================================= */
+
+.sas-ai {
+  --ai-primary: var(--sas-primary);
+  --ai-bg: var(--sas-bg-dark);
+  --ai-card: var(--sas-bg-card);
+  --ai-border: var(--sas-border);
+  --ai-text: var(--sas-text-primary);
+  --ai-muted: var(--sas-text-muted);
+}
+
+/* ====================================================================
+   AI PAGE BACKGROUND & TEXT
+   ==================================================================== */
+.sas-ai {
+  background-color: var(--ai-bg);
+  color: var(--ai-text);
+}
+
+/* ====================================================================
+   AI CARDS / PANELS (CHAT, PROMPTS, HISTORY)
+   ==================================================================== */
+.sas-ai .card,
+.sas-ai .ai-panel,
+.sas-ai .ai-block {
+  background-color: var(--ai-card);
+  border: 1px solid var(--ai-border);
+  border-radius: 10px;
+}
+
+/* ====================================================================
+   AI INPUTS (PROMPT BOX)
+   ==================================================================== */
+.sas-ai textarea,
+.sas-ai input {
+  background-color: var(--sas-bg-elevated);
+  color: var(--ai-text);
+  border: 1px solid var(--ai-border);
+}
+
+.sas-ai textarea:focus,
+.sas-ai input:focus {
+  border-color: var(--ai-primary);
+  box-shadow: 0 0 0 0.15rem rgba(255, 140, 26, 0.45);
+}
+
+/* ====================================================================
+   AI BUTTONS (SEND, NEW CHAT, CLEAR)
+   ==================================================================== */
+.sas-ai .btn-ai-primary {
+  background-color: var(--ai-primary);
+  color: #000;
+  border: none;
+}
+
+.sas-ai .btn-ai-primary:hover {
+  background-color: var(--sas-primary-hover);
+}
+
+.sas-ai .btn-ai-outline {
+  border: 1px solid var(--ai-primary);
+  color: var(--ai-primary);
+}
+
+.sas-ai .btn-ai-outline:hover {
+  background-color: var(--ai-primary);
+  color: #000;
+}
+
+/* ====================================================================
+   AI MESSAGE BUBBLES
+   ==================================================================== */
+.sas-ai .ai-message.user {
+  border-left: 4px solid var(--ai-primary);
+  background-color: rgba(255, 140, 26, 0.08);
+}
+
+.sas-ai .ai-message.system {
+  border-left: 4px solid var(--sas-info);
+  background-color: rgba(0, 207, 232, 0.08);
+}
+
+/* ====================================================================
+   AI SUGGESTED PROMPTS
+   ==================================================================== */
+.sas-ai .ai-prompt {
+  border: 1px dashed var(--ai-border);
+  color: var(--ai-primary);
+}
+
+.sas-ai .ai-prompt:hover {
+  background-color: rgba(255, 140, 26, 0.15);
+}

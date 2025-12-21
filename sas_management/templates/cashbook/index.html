@@ -15,17 +15,26 @@
         <span class="badge">Live totals</span>
     </div>
     <div class="summary-grid">
-        <article class="summary-card">
-            <p>Total Income</p>
-            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.income) }}</h2>
+        <article class="summary-card" style="border-left: 4px solid #22c55e;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem;">📈</span>
+                <p style="margin: 0; color: #6b7280;">Total Income</p>
+            </div>
+            <h2 style="color: #22c55e; text-align: right; margin: 0;">{{ CURRENCY }}{{ "{:,.2f}".format(summary.income) }}</h2>
         </article>
-        <article class="summary-card">
-            <p>Total Expenses</p>
-            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.expense) }}</h2>
+        <article class="summary-card" style="border-left: 4px solid #ef4444;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem;">📉</span>
+                <p style="margin: 0; color: #6b7280;">Total Expenses</p>
+            </div>
+            <h2 style="color: #ef4444; text-align: right; margin: 0;">{{ CURRENCY }}{{ "{:,.2f}".format(summary.expense) }}</h2>
         </article>
-        <article class="summary-card">
-            <p>Net Profit</p>
-            <h2>{{ CURRENCY }}{{ "{:,.2f}".format(summary.net) }}</h2>
+        <article class="summary-card" style="border-left: 4px solid {% if summary.net >= 0 %}#22c55e{% else %}#ef4444{% endif %};">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <span style="font-size: 1.2rem;">💰</span>
+                <p style="margin: 0; color: #6b7280;">Net Profit</p>
+            </div>
+            <h2 style="color: {% if summary.net >= 0 %}#22c55e{% else %}#ef4444{% endif %}; text-align: right; margin: 0;">{{ CURRENCY }}{{ "{:,.2f}".format(summary.net) }}</h2>
         </article>
     </div>
 </section>
@@ -33,21 +42,26 @@
 <section class="panel">
     <div class="table-header">
         <h3>Cashbook Entries</h3>
-        <span class="badge">{{ pagination.total }} records</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            {% if filters_active %}
+            <span class="badge" style="background-color: #3b82f6; color: white;">Filters Applied</span>
+            {% endif %}
+            <span class="badge">{{ filtered_count }} of {{ total_count }} records</span>
+        </div>
     </div>
-    <div class="filter-section" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; margin-bottom: 1rem;">
+    <div class="filter-section" style="padding: 1rem; border-bottom: 1px solid #e0e0e0; margin-bottom: 1rem; background-color: {% if filters_active %}#eff6ff{% else %}#f9fafb{% endif %};">
         <form method="get" action="{{ url_for('cashbook.index') }}" style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
             <div>
-                <label for="start_date">Start Date:</label>
-                <input type="date" id="start_date" name="start_date" value="{{ start_date }}" style="padding: 0.5rem;">
+                <label for="start_date" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; color: #6b7280;">Start Date (dd/mm/yyyy):</label>
+                <input type="date" id="start_date" name="start_date" value="{{ start_date }}" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" placeholder="dd/mm/yyyy">
             </div>
             <div>
-                <label for="end_date">End Date:</label>
-                <input type="date" id="end_date" name="end_date" value="{{ end_date }}" style="padding: 0.5rem;">
+                <label for="end_date" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; color: #6b7280;">End Date (dd/mm/yyyy):</label>
+                <input type="date" id="end_date" name="end_date" value="{{ end_date }}" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;" placeholder="dd/mm/yyyy">
             </div>
             <div>
-                <label for="category">Category:</label>
-                <select id="category" name="category" style="padding: 0.5rem;">
+                <label for="category" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; color: #6b7280;">Category:</label>
+                <select id="category" name="category" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
                     <option value="">All Categories</option>
                     {% for cat in categories %}
                     <option value="{{ cat }}" {% if selected_category == cat %}selected{% endif %}>{{ cat }}</option>
@@ -55,18 +69,25 @@
                 </select>
             </div>
             <div>
-                <label for="type">Type:</label>
-                <select id="type" name="type" style="padding: 0.5rem;">
+                <label for="type" style="display: block; margin-bottom: 0.25rem; font-size: 0.875rem; color: #6b7280;">Type:</label>
+                <select id="type" name="type" style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem;">
                     <option value="">All Types</option>
                     <option value="Income" {% if selected_type == 'Income' %}selected{% endif %}>Income</option>
                     <option value="Expense" {% if selected_type == 'Expense' %}selected{% endif %}>Expense</option>
                 </select>
             </div>
-            <div>
+            <div style="display: flex; gap: 0.5rem; align-items: flex-end;">
                 <button type="submit" class="btn-primary">Filter</button>
-                <a href="{{ url_for('cashbook.index') }}" class="btn-secondary">Clear</a>
+                {% if filters_active %}
+                <a href="{{ url_for('cashbook.index') }}" class="btn-secondary" style="background-color: #f3f4f6; color: #374151; border: 1px solid #d1d5db;">Clear Filters</a>
+                {% endif %}
             </div>
         </form>
+        {% if filters_active %}
+        <div style="margin-top: 0.75rem; padding: 0.5rem; background-color: #dbeafe; border-radius: 0.375rem; font-size: 0.875rem; color: #1e40af;">
+            <strong>Filters active:</strong> Showing {{ filtered_count }} of {{ total_count }} transactions
+        </div>
+        {% endif %}
     </div>
     <div class="table-wrapper">
         <table class="responsive-table">
@@ -99,7 +120,7 @@
                         <span class="muted">—</span>
                         {% endif %}
                     </td>
-                    <td data-label="Amount">{{ CURRENCY }}{{ "{:,.2f}".format(transaction.amount or 0) }}</td>
+                    <td data-label="Amount" style="text-align: right; font-weight: 600; color: {% if transaction.type.value == 'Income' %}#22c55e{% else %}#ef4444{% endif %};">{{ CURRENCY }}{{ "{:,.2f}".format(transaction.amount or 0) }}</td>
                     <td class="table-actions">
                         <a class="btn-ghost" href="{{ url_for('cashbook.edit_transaction', transaction_id=transaction.id) }}">Edit</a>
                         <form method="post" action="{{ url_for('cashbook.delete_transaction', transaction_id=transaction.id) }}" onsubmit="return confirm('Delete this transaction?');">
@@ -108,7 +129,16 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7">No transactions recorded yet. Use the “Record Transaction” button to add your first entry.</td></tr>
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 3rem; color: #6b7280;">
+                        <div style="max-width: 400px; margin: 0 auto;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                            <h3 style="margin: 0 0 0.5rem 0; color: #374151;">No transactions recorded yet</h3>
+                            <p style="margin: 0 0 1.5rem 0;">Click "Record Transaction" to get started.</p>
+                            <a href="{{ url_for('cashbook.add_transaction') }}" class="btn-primary">+ Record Transaction</a>
+                        </div>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

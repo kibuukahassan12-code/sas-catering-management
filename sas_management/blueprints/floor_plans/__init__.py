@@ -5,7 +5,7 @@ import json
 from flask import Blueprint, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from models import FloorPlan, Event, db
+from sas_management.models import FloorPlan, Event, db
 
 floor_plans_bp = Blueprint("floor_plans_bp", __name__, url_prefix="/")
 
@@ -49,7 +49,7 @@ def new():
     event = None
     
     if event_id:
-        event = Event.query.get(event_id)
+        event = db.session.get(Event, event_id)
         if event:
             # Check if floor plan already exists for this event
             existing = FloorPlan.query.filter_by(event_id=event_id).first()
@@ -102,7 +102,7 @@ def create():
         
         # Generate default name if not provided
         if not name and event_id:
-            event = Event.query.get(event_id)
+            event = db.session.get(Event, event_id)
             if event:
                 name = f"Floor Plan - {event.title}"
         
@@ -199,7 +199,7 @@ def save():
         
         # Update existing floor plan
         if plan_id:
-            floor_plan = FloorPlan.query.get(plan_id)
+            floor_plan = db.session.get(FloorPlan, plan_id)
             if floor_plan:
                 if name:
                     floor_plan.name = name
@@ -214,7 +214,7 @@ def save():
         # Create new floor plan if no plan_id provided
         if not name:
             if event_id:
-                event = Event.query.get(event_id)
+                event = db.session.get(Event, event_id)
                 if event:
                     name = f"Floor Plan - {event.title}"
             if not name:

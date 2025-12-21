@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}Order Details #{{ order_id }}{% endblock %}
+
+{% block content %}
+<style>
+.order-detail-section {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.order-detail-section h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    color: var(--accent);
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+.form-grid > div {
+    padding: 12px 0;
+}
+.form-grid strong {
+    display: block;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.form-grid p {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--text);
+}
+.status-badge {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.875rem;
+}
+.status-badge.completed { background: #28a745; color: #fff; }
+.status-badge.pending { background: #ffc107; color: #000; }
+.status-badge.cancelled { background: #dc3545; color: #fff; }
+.status-badge.confirmed { background: #17a2b8; color: #fff; }
+.status-badge.draft { background: #6c757d; color: #fff; }
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Orders</p>
+        <h1>Order Details: {{ order.reference or ('HO-' + order.id|string) }}</h1>
+        <p class="muted">Complete details for this hire order.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('hire.orders_list') }}" style="text-decoration: none;">← Back to Orders</a>
+    </div>
+</section>
+
+{% if order %}
+<section class="order-detail-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3>Order Information</h3>
+        <span class="status-badge {{ order.status.lower() if order.status else 'draft' }}">{{ order.status or 'Draft' }}</span>
+    </div>
+    
+    <div class="form-grid" style="margin-bottom: 2rem;">
+        <div>
+            <strong>Order Reference:</strong>
+            <p>{{ order.reference or ('HO-' + order.id|string) }}</p>
+        </div>
+        <div>
+            <strong>Order Date:</strong>
+            <p>{{ order.created_at.strftime('%Y-%m-%d %H:%M') if order.created_at else '—' }}</p>
+        </div>
+        <div>
+            <strong>Status:</strong>
+            <p><span class="status-badge {{ order.status.lower() if order.status else 'draft' }}">{{ order.status or 'Draft' }}</span></p>
+        </div>
+        <div>
+            <strong>Total Items:</strong>
+            <p>{{ order.items|length }} item(s)</p>
+        </div>
+    </div>
+</section>
+
+<section class="order-detail-section">
+    <h3>Client Information</h3>
+    <div class="form-grid">
+        <div>
+            <strong>Client Name:</strong>
+            <p>{{ order.client_name or '—' }}</p>
+        </div>
+        <div>
+            <strong>Client:</strong>
+            <p>
+                {% if order.client %}
+                    <a href="{{ url_for('crm.client_view', client_id=order.client.id) if 'crm' in url_for.__module__ else '#' }}">{{ order.client.name }}</a>
+                {% else %}
+                    —
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <strong>Telephone:</strong>
+            <p>{{ order.telephone or '—' }}</p>
+        </div>
+        <div>
+            <strong>Email:</strong>
+            <p>{{ order.email or '—' }}</p>
+        </div>
+    </div>
+</section>
+
+<section class="order-detail-section">
+    <h3>Event & Rental Period</h3>
+    <div class="form-grid">
+        <div>
+            <strong>Event:</strong>
+            <p>
+                {% if order.event %}
+                    <a href="{{ url_for('events.event_view', event_id=order.event.id) if 'events' in url_for.__module__ else '#' }}">{{ order.event.event_name }}</a>
+                {% else %}
+                    —
+                {% endif %}
+            </p>
+        </div>
+        <div>
+            <strong>Event Date:</strong>
+            <p>{{ order.event_date.strftime('%Y-%m-%d') if order.event_date else '—' }}</p>
+        </div>
+        <div>
+            <strong>Rental Start Date:</strong>
+            <p><strong>{{ order.start_date.strftime('%Y-%m-%d') if order.start_date else '—' }}</strong></p>
+        </div>
+        <div>
+            <strong>Rental End Date:</strong>
+            <p><strong>{{ order.end_date.strftime('%Y-%m-%d') if order.end_date else '—' }}</strong></p>
+        </div>
+        <div>
+            <strong>Rental Period:</strong>
+            <p><strong>{{ rental_days }} day{{ 's' if rental_days != 1 else '' }}</strong></p>
+        </div>
+        <div>
+            <strong>Delivery Date:</strong>
+            <p>{{ order.delivery_date.strftime('%Y-%m-%d') if order.delivery_date else '—' }}</p>
+        </div>
+        <div>
+            <strong>Pickup Date:</strong>
+            <p>{{ order.pickup_date.strftime('%Y-%m-%d') if order.pickup_date else '—' }}</p>
+        </div>
+        <div>
+            <strong>Delivery Address:</strong>
+            <p>{{ order.delivery_address or '—' }}</p>
+        </div>
+    </div>
+</section>
+
+<section class="order-detail-section">
+    <h3>Equipment Items</h3>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Unit Price (per day)</th>
+                    <th>Rental Days</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td>
+                        <strong>{{ item.inventory_item.name if item.inventory_item else 'Item #' + item.item_id|string }}</strong>
+                        {% if item.inventory_item and item.inventory_item.sku %}
+                        <br><small class="muted">SKU: {{ item.inventory_item.sku }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ item.inventory_item.category if item.inventory_item else '—' }}</td>
+                    <td>{{ item.qty }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.price or 0) }}</td>
+                    <td>{{ rental_days }} day{{ 's' if rental_days != 1 else '' }}</td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.2f}".format(item.subtotal or 0) }}</strong></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 2rem;">No items found in this order.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="background: rgba(255,255,255,0.05); border-top: 2px solid rgba(255,255,255,0.1);">
+                    <td colspan="5" style="text-align: right; padding: 16px 12px;"><strong style="font-size: 1rem;">Total Cost:</strong></td>
+                    <td style="padding: 16px 12px;"><strong style="font-size: 1.125rem; color: var(--accent);">{{ CURRENCY }}{{ "{:,.2f}".format(order.total_cost or 0) }}</strong></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
+
+<section class="order-detail-section">
+    <h3>Payment Information</h3>
+    <div class="form-grid">
+        <div>
+            <strong>Total Cost:</strong>
+            <p style="font-size: 1.25rem; font-weight: bold;">{{ CURRENCY }}{{ "{:,.2f}".format(order.total_cost or 0) }}</p>
+        </div>
+        <div>
+            <strong>Amount Paid:</strong>
+            <p style="font-size: 1.25rem; font-weight: bold; color: #28a745;">{{ CURRENCY }}{{ "{:,.2f}".format(order.amount_paid or 0) }}</p>
+        </div>
+        <div>
+            <strong>Balance Due:</strong>
+            <p style="font-size: 1.25rem; font-weight: bold; color: {% if order.balance_due and order.balance_due > 0 %}#ff6b6b{% else %}#28a745{% endif %};">
+                {{ CURRENCY }}{{ "{:,.2f}".format(order.balance_due or 0) }}
+            </p>
+        </div>
+        <div>
+            <strong>Payment Status:</strong>
+            <p>
+                {% if order.balance_due and order.balance_due > 0 %}
+                    <span class="status-badge pending">Partial Payment</span>
+                {% elif order.amount_paid and order.amount_paid >= order.total_cost %}
+                    <span class="status-badge completed">Fully Paid</span>
+                {% else %}
+                    <span class="status-badge cancelled">Unpaid</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</section>
+
+{% if order.comments %}
+<section class="order-detail-section">
+    <h3>Comments / Notes</h3>
+    <div style="padding: 16px; background: rgba(255,255,255,0.03); border-radius: 4px; white-space: pre-wrap; border: 1px solid rgba(255,255,255,0.05); line-height: 1.6;">{{ order.comments }}</div>
+</section>
+{% endif %}
+
+{% else %}
+<section class="order-detail-section">
+    <div style="text-align: center; padding: 4rem;">
+        <div style="font-size: 4rem; margin-bottom: 1rem;">📋</div>
+        <h3 style="margin-bottom: 1rem;">Order Not Found</h3>
+        <p class="muted" style="margin-bottom: 2rem;">Order #{{ order_id }} could not be found.</p>
+        <a href="{{ url_for('hire.orders_list') }}" class="btn-secondary" style="text-decoration: none;">← Back to Orders</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+{% if schema_error %}
+<div class="alert alert-danger" style="margin: 1rem; padding: 1rem; background: #fee; border: 1px solid #fcc; border-radius: 6px;">
+    <strong>⚠️ Database Schema Issue</strong>
+    <p style="margin: 0.5rem 0 0 0;">{{ schema_error }}</p>
+</div>
+{% endif %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Operations · Event Service</p>
+        <h1>Service Events</h1>
+        <p class="muted">Manage all service events and track service delivery.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('service.event_new') }}">+ New Service Event</a>
+        <a class="btn-secondary" href="{{ url_for('service.dashboard') }}">← Dashboard</a>
+    </div>
+</section>
+
+<!-- Filters -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Search</span>
+            <input type="text" name="search" value="{{ search }}" placeholder="Search events, venues...">
+        </label>
+        <label class="form-control">
+            <span>Status</span>
+            <select name="status">
+                <option value="">All Statuses</option>
+                {% for status in statuses %}
+                <option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-control">
+            <span>Event Type</span>
+            <select name="event_type">
+                <option value="">All Types</option>
+                {% for event_type in event_types %}
+                <option value="{{ event_type }}" {% if event_type_filter == event_type %}selected{% endif %}>{{ event_type }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Apply Filters</button>
+            <a href="{{ url_for('service.events') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Events List -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>All Service Events</h3>
+        <span class="badge">{{ pagination.total }} total</span>
+    </div>
+    
+    {% if events %}
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Venue</th>
+                    <th>Guests</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in events %}
+                <tr>
+                    <td>
+                        <strong><a href="{{ url_for('service.event_view', event_id=event.id) }}">{{ event.title }}</a></strong>
+                        {% if event.client %}
+                        <br><small class="muted">{{ event.client.name }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ event.event_type or '—' }}</td>
+                    <td>
+                        {% if event.event_date %}
+                        {{ event.event_date.strftime('%b %d, %Y') }}
+                        {% else %}
+                        <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ event.venue or '—' }}</td>
+                    <td>{{ event.guest_count or '—' }}</td>
+                    <td>
+                        <span class="badge" style="background: {% if event.status == 'Completed' %}#2ecc71{% elif event.status == 'In Progress' %}#9b59b6{% elif event.status == 'Confirmed' %}#f39c12{% else %}#3498db{% endif %}; color: white;">
+                            {{ event.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="{{ url_for('service.event_view', event_id=event.id) }}" class="btn-ghost btn-sm">View</a>
+                            <a href="{{ url_for('service.event_edit', event_id=event.id) }}" class="btn-ghost btn-sm">Edit</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e9ecef;">
+        {% if pagination.has_prev %}
+        <a href="?page={{ pagination.prev_num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if event_type_filter %}&event_type={{ event_type_filter }}{% endif %}" class="btn-ghost">← Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a href="?page={{ pagination.next_num }}{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if event_type_filter %}&event_type={{ event_type_filter }}{% endif %}" class="btn-ghost">Next →</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+    
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #6c757d;">
+        <div style="max-width: 400px; margin: 0 auto;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #374151;">No service events found</h3>
+            <p class="muted" style="margin-bottom: 1.5rem;">Create your first service event to get started.</p>
+            <a href="{{ url_for('service.event_new') }}" class="btn-primary">+ Create Service Event</a>
+        </div>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

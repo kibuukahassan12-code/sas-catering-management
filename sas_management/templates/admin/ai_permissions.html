@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Roles &amp; Permissions</p>
+        <h1>AI Permissions</h1>
+        <p class="muted">Control which AI capabilities are available for each role.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.roles_list') }}">← Back to Roles &amp; Permissions</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Select Role</h3>
+    </div>
+    <form method="GET" style="padding: 1rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <div class="form-group">
+            <label for="role_id">Role</label>
+            <select id="role_id" name="role_id">
+                {% for role in roles %}
+                <option value="{{ role.id }}" {% if selected_role and role.id == selected_role.id %}selected{% endif %}>
+                    {{ role.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="btn-secondary">Load Role</button>
+    </form>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>AI Capabilities for {{ selected_role.name if selected_role else '—' }}</h3>
+        {% if is_admin_role %}
+        <span class="badge">Admin role · All AI features locked ON</span>
+        {% endif %}
+    </div>
+
+    {% if selected_role %}
+    <form method="POST" style="padding: 1rem;">
+        <input type="hidden" name="role_id" value="{{ selected_role.id }}">
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem;">
+            {% for key, label in ai_permissions.items() %}
+            {% set code = 'ai:' ~ key %}
+            <div style="border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; gap: 0.75rem;">
+                <div>
+                    <strong>{{ label }}</strong>
+                    <p class="muted" style="margin: 0.25rem 0 0; font-size: 0.85rem;">
+                        {% if key == 'ai_chat' %}Allow this role to use SAS AI chat assistant.{% endif %}
+                        {% if key == 'ai_actions' %}Allow this role to run AI reports and summaries.{% endif %}
+                        {% if key == 'ai_analytics' %}Allow this role to get explanations of analytics and KPIs.{% endif %}
+                        {% if key == 'ai_voice' %}Allow this role to use AI voice input/output (speech).{% endif %}
+                        {% if key == 'ai_memory' %}Allow AI to remember conversation context and preferences for this role.{% endif %}
+                        {% if key == 'ai_scheduling' %}Allow this role to schedule AI reports (daily/weekly).{% endif %}
+                    </p>
+                </div>
+                <div style="text-align: right;">
+                    {% if is_admin_role %}
+                        <span class="badge">🔒 Always On</span>
+                    {% else %}
+                        <label style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer;">
+                            <input
+                                type="checkbox"
+                                name="enabled_codes"
+                                value="{{ code }}"
+                                {% if code in enabled_codes %}checked{% endif %}
+                            >
+                            <span>Enabled</span>
+                        </label>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--border);">
+            {% if not is_admin_role %}
+            <button type="submit" class="btn-primary">Save AI Permissions</button>
+            {% else %}
+            <button type="button" class="btn-secondary" disabled title="Admin always has full AI access.">
+                Admin AI permissions are locked
+            </button>
+            {% endif %}
+        </div>
+    </form>
+    {% else %}
+    <div style="padding: 1rem;">
+        <p class="muted">No roles available. Create a role first to configure AI permissions.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+
+

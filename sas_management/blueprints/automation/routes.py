@@ -3,8 +3,8 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required, current_user
 import json
 
-from models import db, Workflow, ActionLog, UserRole
-from utils import role_required
+from sas_management.models import db, Workflow, ActionLog, UserRole
+from sas_management.utils import role_required
 
 automation_bp = Blueprint("automation", __name__, url_prefix="/automation")
 

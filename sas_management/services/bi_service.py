@@ -6,7 +6,7 @@ from sqlalchemy import func, and_, or_
 import statistics
 from collections import defaultdict
 
-from models import (
+from sas_management.models import (
     db, BIEventProfitability, BIIngredientPriceTrend, BISalesForecast,
     BIStaffPerformance, BIBakeryDemand, BICustomerBehavior, BIPOSHeatmap,
     Event, EventMenuSelection, EventStaffAssignment, Ingredient, Employee,
@@ -19,7 +19,7 @@ def calculate_event_profitability(event_id):
     try:
         db.session.begin()
         
-        event = Event.query.get(event_id)
+        event = db.session.get(Event, event_id)
         if not event:
             raise ValueError("Event not found")
         

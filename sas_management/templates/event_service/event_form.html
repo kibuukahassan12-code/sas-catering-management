@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header">
+        <h1>{% if event %}Edit Event{% else %}Create New Event{% endif %}</h1>
+    </div>
+
+    <div class="panel">
+        <form method="POST">
+            <div class="form-grid">
+                <div>
+                    <label>Title *</label>
+                    <input type="text" name="title" value="{{ event.title if event else '' }}" required>
+                </div>
+                <div>
+                    <label>Event Date & Time *</label>
+                    <input type="datetime-local" name="event_date" 
+                           value="{{ event.event_date.strftime('%Y-%m-%dT%H:%M') if event else '' }}" required>
+                </div>
+                <div>
+                    <label>Venue</label>
+                    <input type="text" name="venue" value="{{ event.venue if event else '' }}">
+                </div>
+                <div>
+                    <label>Guest Count</label>
+                    <input type="number" name="guest_count" value="{{ event.guest_count if event else 0 }}" min="0">
+                </div>
+                <div>
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="Planning" {% if event and event.status == 'Planning' %}selected{% endif %}>Planning</option>
+                        <option value="Confirmed" {% if event and event.status == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                        <option value="In Progress" {% if event and event.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                        <option value="Completed" {% if event and event.status == 'Completed' %}selected{% endif %}>Completed</option>
+                    </select>
+                </div>
+                <div style="grid-column: 1 / -1;">
+                    <label>Description</label>
+                    <textarea name="description" rows="4">{{ event.description if event else '' }}</textarea>
+                </div>
+            </div>
+            <div style="margin-top: 1.5rem;">
+                <button type="submit" class="btn-primary">{% if event %}Update Event{% else %}Create Event{% endif %}</button>
+                <a href="{{ url_for('event_service.events_list') }}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

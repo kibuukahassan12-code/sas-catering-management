@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header">
+        <h1>Event Service Dashboard</h1>
+        <p class="muted">Manage events, services, and operations</p>
+    </div>
+
+    <div class="panel">
+        <h2>Statistics</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+            <div>
+                <strong>Total Events:</strong> {{ stats.total_events }}
+            </div>
+            <div>
+                <strong>Upcoming Events:</strong> {{ stats.upcoming_events }}
+            </div>
+            <div>
+                <strong>Completed Events:</strong> {{ stats.completed_events }}
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-top: 1.5rem;">
+        <h2>Recent Events</h2>
+        {% if recent_events %}
+            <ul>
+                {% for event in recent_events %}
+                <li>
+                    <a href="{{ url_for('event_service.event_view', event_id=event.id) }}">{{ event.title }}</a>
+                    - {{ event.event_date.strftime('%Y-%m-%d') }}
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No events yet.</p>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+        <a href="{{ url_for('event_service.events_list') }}" class="btn-primary">View All Events</a>
+        <a href="{{ url_for('event_service.event_create') }}" class="btn-primary">Create New Event</a>
+    </div>
+</div>
+{% endblock %}
+

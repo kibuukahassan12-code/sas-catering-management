@@ -6,11 +6,11 @@ import json
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required
 
-from models import (
+from sas_management.models import (
     Event, ProductionOrder, Recipe, UserRole, User, db,
     KitchenChecklist, DeliveryQCChecklist, FoodSafetyLog, HygieneReport
 )
-from services.production_service import (
+from sas_management.services.production_service import (
     compute_cogs_for_order,
     create_production_order,
     generate_production_reference,
@@ -19,7 +19,7 @@ from services.production_service import (
     reserve_ingredients,
     scale_recipe,
 )
-from utils import paginate_query, role_required
+from sas_management.utils import paginate_query, role_required
 
 production_bp = Blueprint("production", __name__, url_prefix="/production")
 
@@ -80,7 +80,7 @@ def order_create():
                     items_data.append({
                         "recipe_id": int(recipe_id),
                         "portions": int(portion),
-                        "recipe_name": recipe_name or Recipe.query.get(int(recipe_id)).name if Recipe.query.get(int(recipe_id)) else "Unknown",
+                        "recipe_name": recipe_name or (lambda r: r.name if r else "Unknown")(db.session.get(Recipe, int(recipe_id))),
                     })
             
             if not items_data:
@@ -288,7 +288,7 @@ def api_order_reserve(order_id):
         # Get all ingredients needed
         all_ingredients = {}
         for line_item in order.items:
-            recipe = Recipe.query.get(line_item.recipe_id)
+            recipe = db.session.get(Recipe, line_item.recipe_id)
             if recipe:
                 scaled = scale_recipe(recipe.id, line_item.portions)
                 for ing_id, qty in scaled.items():

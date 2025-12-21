@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University</p>
+        <h1>Course Library</h1>
+        <p class="muted">Browse and enroll in available training courses.</p>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Available Courses</h3>
+    </div>
+    
+    <form method="GET" action="{{ url_for('university.employee_course_list') }}" style="margin-bottom: 1.5rem;">
+        <div style="display: flex; gap: 0.5rem;">
+            <input type="text" name="search" value="{{ search }}" placeholder="Search courses..." 
+                   class="form-control" style="flex: 1;">
+            <button type="submit" class="btn-primary">Search</button>
+            {% if search %}
+            <a href="{{ url_for('university.employee_course_list') }}" class="btn-secondary">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+    
+    {% if courses %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+        {% for course in courses %}
+        <article class="panel" style="padding: 1.5rem;">
+            <h3 style="margin-top: 0; margin-bottom: 0.5rem;">
+                <a href="{{ url_for('university.employee_course_detail', course_id=course.id) }}" 
+                   style="color: inherit; text-decoration: none;">
+                    {{ course.title }}
+                </a>
+            </h3>
+            <p class="muted" style="margin-bottom: 1rem; font-size: 0.9rem;">
+                {{ course.description[:150] }}{% if course.description|length > 150 %}...{% endif %}
+            </p>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <a href="{{ url_for('university.employee_course_detail', course_id=course.id) }}" 
+                   class="btn-primary" style="flex: 1; text-align: center;">
+                    {% if course.id in enrolled_course_ids %}View Course{% else %}Enroll{% endif %}
+                </a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    
+    {% if pagination and pagination.pages > 1 %}
+    <div style="margin-top: 2rem; display: flex; justify-content: center; gap: 0.5rem;">
+        {% if pagination.has_prev %}
+        <a href="{{ url_for('university.employee_course_list', page=pagination.prev_num, search=search) }}" 
+           class="btn-secondary">Previous</a>
+        {% endif %}
+        <span style="padding: 0.5rem 1rem; display: flex; align-items: center;">
+            Page {{ pagination.page }} of {{ pagination.pages }}
+        </span>
+        {% if pagination.has_next %}
+        <a href="{{ url_for('university.employee_course_list', page=pagination.next_num, search=search) }}" 
+           class="btn-secondary">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <p class="muted">No courses available at this time.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

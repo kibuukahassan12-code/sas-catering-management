@@ -3,7 +3,7 @@ from datetime import datetime
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from models import Message, db
+from sas_management.models import Message, db
 
 chat_bp = Blueprint("chat", __name__, url_prefix="/chat")
 

@@ -2,8 +2,8 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from models import IncomingLead, UserRole, db
-from utils import role_required, paginate_query
+from sas_management.models import IncomingLead, UserRole, db
+from sas_management.utils import role_required, paginate_query
 
 leads_bp = Blueprint("leads", __name__, url_prefix="/leads")
 

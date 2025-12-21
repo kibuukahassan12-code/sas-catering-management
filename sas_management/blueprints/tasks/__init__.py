@@ -4,8 +4,8 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
 
-from models import Event, Task, TaskStatus, User, UserRole, db
-from utils import role_required, paginate_query
+from sas_management.models import Event, Task, TaskStatus, User, UserRole, db
+from sas_management.utils import role_required, paginate_query
 
 tasks_bp = Blueprint("tasks", __name__, url_prefix="/tasks")
 
@@ -61,10 +61,11 @@ def task_add():
 def task_edit(task_id):
     task = Task.query.get_or_404(task_id)
 
-    # Users can only edit their own tasks unless they're admin
-    if current_user.role != UserRole.Admin and task.assigned_user_id != current_user.id:
-        flash("You can only edit tasks assigned to you.", "warning")
-        return redirect(url_for("tasks.task_list"))
+    # Users can only edit their own tasks unless they're admin - Admin bypass
+    if not (hasattr(current_user, 'is_admin') and current_user.is_admin):
+        if current_user.role != UserRole.Admin and task.assigned_user_id != current_user.id:
+            flash("You can only edit tasks assigned to you.", "warning")
+            return redirect(url_for("tasks.task_list"))
 
     events = Event.query.order_by(Event.event_date.desc()).all()
     users = User.query.order_by(User.email.asc()).all()
@@ -73,7 +74,8 @@ def task_edit(task_id):
         task.title = request.form.get("title", task.title).strip()
         task.description = request.form.get("description", "").strip() or None
 
-        if current_user.is_super_admin() or current_user.role == UserRole.Admin:
+        # Admin bypass
+        if (hasattr(current_user, 'is_admin') and current_user.is_admin) or current_user.is_super_admin() or current_user.role == UserRole.Admin:
             task.event_id = request.form.get("event_id", type=int) or None
             task.assigned_user_id = request.form.get("assigned_user_id", type=int) or None
             due_date_str = request.form.get("due_date", "")

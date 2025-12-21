@@ -9,11 +9,8 @@ from enum import Enum
 from decimal import Decimal
 import json
 
-# Database instance
-try:
-    from app import db
-except ImportError:
-    db = SQLAlchemy()
+# Database instance - SINGLE INSTANCE ONLY
+db = SQLAlchemy()
 
 # ============================================================================
 # ENUMS
@@ -91,10 +88,13 @@ class Permission(db.Model):
     __tablename__ = "permissions"
 
     id = db.Column(db.Integer, primary_key=True)
-    code = db.Column(db.String(100), nullable=False, unique=True)
-    name = db.Column(db.String(200), nullable=False)
-    group = db.Column(db.String(100))
+    code = db.Column(db.String(100), nullable=False, unique=True)  # Legacy field for backward compatibility
+    name = db.Column(db.String(200), nullable=False, unique=False)  # Human-readable permission name
+    group = db.Column(db.String(100))  # Legacy field for backward compatibility
+    module = db.Column(db.String(100), nullable=True)  # e.g. 'event_service', 'accounting'
+    action = db.Column(db.String(50), nullable=True)  # e.g. 'view', 'create', 'edit', 'delete', 'approve'
     description = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     roles = db.relationship(
 
@@ -171,6 +171,8 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, unique=True)
     description = db.Column(db.Text, nullable=True)
+    is_system_role = db.Column(db.Boolean, default=False, nullable=False)  # True for ADMIN
+    system_protected = db.Column(db.Boolean, default=False, nullable=False)  # True for ADMIN (cannot be deleted/modified)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -222,6 +224,12 @@ class User(UserMixin, db.Model):
     # Legacy role enum field (for backward compatibility with old schema)
     role = db.Column(db.Enum(UserRole), nullable=True)
     
+    # Temporary role assignment fields
+    previous_role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
+    role_expiry_date = db.Column(db.DateTime, nullable=True)
+    role_expires_at = db.Column(db.DateTime, nullable=True)  # Alias for role_expiry_date (for compatibility)
+    is_temporary_role = db.Column(db.Boolean, default=False, nullable=False)
+    
     # Timestamps (created_at may exist in DB)
     created_at = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
     
@@ -238,6 +246,26 @@ class User(UserMixin, db.Model):
         if self.roles.count() > 0:
             return self.roles.first()
         return self.role_obj
+    
+    @property
+    def is_admin(self):
+        """Check if user has Admin role - bypasses all permission checks."""
+        try:
+            # Check legacy role enum field first
+            if self.role == UserRole.Admin:
+                return True
+            # Check role_obj name
+            if self.role_obj and hasattr(self.role_obj, 'name'):
+                if self.role_obj.name == 'Admin':
+                    return True
+            # Check roles relationship
+            if self.roles.count() > 0:
+                for role in self.roles:
+                    if role.name == 'Admin':
+                        return True
+            return False
+        except Exception:
+            return False
     
     # Add this helper safely:
     def is_super_admin(self):
@@ -279,8 +307,11 @@ class User(UserMixin, db.Model):
             return False
     
     def has_permission(self, code):
-        """Check if user has a specific permission. All users now have full access."""
-        # ALL PERMISSIONS GRANTED - No restrictions
+        """Check if user has a specific permission. Admin always has full access."""
+        # Admin bypass: If user is Admin, grant all permissions
+        if self.is_admin:
+            return True
+        # ALL PERMISSIONS GRANTED - No restrictions for non-admin users
         return True
     
     def get_role_name(self):
@@ -294,8 +325,11 @@ class User(UserMixin, db.Model):
             return "Unassigned"
     
     def has_role(self, role_name):
-        """Check if user has a specific role. All users now have all roles."""
-        # ALL ROLES GRANTED - No restrictions
+        """Check if user has a specific role. Admin always has all roles."""
+        # Admin bypass: If user is Admin, grant all roles
+        if self.is_admin:
+            return True
+        # ALL ROLES GRANTED - No restrictions for non-admin users
         return True
     
     def set_password(self, password):
@@ -815,6 +849,32 @@ class ChecklistItem(db.Model):
 
 
 # ============================================================================
+# AI CONVERSATION MODEL
+# ============================================================================
+
+
+class AIConversation(db.Model):
+    """
+    Persistent conversation memory for SAS AI Chat.
+
+    Stores a JSON payload of messages and optional summaries, keyed by user.
+    """
+    __tablename__ = "ai_conversations"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    role = db.Column(db.String(100), nullable=True)
+    messages = db.Column(db.Text, nullable=False, default="[]")  # JSON-encoded list/log
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship("User")
+
+    def __repr__(self):
+        return f"<AIConversation user_id={self.user_id} id={self.id}>"
+
+
+# ============================================================================
 # INVOICE & ACCOUNTING MODELS
 # ============================================================================
 
@@ -1025,13 +1085,24 @@ class Quotation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     client_id = db.Column(db.Integer, db.ForeignKey("client.id"), nullable=False)
     event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=True)
+    title = db.Column(db.String(200), nullable=True)  # Quote Title
+    event_type = db.Column(db.String(50), nullable=True)  # Wedding, Kwanjula, Kukyala, Kuhingira, Nikkah
     quote_date = db.Column(db.Date, nullable=False, default=date.today)
     expiry_date = db.Column(db.Date, nullable=False)
+    event_date = db.Column(db.Date, nullable=True)  # Event Date
     subtotal = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    tax = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)  # Tax amount
+    total = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)  # Total amount
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
     client = db.relationship("Client")
     event = db.relationship("Event")
     lines = db.relationship("QuotationLine", back_populates="quotation", cascade="all, delete-orphan")
+    
+    @property
+    def items(self):
+        """Compatibility property: alias for lines."""
+        return self.lines
     
     def __repr__(self):
         return f'<Quotation {self.id}>'
@@ -1043,8 +1114,10 @@ class QuotationLine(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     quotation_id = db.Column(db.Integer, db.ForeignKey("quotation.id"), nullable=False)
-    source_type = db.Column(db.Enum(QuotationSource), nullable=False)
+    source_type = db.Column(db.Enum(QuotationSource), nullable=True)  # Made optional for custom items
+    source_reference = db.Column(db.String(100), nullable=True)  # Reference to source item
     item_name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)  # Item description
     quantity = db.Column(db.Integer, nullable=False, default=1)
     unit_price = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     line_total = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
@@ -1270,16 +1343,63 @@ class InventoryItem(db.Model):
         return f'<InventoryItem {self.name}>'
 
 
-# HireOrder and HireOrderItem models removed - hire order functionality disabled
-# class HireOrder(db.Model):
-#     """Equipment hire orders."""
-#     __tablename__ = "hire_order"
-#     ...
-#
-# class HireOrderItem(db.Model):
-#     """Hire order line items."""
-#     __tablename__ = "hire_order_item"
-#     ...
+# Hire Order Models
+class Order(db.Model):
+    """Equipment hire orders."""
+    __tablename__ = "hire_order"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    client_name = db.Column(db.String(255), nullable=False)
+    client_id = db.Column(db.Integer, db.ForeignKey("client.id"), nullable=True)
+    event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=True)
+    event_date = db.Column(db.Date, nullable=True)
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+    delivery_date = db.Column(db.Date, nullable=True)
+    pickup_date = db.Column(db.Date, nullable=True)
+    delivery_address = db.Column(db.Text, nullable=True)
+    telephone = db.Column(db.String(50), nullable=True)
+    email = db.Column(db.String(120), nullable=True)
+    status = db.Column(db.String(50), nullable=False, default="Pending")
+    total_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    amount_paid = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    balance_due = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    reference = db.Column(db.String(50), nullable=True, unique=True)
+    comments = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    items = db.relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    client = db.relationship("Client", foreign_keys=[client_id])
+    event = db.relationship("Event", foreign_keys=[event_id])
+    
+    def __repr__(self):
+        return f'<Order {self.id} - {self.client_name}>'
+    
+    def calculate_balance(self):
+        """Calculate balance due."""
+        self.balance_due = max(Decimal('0.00'), self.total_cost - self.amount_paid)
+        return self.balance_due
+
+
+class OrderItem(db.Model):
+    """Hire order line items."""
+    __tablename__ = "hire_order_item"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey("hire_order.id"), nullable=False)
+    item_id = db.Column(db.Integer, db.ForeignKey("inventory_item.id"), nullable=False)
+    qty = db.Column(db.Integer, nullable=False, default=1)
+    price = db.Column(db.Numeric(10, 2), nullable=False)
+    subtotal = db.Column(db.Numeric(12, 2), nullable=False)
+    
+    # Relationships
+    order = db.relationship("Order", back_populates="items")
+    inventory_item = db.relationship("InventoryItem")
+    
+    def __repr__(self):
+        return f'<OrderItem {self.id} - Order {self.order_id}>'
 
 
 # ============================================================================
@@ -1531,6 +1651,32 @@ class AuditLog(db.Model):
         return f'<AuditLog {self.action} by {self.user_id}>'
 
 
+class RoleAssignmentLog(db.Model):
+    """Audit log for role assignments."""
+    __tablename__ = "role_assignment_logs"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    admin_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    affected_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    old_role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
+    new_role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
+    is_bulk_assignment = db.Column(db.Boolean, default=False, nullable=False)
+    is_temporary = db.Column(db.Boolean, default=False, nullable=False)
+    expiry_date = db.Column(db.DateTime, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    ip_address = db.Column(db.String(50), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    # Relationships
+    admin_user = db.relationship("User", foreign_keys=[admin_user_id], backref="role_assignments_made")
+    affected_user = db.relationship("User", foreign_keys=[affected_user_id], backref="role_assignments_received")
+    old_role = db.relationship("Role", foreign_keys=[old_role_id])
+    new_role = db.relationship("Role", foreign_keys=[new_role_id])
+    
+    def __repr__(self):
+        return f'<RoleAssignmentLog admin={self.admin_user_id} user={self.affected_user_id} role={self.new_role_id}>'
+
+
 class Department(db.Model):
     """Departments."""
     __tablename__ = "department"
@@ -1581,6 +1727,7 @@ class Employee(db.Model):
     position_id = db.Column(db.Integer, db.ForeignKey("position.id"), nullable=True)
     position = db.Column(db.String(100), nullable=True)  # Legacy field
     hire_date = db.Column(db.Date, nullable=True)
+    monthly_salary = db.Column(db.Numeric(10, 2), default=0)  # Monthly salary amount
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     status = db.Column(db.String(20), default="active")
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -1941,6 +2088,9 @@ class Course(db.Model):
     duration_hours = db.Column(db.Integer, nullable=True)
     published = db.Column(db.Boolean, nullable=False, default=False)
     target_role = db.Column(db.Enum(UserRole), nullable=True)
+    mandatory = db.Column(db.Boolean, nullable=False, default=False)
+    required_for_role = db.Column(db.Enum(UserRole), nullable=True)
+    required_for_department = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
     lessons = db.relationship("Lesson", back_populates="course", cascade="all, delete-orphan")
@@ -2379,6 +2529,7 @@ class POSPayment(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
     order = db.relationship("POSOrder", back_populates="payments")
+    receipt = db.relationship("POSReceipt", back_populates="payment", uselist=False, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f'<POSPayment {self.method} - {self.amount}>'
@@ -2392,8 +2543,17 @@ class POSProduct(db.Model):
     name = db.Column(db.String(255), nullable=False)
     category = db.Column(db.String(100), nullable=True)
     price = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    description = db.Column(db.Text, nullable=True)
+    image_url = db.Column(db.String(500), nullable=True)
+    barcode = db.Column(db.String(100), nullable=True)
+    sku = db.Column(db.String(100), nullable=True)
+    tax_rate = db.Column(db.Numeric(5, 2), nullable=False, default=18.00)
     is_available = db.Column(db.Boolean, nullable=False, default=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)  # Alias for is_available for compatibility
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    
+    creator = db.relationship("User", foreign_keys=[created_by])
     
     def __repr__(self):
         return f'<POSProduct {self.name}>'
@@ -2404,15 +2564,21 @@ class POSReceipt(db.Model):
     __tablename__ = "pos_receipt"
     
     id = db.Column(db.Integer, primary_key=True)
-    order_id = db.Column(db.Integer, db.ForeignKey("pos_order.id"), nullable=False)
-    receipt_number = db.Column(db.String(100), unique=True, nullable=False)
+    payment_id = db.Column(db.Integer, db.ForeignKey("pos_payment.id"), nullable=False)
+    receipt_ref = db.Column(db.String(50), unique=True, nullable=False)
     pdf_path = db.Column(db.String(500), nullable=True)
+    issued_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
+    # Legacy field for backward compatibility
+    order_id = db.Column(db.Integer, db.ForeignKey("pos_order.id"), nullable=True)
+    receipt_number = db.Column(db.String(100), nullable=True)
+    
+    payment = db.relationship("POSPayment", back_populates="receipt")
     order = db.relationship("POSOrder")
     
     def __repr__(self):
-        return f'<POSReceipt {self.receipt_number}>'
+        return f'<POSReceipt {self.receipt_ref}>'
 
 
 # ============================================================================

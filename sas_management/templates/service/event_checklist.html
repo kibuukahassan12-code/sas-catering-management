@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Checklist{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h3>Checklist for Event {{ event_id }}</h3>
+  <a href="{{ url_for('service.event_view', event_id=event_id) }}" class="btn btn-sm btn-secondary mb-3">Back</a>
+  {% if checklist %}
+    <ul class="list-group">
+      {% for ck in checklist %}
+        <li class="list-group-item">{{ ck.task }} - {% if ck.is_complete %}Done{% else %}Pending{% endif %}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">No checklist items.</p>
+  {% endif %}
+</div>
+{% endblock %}
+

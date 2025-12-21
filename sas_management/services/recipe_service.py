@@ -5,7 +5,7 @@ from decimal import Decimal
 from flask import current_app
 from werkzeug.utils import secure_filename
 
-from models import (
+from sas_management.models import (
     db, RecipeAdvanced, RecipeIngredient, BatchProduction, WasteLog,
     Ingredient, Employee, User
 )
@@ -60,7 +60,7 @@ def update_recipe(recipe_id, data, image_file=None):
     try:
         db.session.begin()
         
-        recipe = RecipeAdvanced.query.get(recipe_id)
+        recipe = db.session.get(RecipeAdvanced, recipe_id)
         if not recipe:
             raise ValueError("Recipe not found")
         
@@ -115,13 +115,13 @@ def add_ingredient(recipe_id, inventory_item_id=None, ingredient_name=None, qty_
     try:
         db.session.begin()
         
-        recipe = RecipeAdvanced.query.get(recipe_id)
+        recipe = db.session.get(RecipeAdvanced, recipe_id)
         if not recipe:
             raise ValueError("Recipe not found")
         
         # Get ingredient name
         if inventory_item_id:
-            inv_item = Ingredient.query.get(inventory_item_id)
+            inv_item = db.session.get(Ingredient, inventory_item_id)
             if not inv_item:
                 raise ValueError("Ingredient not found")
             ingredient_name = inv_item.name
@@ -152,7 +152,7 @@ def add_ingredient(recipe_id, inventory_item_id=None, ingredient_name=None, qty_
 def calculate_recipe_cost(recipe_id):
     """Calculate recipe cost based on current inventory prices."""
     try:
-        recipe = RecipeAdvanced.query.get(recipe_id)
+        recipe = db.session.get(RecipeAdvanced, recipe_id)
         if not recipe:
             return {"success": False, "error": "Recipe not found"}
         
@@ -200,7 +200,7 @@ def record_batch_production(recipe_id, batch_size, servings_produced=None, perfo
     try:
         db.session.begin()
         
-        recipe = RecipeAdvanced.query.get(recipe_id)
+        recipe = db.session.get(RecipeAdvanced, recipe_id)
         if not recipe:
             raise ValueError("Recipe not found")
         
@@ -261,12 +261,12 @@ def log_waste(recipe_id, ingredient_id=None, ingredient_name=None, qty_lost=None
     try:
         db.session.begin()
         
-        recipe = RecipeAdvanced.query.get(recipe_id) if recipe_id else None
+        recipe = db.session.get(RecipeAdvanced, recipe_id) if recipe_id else None
         
         # Get ingredient info
         cost_lost = None
         if ingredient_id:
-            inv_item = Ingredient.query.get(ingredient_id)
+            inv_item = db.session.get(Ingredient, ingredient_id)
             if inv_item:
                 if not ingredient_name:
                     ingredient_name = inv_item.name
@@ -307,7 +307,7 @@ def recalc_cost_on_inventory_price_change(inventory_item_id):
         
         # Update cost snapshots (optional - for audit trail)
         for ingredient in ingredients:
-            inv_item = Ingredient.query.get(inventory_item_id)
+            inv_item = db.session.get(Ingredient, inventory_item_id)
             if inv_item and hasattr(inv_item, 'unit_cost_ugx'):
                 ingredient.cost_snapshot = inv_item.unit_cost_ugx
                 db.session.add(ingredient)
@@ -328,7 +328,7 @@ def recalc_cost_on_inventory_price_change(inventory_item_id):
 def get_recipe(recipe_id):
     """Get recipe by ID with full details."""
     try:
-        recipe = RecipeAdvanced.query.get(recipe_id)
+        recipe = db.session.get(RecipeAdvanced, recipe_id)
         if not recipe:
             return {"success": False, "error": "Recipe not found"}
         

@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required, current_user
 from datetime import datetime, date
 
-from models import db, Task, StaffTask
+from sas_management.models import db, Task, StaffTask
 
 mobile_staff_bp = Blueprint("mobile_staff", __name__, url_prefix="/mobile")
 

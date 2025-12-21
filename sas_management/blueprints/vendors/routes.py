@@ -5,9 +5,9 @@ from datetime import datetime, date
 import json
 import secrets
 
-from models import db, Supplier, PurchaseOrder, PurchaseOrderItem, SupplierQuote, UserRole
-from utils import role_required, permission_required
-from services.vendors_service import create_purchase_order
+from sas_management.models import db, Supplier, PurchaseOrder, PurchaseOrderItem, SupplierQuote, UserRole
+from sas_management.utils import role_required, permission_required
+from sas_management.services.vendors_service import create_purchase_order
 
 vendors_bp = Blueprint("vendors", __name__, url_prefix="/vendors")
 

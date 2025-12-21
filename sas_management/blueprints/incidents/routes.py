@@ -3,8 +3,8 @@ from flask import Blueprint, render_template, request, jsonify, flash, redirect,
 from flask_login import login_required, current_user
 from datetime import datetime
 
-from models import db, Incident, QualityChecklist, Event, UserRole
-from utils import role_required
+from sas_management.models import db, Incident, QualityChecklist, Event, UserRole
+from sas_management.utils import role_required
 
 incidents_bp = Blueprint("incidents", __name__, url_prefix="/incidents")
 

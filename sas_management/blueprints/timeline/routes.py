@@ -4,9 +4,9 @@ from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
 import json
 
-from models import db, Timeline, Event, Task, UserRole, TaskStatus
-from utils import role_required
-from utils.helpers import parse_date
+from sas_management.models import db, Timeline, Event, Task, UserRole, TaskStatus
+from sas_management.utils import role_required
+from sas_management.utils.helpers import parse_date
 
 timeline_bp = Blueprint("timeline", __name__, url_prefix="/timeline")
 

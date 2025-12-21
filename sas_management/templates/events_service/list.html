@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Event Service Department</p>
+        <h1>Event Services Dashboard</h1>
+        <p class="muted">Manage services, items, and tasks for events. Create service packages and track service delivery.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('events_service.service_add') }}">+ New Service</a>
+    </div>
+</section>
+
+<!-- Summary Cards -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Overview</h3>
+    </div>
+    <div class="summary-grid">
+        <article class="summary-card">
+            <p>Total Services</p>
+            <h2>{{ total_services or 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Service Items</p>
+            <h2>{{ total_items or 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Tasks</p>
+            <h2>{{ total_tasks or 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Pending Tasks</p>
+            <h2>{{ pending_tasks or 0 }}</h2>
+        </article>
+    </div>
+</section>
+
+<!-- Services List -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Services</h3>
+        <a href="{{ url_for('events_service.service_add') }}" class="btn-ghost btn-sm">+ Add Service</a>
+    </div>
+    {% if services %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Service</th>
+                    <th>Description</th>
+                    <th>Price</th>
+                    <th>Items</th>
+                    <th>Tasks</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in services %}
+                <tr>
+                    <td>
+                        <strong>{{ s.title }}</strong>
+                    </td>
+                    <td>{{ s.description or 'No description' }}</td>
+                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(s.price) }}</td>
+                    <td>{{ s.items.count() }}</td>
+                    <td>{{ s.tasks.count() }}</td>
+                    <td>
+                        <a href="{{ url_for('events_service.service_edit', service_id=s.id) }}" class="btn-ghost btn-sm">Edit</a>
+                        <form method="POST" action="{{ url_for('events_service.service_delete', service_id=s.id) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this service?');">
+                            <button type="submit" class="btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state" style="text-align: center; padding: 3rem 1rem;">
+        <div style="font-size: 4rem; margin-bottom: 1rem; opacity: 0.5;">📋</div>
+        <h3>No Services Yet</h3>
+        <p style="color: #6b7280; margin-bottom: 1.5rem;">Get started by creating your first event service.</p>
+        <a href="{{ url_for('events_service.service_add') }}" class="btn-primary">Create First Service</a>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

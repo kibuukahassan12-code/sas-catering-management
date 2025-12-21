@@ -1,0 +1,4 @@
+# Google Generative AI (Gemini) Integration
+# Install with: pip install google-generativeai
+google-generativeai>=0.3.0
+

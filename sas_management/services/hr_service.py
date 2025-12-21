@@ -5,7 +5,7 @@ from datetime import datetime, date, time
 from flask import current_app
 from werkzeug.utils import secure_filename
 
-from models import (
+from sas_management.models import (
     db, Department, Position, Employee, Attendance, Shift, ShiftAssignment,
     LeaveRequest, PayrollExport, User
 )
@@ -79,7 +79,7 @@ def create_employee(data, photo_file=None):
 def get_employee(employee_id):
     """Get employee by ID."""
     try:
-        employee = Employee.query.get(employee_id)
+        employee = db.session.get(Employee, employee_id)
         if not employee:
             return {"success": False, "error": "Employee not found"}
         return {"success": True, "employee": employee}
@@ -93,7 +93,7 @@ def update_employee(employee_id, data, photo_file=None):
     try:
         db.session.begin()
         
-        employee = Employee.query.get(employee_id)
+        employee = db.session.get(Employee, employee_id)
         if not employee:
             raise ValueError("Employee not found")
         
@@ -200,7 +200,7 @@ def clock_in(employee_id, device=None, location=None):
     try:
         db.session.begin()
         
-        employee = Employee.query.get(employee_id)
+        employee = db.session.get(Employee, employee_id)
         if not employee:
             raise ValueError("Employee not found")
         
@@ -235,7 +235,7 @@ def clock_out(employee_id):
     try:
         db.session.begin()
         
-        employee = Employee.query.get(employee_id)
+        employee = db.session.get(Employee, employee_id)
         if not employee:
             raise ValueError("Employee not found")
         
@@ -263,11 +263,11 @@ def assign_shift(shift_id, employee_id, date_str):
     try:
         db.session.begin()
         
-        shift = Shift.query.get(shift_id)
+        shift = db.session.get(Shift, shift_id)
         if not shift:
             raise ValueError("Shift not found")
         
-        employee = Employee.query.get(employee_id)
+        employee = db.session.get(Employee, employee_id)
         if not employee:
             raise ValueError("Employee not found")
         
@@ -283,7 +283,7 @@ def assign_shift(shift_id, employee_id, date_str):
         existing = ShiftAssignment.query.filter_by(
             shift_id=shift_id,
             employee_id=employee_id,
-            date=assign_date
+            assignment_date=assign_date
         ).first()
         
         if existing:
@@ -292,7 +292,7 @@ def assign_shift(shift_id, employee_id, date_str):
         assignment = ShiftAssignment(
             shift_id=shift_id,
             employee_id=employee_id,
-            date=assign_date
+            assignment_date=assign_date
         )
         
         db.session.add(assignment)
@@ -310,7 +310,7 @@ def request_leave(employee_id, data):
     try:
         db.session.begin()
         
-        employee = Employee.query.get(employee_id)
+        employee = db.session.get(Employee, employee_id)
         if not employee:
             raise ValueError("Employee not found")
         
@@ -424,5 +424,176 @@ def generate_payroll_export(period_start, period_end, created_by=None):
         db.session.rollback()
         current_app.logger.exception(f"Error generating payroll export: {e}")
         return {"success": False, "error": str(e)}
+
+
+def generate_payroll_pdf(period_start, period_end, created_by):
+    """Generate payroll PDF export with SAS branding."""
+    try:
+        # Check if ReportLab is available
+        try:
+            from reportlab.pdfgen import canvas
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.units import inch
+            from reportlab.lib import colors
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_LEFT
+            REPORTLAB_AVAILABLE = True
+        except ImportError:
+            REPORTLAB_AVAILABLE = False
+            return {'success': False, 'error': 'ReportLab is not installed. Please install it using: pip install reportlab'}
+        
+        db.session.begin()
+        
+        # Get all active employees with salaries
+        employees = Employee.query.filter_by(status='active').order_by(Employee.last_name.asc()).all()
+        
+        if not employees:
+            return {'success': False, 'error': 'No active employees found'}
+        
+        # Create PDF folder if it doesn't exist
+        pdf_folder = os.path.join(current_app.instance_path, 'payroll_pdfs')
+        os.makedirs(pdf_folder, exist_ok=True)
+        
+        # Generate filename
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"payroll_{period_start.strftime('%Y%m%d')}_{period_end.strftime('%Y%m%d')}_{timestamp}.pdf"
+        pdf_path = os.path.join(pdf_folder, filename)
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, 
+                               rightMargin=0.75*inch, leftMargin=0.75*inch,
+                               topMargin=0.75*inch, bottomMargin=0.75*inch)
+        
+        # Container for the 'Flowable' objects
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Brand colors
+        brand_color = colors.HexColor('#F26822')  # Orange
+        accent_color = colors.HexColor('#F6BC38')  # Yellow
+        
+        # Title style
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=brand_color,
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold'
+        )
+        
+        # Header style
+        header_style = ParagraphStyle(
+            'CustomHeader',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#333333'),
+            spaceAfter=10,
+            alignment=TA_LEFT
+        )
+        
+        # Add header with branding
+        elements.append(Paragraph("Bakery · New Order", title_style))
+        elements.append(Paragraph("Payroll Report", ParagraphStyle(
+            'Subtitle',
+            parent=styles['Heading2'],
+            fontSize=18,
+            textColor=colors.HexColor('#666666'),
+            spaceAfter=20,
+            alignment=TA_CENTER
+        )))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Period information
+        period_info = f"<b>Period:</b> {period_start.strftime('%B %d, %Y')} to {period_end.strftime('%B %d, %Y')}"
+        elements.append(Paragraph(period_info, header_style))
+        elements.append(Paragraph(f"<b>Generated:</b> {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", header_style))
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Calculate totals
+        total_salary = sum(float(emp.monthly_salary or 0) for emp in employees)
+        
+        # Create table data
+        table_data = [['Employee', 'Department', 'Position', 'Monthly Salary']]
+        
+        for emp in employees:
+            salary = float(emp.monthly_salary or 0) if hasattr(emp, 'monthly_salary') else 0
+            table_data.append([
+                f"{emp.first_name} {emp.last_name}",
+                emp.department.name if emp.department else 'N/A',
+                emp.position or 'N/A',
+                f"UGX {salary:,.2f}" if salary > 0 else "N/A"
+            ])
+        
+        # Add summary row
+        table_data.append([
+            '<b>TOTAL</b>',
+            '',
+            '',
+            f"<b>UGX {total_salary:,.2f}</b>"
+        ])
+        
+        # Create table
+        table = Table(table_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+        table.setStyle(TableStyle([
+            # Header row
+            ('BACKGROUND', (0, 0), (-1, 0), brand_color),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            # Data rows
+            ('FONTNAME', (0, 1), (-1, -2), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -2), 10),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.white, colors.HexColor('#F5F5F5')]),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            # Summary row
+            ('BACKGROUND', (0, -1), (-1, -1), accent_color),
+            ('TEXTCOLOR', (0, -1), (-1, -1), colors.HexColor('#000000')),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 11),
+            ('TOPPADDING', (0, -1), (-1, -1), 12),
+            ('BOTTOMPADDING', (0, -1), (-1, -1), 12),
+        ]))
+        
+        elements.append(table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # Summary statistics
+        elements.append(Paragraph(f"<b>Total Employees:</b> {len(employees)}", header_style))
+        elements.append(Paragraph(f"<b>Total Payroll:</b> UGX {total_salary:,.2f}", header_style))
+        
+        # Build PDF
+        doc.build(elements)
+        
+        # Create PayrollExport record
+        export = PayrollExport(
+            export_date=date.today(),
+            period_start=period_start,
+            period_end=period_end,
+            file_path=f"payroll_pdfs/{filename}",
+            total_amount=total_salary,
+            employee_count=len(employees),
+            created_by=created_by
+        )
+        db.session.add(export)
+        db.session.commit()
+        
+        return {
+            'success': True,
+            'export_id': export.id,
+            'pdf_path': export.file_path,
+            'filename': filename,
+            'total_amount': total_salary,
+            'employee_count': len(employees)
+        }
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error generating payroll PDF: {e}")
+        return {'success': False, 'error': str(e)}
 
 

@@ -1,0 +1,125 @@
+{% extends "ai/base.html" %}
+{% block ai_content %}
+<div class="sas-ai-header">
+    <p class="eyebrow">Premium · SAS AI</p>
+    <h1>🤖 AI Features Hub</h1>
+    <p class="muted">Central hub for all AI-powered features in the SAS Management System.</p>
+</div>
+
+{% if not module_enabled %}
+<section class="panel">
+    <div class="sas-ai-empty-state">
+        <div class="sas-ai-empty-state-icon">🤖</div>
+        <h2 style="color: #6b7280; margin-bottom: 1rem;">SAS AI Module Disabled</h2>
+        <p style="color: #9ca3af;">The SAS AI module is currently disabled. Contact an administrator to enable it.</p>
+    </div>
+</section>
+{% else %}
+<section class="panel">
+    <div style="margin-bottom: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h2 style="margin: 0; color: var(--sas-dark);">AI Features Overview</h2>
+            <div class="sas-ai-stats">
+                <div class="sas-ai-stat">
+                    <span class="sas-ai-stat-value">{{ enabled_count }}</span>
+                    <span class="sas-ai-stat-label">Enabled</span>
+                </div>
+                <div class="sas-ai-stat">
+                    <span class="sas-ai-stat-value">{{ total_count }}</span>
+                    <span class="sas-ai-stat-label">Total</span>
+                </div>
+            </div>
+        </div>
+        <p style="color: #6b7280; margin: 0; line-height: 1.6;">
+            All AI features are <strong>assistive only</strong> - they provide suggestions and recommendations 
+            that require manual review and approval. No autonomous writes or changes to your data.
+        </p>
+    </div>
+</section>
+
+{% if features_by_category %}
+{% for category, category_features in features_by_category.items() %}
+<section class="panel">
+    <h3 style="margin: 0 0 1.5rem 0; font-size: 1.5rem; font-weight: 600; color: var(--sas-dark); border-bottom: 2px solid var(--sas-primary); padding-bottom: 0.5rem;">
+        {{ category }}
+    </h3>
+    <div class="sas-ai-feature-grid">
+        {% for feature in category_features %}
+        <div class="sas-ai-feature-card {% if not feature.enabled %}disabled{% endif %}" 
+             {% if feature.enabled %}
+                {% if feature.key == 'ai_chat' %}
+                onclick="window.location.href='{{ url_for('sas_ai.chat_ui') }}'"
+                {% else %}
+                onclick="window.location.href='{{ url_for('sas_ai.feature_detail', feature_key=feature.key) }}'"
+                {% endif %}
+             {% endif %}>
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+                <span class="sas-ai-feature-icon">{{ feature.icon }}</span>
+                {% if current_user.role.value == 'Admin' %}
+                <button class="sas-ai-toggle-btn" 
+                        data-feature="{{ feature.key }}"
+                        data-enabled="{{ 'true' if feature.enabled else 'false' }}"
+                        onclick="event.stopPropagation(); toggleFeature('{{ feature.key }}', this);"
+                        title="{% if feature.enabled %}Disable{% else %}Enable{% endif %} feature">
+                    {% if feature.enabled %}🔓{% else %}🔒{% endif %}
+                </button>
+                {% endif %}
+            </div>
+            <h4 class="sas-ai-feature-title">{{ feature.name }}</h4>
+            <p class="sas-ai-feature-description">{{ feature.description }}</p>
+            
+            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem;">
+                {% if feature.enabled %}
+                <span class="sas-ai-badge sas-ai-badge-enabled">Enabled</span>
+                {% else %}
+                <span class="sas-ai-badge sas-ai-badge-disabled">🔒 Disabled</span>
+                {% endif %}
+                
+                {% if feature.business_value == "Revenue" %}
+                <span class="sas-ai-badge sas-ai-badge-revenue">Revenue</span>
+                {% elif feature.business_value == "Cost" %}
+                <span class="sas-ai-badge sas-ai-badge-cost">Cost</span>
+                {% elif feature.business_value == "Risk" %}
+                <span class="sas-ai-badge sas-ai-badge-risk">Risk</span>
+                {% elif feature.business_value == "Efficiency" %}
+                <span class="sas-ai-badge sas-ai-badge-efficiency">Efficiency</span>
+                {% endif %}
+            </div>
+            
+            <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; font-size: 0.75rem; color: #9ca3af;">
+                Integrates with: <strong>{{ feature.module_integration|title }}</strong>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+{% else %}
+<section class="panel">
+    <div class="sas-ai-empty-state">
+        <div class="sas-ai-empty-state-icon">📭</div>
+        <p style="color: #6b7280;">No AI features available.</p>
+    </div>
+</section>
+{% endif %}
+
+<section class="panel" style="background: var(--sas-light); border: 2px solid var(--sas-primary); margin-top: 2rem;">
+    <div style="padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0; font-size: 1.25rem; font-weight: 600; color: var(--sas-dark);">
+            About SAS AI
+        </h3>
+        <p style="margin: 0 0 0.75rem 0; color: #374151; line-height: 1.6;">
+            SAS AI is a premium module that provides intelligent, assistive features across the SAS Management System. 
+            All AI features are designed to <strong>support decision-making</strong>, not replace human judgment.
+        </p>
+        <ul style="margin: 0.75rem 0 0 0; padding-left: 1.5rem; color: #374151; line-height: 1.8;">
+            <li>All suggestions require manual review and approval</li>
+            <li>No autonomous writes or changes to data</li>
+            <li>Features can be enabled or disabled individually</li>
+            <li>Access is controlled by role-based permissions</li>
+            <li>All insights are explainable and traceable</li>
+        </ul>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

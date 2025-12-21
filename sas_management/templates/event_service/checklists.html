@@ -1,0 +1,803 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.checklists-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+}
+
+.checklists-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.checklist-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.checklist-card:hover {
+    border-color: rgba(242,104,34,0.4);
+    background: rgba(242,104,34,0.1);
+}
+
+.checklist-card.complete {
+    border-color: rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.05);
+}
+
+.checklist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.checklist-title {
+    font-weight: 600;
+    color: var(--accent, #F6BC38);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checklist-title .checklist-number {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.875rem;
+}
+
+.progress-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.progress-badge.complete {
+    background: rgba(16,185,129,0.3);
+    color: #34d399;
+    border: 1px solid rgba(16,185,129,0.5);
+}
+
+.progress-badge.in-progress {
+    background: rgba(245,158,11,0.3);
+    color: #fbbf24;
+    border: 1px solid rgba(245,158,11,0.5);
+}
+
+.progress-badge.empty {
+    background: rgba(107,114,128,0.3);
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(107,114,128,0.5);
+}
+
+.checklist-type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+
+.checklist-type-badge.pre-event {
+    background: rgba(59,130,246,0.3);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,0.5);
+}
+
+.checklist-type-badge.during-event {
+    background: rgba(245,158,11,0.3);
+    color: #fbbf24;
+    border: 1px solid rgba(245,158,11,0.5);
+}
+
+.checklist-type-badge.post-event {
+    background: rgba(107,114,128,0.3);
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(107,114,128,0.5);
+}
+
+.checklist-progress {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(242,104,34,0.8), rgba(246,188,56,0.8));
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.progress-fill.complete {
+    background: linear-gradient(90deg, rgba(16,185,129,0.8), rgba(34,211,153,0.8));
+}
+
+.checklist-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.checklist-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    border-left: 3px solid rgba(255,255,255,0.1);
+}
+
+.checklist-item.completed {
+    border-left-color: rgba(16,185,129,0.6);
+    background: rgba(16,185,129,0.05);
+}
+
+.checklist-item-description {
+    flex: 1;
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9375rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.checklist-item-description.completed {
+    text-decoration: line-through;
+    color: rgba(255,255,255,0.5);
+}
+
+.item-category {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    background: rgba(59,130,246,0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,0.3);
+}
+
+.checklist-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-item {
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-item-primary {
+    background: rgba(242,104,34,0.2);
+    border-color: rgba(242,104,34,0.4);
+    color: var(--accent, #F6BC38);
+}
+
+.btn-item-primary:hover {
+    background: rgba(242,104,34,0.3);
+    border-color: var(--brand, #F26822);
+}
+
+.btn-item-success {
+    background: rgba(16,185,129,0.2);
+    border-color: rgba(16,185,129,0.4);
+    color: #34d399;
+}
+
+.btn-item-success:hover {
+    background: rgba(16,185,129,0.3);
+    border-color: rgba(16,185,129,0.6);
+}
+
+.completed-timestamp {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-left: 0.5rem;
+}
+
+.checklist-summary {
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(242,104,34,0.3);
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+}
+
+.summary-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+}
+
+.summary-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+}
+
+.summary-value.warning {
+    color: #f59e0b;
+}
+
+.summary-value.danger {
+    color: #f87171;
+}
+
+.summary-value.success {
+    color: #34d399;
+}
+
+.progress-bar-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.event-info-card {
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.event-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.event-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.event-info-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.event-info-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.filter-bar {
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+    .checklists-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .checklist-summary {
+        position: relative;
+        top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .checklist-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-1">Event Checklists</h1>
+            <p class="text-muted mb-0">Operational execution checklists for service delivery</p>
+        </div>
+        <a href="{{ url_for('core.dashboard') }}" class="btn btn-outline-secondary">← Dashboard</a>
+    </div>
+
+    {% if event %}
+    <!-- Event Info Card -->
+    <div class="event-info-card">
+        <div class="event-info-grid">
+            <div class="event-info-item">
+                <span class="event-info-label">Event</span>
+                <span class="event-info-value">{{ event.title }}</span>
+            </div>
+            <div class="event-info-item">
+                <span class="event-info-label">Event Date</span>
+                <span class="event-info-value">
+                    {% if event.date %}
+                        {{ event.date.strftime('%Y-%m-%d') }}{% if event.start_time %} {{ event.start_time }}{% endif %}
+                    {% elif event.event_date %}
+                        {{ event.event_date.strftime('%Y-%m-%d') }}{% if event.start_time %} {{ event.start_time }}{% endif %}
+                    {% else %}
+                        TBD
+                    {% endif %}
+                </span>
+            </div>
+            <div class="event-info-item">
+                <span class="event-info-label">Venue</span>
+                <span class="event-info-value">
+                    {% if event.venue_obj %}
+                        {{ event.venue_obj.name }}
+                    {% else %}
+                        TBD
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two-Column Layout -->
+    <div class="checklists-container">
+        <!-- LEFT COLUMN: Checklist Cards -->
+        <div class="checklists-main">
+            {% if checklist_data %}
+                {% for data in checklist_data %}
+                    {% set checklist = data.checklist %}
+                    {% set items = data.items %}
+                    {% set total = data.total %}
+                    {% set completed = data.completed %}
+                    {% set progress = data.progress %}
+                    {% set is_complete = total > 0 and completed == total %}
+                    
+                    <div class="checklist-card {% if is_complete %}complete{% endif %}">
+                        <!-- Checklist Header -->
+                        <div class="checklist-header">
+                            <div class="checklist-title">
+                                <span class="checklist-number">Checklist #{{ loop.index }}</span>
+                                <span>
+                                    {% if checklist %}
+                                        {{ checklist.title }}
+                                    {% else %}
+                                        Event Checklist
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <span class="progress-badge {% if is_complete %}complete{% elif total == 0 %}empty{% else %}in-progress{% endif %}">
+                                {% if total == 0 %}
+                                    Empty
+                                {% elif is_complete %}
+                                    ✓ Complete
+                                {% else %}
+                                    {{ completed }} / {{ total }}
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <!-- Checklist Type Badge -->
+                        {% if checklist and checklist.checklist_type %}
+                        <div>
+                            <span class="checklist-type-badge {{ checklist.checklist_type.replace('_', '-') }}">
+                                {% if checklist.checklist_type == "pre_event" %}
+                                    Pre-Event
+                                {% elif checklist.checklist_type == "during_event" %}
+                                    During Event
+                                {% elif checklist.checklist_type == "post_event" %}
+                                    Post-Event
+                                {% else %}
+                                    {{ checklist.checklist_type }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Progress Bar -->
+                        {% if total > 0 %}
+                        <div class="checklist-progress">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <span style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Progress</span>
+                                <span style="color: rgba(255,255,255,0.9); font-weight: 500; font-size: 0.875rem;">
+                                    <strong>{{ completed }}</strong> / {{ total }}
+                                </span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill {% if is_complete %}complete{% endif %}" style="width: {{ progress }}%;">
+                                    {{ progress }}%
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Checklist Items -->
+                        {% if items %}
+                        <div class="checklist-items">
+                            {% for item in items %}
+                            <div class="checklist-item {% if item.completed or item.is_completed %}completed{% endif %}">
+                                <div class="checklist-item-description {% if item.completed or item.is_completed %}completed{% endif %}">
+                                    {% if item.category %}
+                                        <span class="item-category">{{ item.category }}</span>
+                                    {% endif %}
+                                    <span>
+                                        {% if item.description %}
+                                            {{ item.description }}
+                                        {% elif item.item_name %}
+                                            {{ item.item_name }}
+                                        {% else %}
+                                            Checklist Item
+                                        {% endif %}
+                                    </span>
+                                    {% if item.completed_at or (item.is_completed and item.completed_at) %}
+                                    <span class="completed-timestamp">
+                                        ({{ item.completed_at.strftime('%Y-%m-%d') if item.completed_at else '' }})
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div class="checklist-item-actions">
+                                    {% if item.completed or item.is_completed %}
+                                        <span class="btn-item btn-item-success">✓ Done</span>
+                                    {% else %}
+                                        <a href="{{ url_for('event_service.checklist_toggle', event_id=event.id, item_id=item.id) if event else url_for('event_service.toggle_checklist_item', item_id=item.id) }}" 
+                                           class="btn-item btn-item-primary">
+                                            Mark Done
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div style="padding: 1rem; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                            No checklist items defined.
+                        </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+                    <h2 style="color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">No checklists created</h2>
+                    <p style="color: rgba(255,255,255,0.5);">No checklists have been created for this event yet.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT COLUMN: Checklist Summary -->
+        <div class="checklist-summary">
+            <div class="summary-header">
+                <span>📊</span>
+                <h3>Checklist Summary</h3>
+            </div>
+            
+            {% if checklist_data %}
+                {% set total_checklists = checklist_data|length %}
+                {% set total_items = checklist_data|sum(attribute='total') %}
+                {% set completed_items = checklist_data|sum(attribute='completed') %}
+                {% set pending_items = total_items - completed_items %}
+                {% set overall_progress = (completed_items / total_items * 100) if total_items > 0 else 0 %}
+                
+                <div class="summary-row">
+                    <span class="summary-label">Total Checklists</span>
+                    <span class="summary-value">{{ total_checklists }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Total Items</span>
+                    <span class="summary-value">{{ total_items }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Completed Items</span>
+                    <span class="summary-value success">{{ completed_items }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Pending Items</span>
+                    <span class="summary-value {% if pending_items > 0 %}warning{% endif %}">{{ pending_items }}</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="summary-row" style="border-bottom: none; padding-bottom: 0.5rem;">
+                        <span class="summary-label">Overall Progress</span>
+                        <span class="summary-value">{{ "%.0f"|format(overall_progress) }}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill {% if overall_progress == 100 %}complete{% endif %}" style="width: {{ overall_progress }}%;">
+                            {{ "%.0f"|format(overall_progress) }}%
+                        </div>
+                    </div>
+                    {% if pending_items > 0 %}
+                    <div style="padding-top: 0.5rem; color: #f59e0b; font-size: 0.875rem; text-align: center;">
+                        ⚠ {{ pending_items }} item{{ 's' if pending_items != 1 else '' }} pending
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="summary-row">
+                    <span class="summary-label">Total Checklists</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Total Items</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div style="padding: 1rem; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                    No checklists available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <!-- Index View: Show All Checklists -->
+    <div class="filter-bar">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-lg-6">
+                <label class="form-label fw-semibold">Event</label>
+                <select name="event_id" class="form-select">
+                    <option value="">All Events</option>
+                    {% for evt in events %}
+                        <option value="{{ evt.id }}">{{ evt.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label fw-semibold">Status</label>
+                <select class="form-select" disabled>
+                    <option>All</option>
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <button type="submit" class="btn btn-warning w-100">Apply Filters</button>
+            </div>
+        </form>
+    </div>
+
+    {% if checklists %}
+    <div class="checklists-container">
+        <div class="checklists-main">
+            {% for checklist in checklists %}
+                {% set checklist_items = items | selectattr("checklist_id", "equalto", checklist.id) | list %}
+                {% set total_items = checklist_items | length %}
+                {% set completed_items = checklist_items | selectattr("is_completed", "equalto", True) | list | length %}
+                {% set completion_percent = (completed_items / total_items * 100) | round if total_items > 0 else 0 %}
+                {% set is_complete = total_items > 0 and completed_items == total_items %}
+                
+                <div class="checklist-card {% if is_complete %}complete{% endif %}">
+                    <div class="checklist-header">
+                        <div class="checklist-title">
+                            <span class="checklist-number">Checklist #{{ loop.index }}</span>
+                            <span>{{ checklist.title }}</span>
+                        </div>
+                        <span class="progress-badge {% if is_complete %}complete{% elif total_items == 0 %}empty{% else %}in-progress{% endif %}">
+                            {% if total_items == 0 %}
+                                Empty
+                            {% elif is_complete %}
+                                ✓ Complete
+                            {% else %}
+                                {{ completed_items }} / {{ total_items }}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    {% if checklist.checklist_type %}
+                    <div>
+                        <span class="checklist-type-badge {{ checklist.checklist_type.replace('_', '-') }}">
+                            {% if checklist.checklist_type == "pre_event" %}
+                                Pre-Event
+                            {% elif checklist.checklist_type == "during_event" %}
+                                During Event
+                            {% elif checklist.checklist_type == "post_event" %}
+                                Post-Event
+                            {% else %}
+                                {{ checklist.checklist_type }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    {% if checklist.event_id %}
+                        {% set checklist_event = events | selectattr("id", "equalto", checklist.event_id) | first %}
+                        {% if checklist_event %}
+                        <div style="margin-bottom: 1rem; padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 6px;">
+                            <span style="color: rgba(255,255,255,0.6); font-size: 0.75rem;">Event:</span>
+                            <span style="color: rgba(255,255,255,0.9); font-weight: 500;">{{ checklist_event.title }}</span>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+
+                    {% if total_items > 0 %}
+                    <div class="checklist-progress">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Progress</span>
+                            <span style="color: rgba(255,255,255,0.9); font-weight: 500; font-size: 0.875rem;">
+                                <strong>{{ completed_items }}</strong> / {{ total_items }}
+                            </span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill {% if is_complete %}complete{% endif %}" style="width: {{ completion_percent }}%;">
+                                {{ completion_percent }}%
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if checklist_items %}
+                    <div class="checklist-items">
+                        {% for item in checklist_items %}
+                        <div class="checklist-item {% if item.is_completed %}completed{% endif %}">
+                            <div class="checklist-item-description {% if item.is_completed %}completed{% endif %}">
+                                {% if item.category %}
+                                    <span class="item-category">{{ item.category }}</span>
+                                {% endif %}
+                                <span>{{ item.description }}</span>
+                                {% if item.completed_at %}
+                                <span class="completed-timestamp">
+                                    ({{ item.completed_at.strftime('%Y-%m-%d') }})
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="checklist-item-actions">
+                                {% if item.is_completed %}
+                                    <span class="btn-item btn-item-success">✓ Done</span>
+                                {% else %}
+                                    <a href="{{ url_for('event_service.toggle_checklist_item', item_id=item.id) }}" 
+                                       class="btn-item btn-item-primary">
+                                        Mark Done
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="padding: 1rem; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                        No checklist items defined.
+                    </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="checklist-summary">
+            <div class="summary-header">
+                <span>📊</span>
+                <h3>Checklist Summary</h3>
+            </div>
+            
+            {% set total_checklists = checklists|length %}
+            {% set all_items = items|list %}
+            {% set total_items = all_items|length %}
+            {% set completed_items = all_items|selectattr("is_completed", "equalto", True)|list|length %}
+            {% set pending_items = total_items - completed_items %}
+            {% set overall_progress = (completed_items / total_items * 100) if total_items > 0 else 0 %}
+            
+            <div class="summary-row">
+                <span class="summary-label">Total Checklists</span>
+                <span class="summary-value">{{ total_checklists }}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Total Items</span>
+                <span class="summary-value">{{ total_items }}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Completed Items</span>
+                <span class="summary-value success">{{ completed_items }}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Pending Items</span>
+                <span class="summary-value {% if pending_items > 0 %}warning{% endif %}">{{ pending_items }}</span>
+            </div>
+            
+            <div class="progress-bar-container">
+                <div class="summary-row" style="border-bottom: none; padding-bottom: 0.5rem;">
+                    <span class="summary-label">Overall Progress</span>
+                    <span class="summary-value">{{ "%.0f"|format(overall_progress) }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill {% if overall_progress == 100 %}complete{% endif %}" style="width: {{ overall_progress }}%;">
+                        {{ "%.0f"|format(overall_progress) }}%
+                    </div>
+                </div>
+                {% if pending_items > 0 %}
+                <div style="padding-top: 0.5rem; color: #f59e0b; font-size: 0.875rem; text-align: center;">
+                    ⚠ {{ pending_items }} item{{ 's' if pending_items != 1 else '' }} pending
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+        <div class="empty-state">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+            <h2 style="color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">No checklists available</h2>
+            <p style="color: rgba(255,255,255,0.5);">Create checklists for events to start tracking execution tasks.</p>
+        </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<style>
+.fw-semibold {
+    font-weight: 600;
+}
+</style>
+
+{% endblock %}

@@ -3,7 +3,7 @@ import os
 import re
 from datetime import datetime
 from flask import current_app
-from models import db, Contract, ContractTemplate, Event, Client
+from sas_management.models import db, Contract, ContractTemplate, Event, Client
 from decimal import Decimal
 
 
@@ -22,8 +22,8 @@ def create_contract(event_id, client_id, contract_body, created_by, template_id=
     """Create a new contract."""
     try:
         # Verify event and client exist
-        event = Event.query.get(event_id)
-        client = Client.query.get(client_id)
+        event = db.session.get(Event, event_id)
+        client = db.session.get(Client, client_id)
         
         if not event or not client:
             return {"success": False, "error": "Event or client not found"}
@@ -50,7 +50,7 @@ def create_contract(event_id, client_id, contract_body, created_by, template_id=
 def get_contract(contract_id):
     """Get a specific contract."""
     try:
-        contract = Contract.query.get(contract_id)
+        contract = db.session.get(Contract, contract_id)
         if not contract:
             return {"success": False, "error": "Contract not found"}
         return {"success": True, "contract": contract}
@@ -80,7 +80,7 @@ def list_contracts(status=None, client_id=None, event_id=None):
 def update_contract(contract_id, contract_body=None, status=None):
     """Update a contract."""
     try:
-        contract = Contract.query.get(contract_id)
+        contract = db.session.get(Contract, contract_id)
         if not contract:
             return {"success": False, "error": "Contract not found"}
         
@@ -102,7 +102,7 @@ def update_contract(contract_id, contract_body=None, status=None):
 def mark_as_signed(contract_id, signed_by=None):
     """Mark contract as signed."""
     try:
-        contract = Contract.query.get(contract_id)
+        contract = db.session.get(Contract, contract_id)
         if not contract:
             return {"success": False, "error": "Contract not found"}
         
@@ -128,7 +128,7 @@ def mark_as_signed(contract_id, signed_by=None):
 def load_contract_template(template_id):
     """Load a contract template."""
     try:
-        template = ContractTemplate.query.get(template_id)
+        template = db.session.get(ContractTemplate, template_id)
         if not template:
             return {"success": False, "error": "Template not found"}
         return {"success": True, "template": template}
@@ -213,7 +213,7 @@ def apply_template_variables(body, event_data=None, client_data=None):
 def generate_contract_pdf(contract_id):
     """Generate PDF from contract (placeholder for ReportLab)."""
     try:
-        contract = Contract.query.get(contract_id)
+        contract = db.session.get(Contract, contract_id)
         if not contract:
             return {"success": False, "error": "Contract not found"}
         

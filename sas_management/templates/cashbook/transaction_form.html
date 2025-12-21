@@ -53,7 +53,7 @@
                 <option value="">— No Event —</option>
                 {% for event in events %}
                 <option value="{{ event.id }}" {% if selected_event|string == event.id|string %}selected{% endif %}>
-                    {{ event.event_name }} · {{ event.event_date.strftime('%b %d, %Y') }}
+                    {{ event.event_name }} · {{ (event.event_date.strftime('%b %d, %Y') if event.event_date else 'No Date') }}
                 </option>
                 {% endfor %}
             </select>

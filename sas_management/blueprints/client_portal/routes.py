@@ -2,7 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, jsonify
 from datetime import datetime
 
-from models import Client, Event, Quotation, QuotationLine, db
+from sas_management.models import Client, Event, Quotation, QuotationLine, db
 from services.client_portal_service import authenticate_client, create_shareable_link
 
 client_portal_bp = Blueprint("client_portal", __name__, url_prefix="/client")
@@ -45,7 +45,7 @@ def dashboard():
         return redirect(url_for("client_portal.login"))
     
     try:
-        client = Client.query.get(client_id)
+        client = db.session.get(Client, client_id)
         if not client:
             flash("Client not found.", "danger")
             return redirect(url_for("client_portal.login"))
@@ -124,7 +124,7 @@ def contracts():
         return redirect(url_for("client_portal.login"))
     
     # Get contracts linked to client's events
-    from models import Contract
+    from sas_management.models import Contract
     events = Event.query.filter_by(client_id=client_id).all()
     event_ids = [e.id for e in events]
     contracts = Contract.query.filter(Contract.event_id.in_(event_ids)).all() if event_ids else []

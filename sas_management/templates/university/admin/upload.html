@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">University Admin · Upload</p>
+        <h1>Upload Course Material</h1>
+        <p class="muted">Upload materials in any format for courses.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('university.admin_materials_list') }}">← Back to Materials</a>
+</section>
+
+<section class="panel">
+    <form method="post" enctype="multipart/form-data" class="form-grid">
+        <label class="form-control">
+            <span>Course</span>
+            <select name="course_id" required>
+                <option value="">Select Course</option>
+                {% for course in courses %}
+                <option value="{{ course.id }}" {% if request.args.get('course_id')|int == course.id %}selected{% endif %}>
+                    {{ course.title }}
+                </option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Material Title</span>
+            <input type="text" name="title" required placeholder="Enter material title">
+        </label>
+
+        <label class="form-control form-control--full">
+            <span>File</span>
+            <input type="file" name="upload_file" required>
+            <small class="muted">All file formats supported: PDF, DOCX, MP4, MP3, ZIP, images, and more</small>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Upload File</button>
+            <a class="btn-ghost" href="{{ url_for('university.admin_materials_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

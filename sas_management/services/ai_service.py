@@ -54,7 +54,7 @@ def ensure_model_dir():
 def get_db_models():
     """Safely import database models."""
     try:
-        from models import (
+        from sas_management.models import (
             AIPredictionRun, MenuRecommendation, ForecastResult,
             StaffingSuggestion, ShortageAlert, CostOptimization,
             MenuItem, InventoryItem, Event, db
@@ -114,7 +114,7 @@ def auto_cost_optimization(event_id: Optional[int] = None, menu_items_list: Opti
         # Get menu items to analyze
         if event_id:
             # Get menu items from event
-            event = models['Event'].query.get(event_id)
+            event = models['db'].session.get(models['Event'], event_id)
             if event and hasattr(event, 'menu_items'):
                 menu_items = event.menu_items
             else:
@@ -471,7 +471,7 @@ def kitchen_planner(event_id: int) -> Dict[str, Any]:
         }
     
     try:
-        event = models['Event'].query.get(event_id)
+        event = models['db'].session.get(models['Event'], event_id)
         if not event:
             return {'success': False, 'error': f'Event {event_id} not found'}
         
@@ -533,7 +533,7 @@ def predictive_staffing(event_id: Optional[int] = None, date_range: Optional[Tup
     
     try:
         if event_id:
-            event = models['Event'].query.get(event_id)
+            event = models['db'].session.get(models['Event'], event_id)
             if not event:
                 return {'success': False, 'error': f'Event {event_id} not found'}
             

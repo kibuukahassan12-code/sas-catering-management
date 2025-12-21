@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Team{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h3>Team for Event {{ event_id }}</h3>
+  <a href="{{ url_for('service.event_view', event_id=event_id) }}" class="btn btn-sm btn-secondary mb-3">Back</a>
+  {% if team %}
+    <ul class="list-group">
+    {% for t in team %}
+      <li class="list-group-item">{{ t.staff_name }} — {{ t.staff_role }}</li>
+    {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">No team members.</p>
+  {% endif %}
+</div>
+{% endblock %}
+

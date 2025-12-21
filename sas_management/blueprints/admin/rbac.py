@@ -3,8 +3,8 @@ RBAC Management Blueprint - Role and Permission management.
 """
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from models import Role, Permission, RolePermission, User, db
-from utils.security import require_permission
+from sas_management.models import Role, Permission, RolePermission, User, db
+from sas_management.utils.security import require_permission
 
 rbac_bp = Blueprint("rbac", __name__)
 
@@ -67,29 +67,14 @@ def permissions_list():
 
 @rbac_bp.route("/users/roles", methods=["GET", "POST"])
 @login_required
-# @require_permission("assign_roles")
 def users_roles():
-    """Assign roles to users."""
-    users = User.query.order_by(User.email.asc()).all()
-    roles = Role.query.order_by(Role.name.asc()).all()
-    
-    if request.method == "POST":
-        user_id = request.form.get("user_id", type=int)
-        role_id = request.form.get("role_id", type=int)
-        
-        user = User.query.get_or_404(user_id)
-        if role_id:
-            role = Role.query.get_or_404(role_id)
-            user.role_id = role.id
-            flash(f"Role '{role.name}' assigned to {user.email}.", "success")
-        else:
-            user.role_id = None
-            flash(f"Role removed from {user.email}.", "info")
-        
-        db.session.commit()
-        return redirect(url_for("rbac.users_roles"))
-    
-    return render_template("admin/rbac/users_roles.html", users=users, roles=roles)
+    """
+    Legacy RBAC route for assigning roles.
+
+    To avoid duplicate UIs for the same feature, this route now redirects
+    to the canonical admin.assign_roles page.
+    """
+    return redirect(url_for("admin.assign_roles"))
 
 
 @rbac_bp.route("/logs")
@@ -97,7 +82,7 @@ def users_roles():
 # @require_permission("system_admin")
 def activity_logs():
     """View activity logs."""
-    from models import ActivityLog
+    from sas_management.models import ActivityLog
     from utils import paginate_query
     
     query = ActivityLog.query.order_by(ActivityLog.timestamp.desc())

@@ -1,0 +1,518 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.messages-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+}
+
+.messages-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.thread-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    position: relative;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.thread-card:hover {
+    border-color: rgba(242,104,34,0.4);
+    background: rgba(242,104,34,0.1);
+}
+
+.thread-card.active {
+    border-color: rgba(242,104,34,0.6);
+    background: rgba(242,104,34,0.15);
+    box-shadow: 0 0 0 2px rgba(242,104,34,0.2);
+}
+
+.thread-card.unread {
+    border-color: rgba(59,130,246,0.6);
+    background: rgba(59,130,246,0.1);
+}
+
+.thread-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.thread-title {
+    font-weight: 600;
+    color: var(--accent, #F6BC38);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.thread-title .thread-number {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.875rem;
+}
+
+.unread-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background: rgba(59,130,246,0.3);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,0.5);
+}
+
+.timestamp-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.6);
+    background: rgba(0,0,0,0.2);
+}
+
+.message-preview {
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+}
+
+.sender-name {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.message-snippet {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.thread-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-thread {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-thread-primary {
+    background: rgba(242,104,34,0.2);
+    border-color: rgba(242,104,34,0.4);
+    color: var(--accent, #F6BC38);
+}
+
+.btn-thread-primary:hover {
+    background: rgba(242,104,34,0.3);
+    border-color: var(--brand, #F26822);
+}
+
+.message-summary {
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(242,104,34,0.3);
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+}
+
+.summary-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+}
+
+.summary-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+}
+
+.summary-value.warning {
+    color: #f59e0b;
+}
+
+.summary-value.danger {
+    color: #f87171;
+}
+
+.summary-value.success {
+    color: #34d399;
+}
+
+.summary-value.info {
+    color: #60a5fa;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.filter-bar {
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1200px) {
+    .messages-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .message-summary {
+        position: relative;
+        top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .message-preview {
+        padding: 0.5rem;
+    }
+}
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-1">Event Messages</h1>
+            <p class="text-muted mb-0">Operational communication per service event</p>
+        </div>
+        <a href="{{ url_for('core.dashboard') }}" class="btn btn-outline-secondary">← Dashboard</a>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <form method="get" action="{{ url_for('event_service.service_messages') }}" class="row g-3 align-items-end">
+            <div class="col-lg-6">
+                <label class="form-label fw-semibold">Filter by Event</label>
+                <select name="event_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Events</option>
+                    {% for event in events %}
+                        <option value="{{ event.id }}" {% if selected_event_id == event.id %}selected{% endif %}>
+                            {{ event.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-3">
+                <button type="submit" class="btn btn-warning w-100">Apply Filter</button>
+            </div>
+            <div class="col-lg-3">
+                <a href="{{ url_for('event_service.service_messages') }}" class="btn btn-outline-secondary w-100">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Two-Column Layout -->
+    <div class="messages-container">
+        <!-- LEFT COLUMN: Message Thread Cards -->
+        <div class="messages-main">
+            {% if threads %}
+                {% for thread in threads %}
+                    {% set thread_event = events | selectattr("id", "equalto", thread.event_id) | first %}
+                    {% set thread_messages = [] %}
+                    {% for msg in messages %}
+                        {% if msg.thread_id == thread.id %}
+                            {% set _ = thread_messages.append(msg) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set last_message = thread_messages[0] if thread_messages else None %}
+                    {% set unread_count = thread_messages|length %}
+                    {% set is_active = selected_event_id == thread.event_id %}
+                    
+                    <div class="thread-card {% if is_active %}active{% elif unread_count > 0 %}unread{% endif %}" 
+                         onclick="window.location.href='{{ url_for('event_service.service_messages', event_id=thread.event_id) }}'">
+                        <!-- Thread Header -->
+                        <div class="thread-header">
+                            <div class="thread-title">
+                                <span class="thread-number">Thread #{{ loop.index }}</span>
+                                <span>{{ thread_event.title if thread_event else "Unknown Event" }}</span>
+                            </div>
+                            {% if unread_count > 0 %}
+                                <span class="unread-badge">{{ unread_count }} New</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Last Message Timestamp -->
+                        {% if thread.updated_at %}
+                        <div style="margin-bottom: 0.75rem;">
+                            <span class="timestamp-badge">
+                                {{ thread.updated_at.strftime("%d %b %Y %H:%M") }}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Message Preview -->
+                        {% if last_message %}
+                        <div class="message-preview">
+                            <div class="sender-name">
+                                {{ last_message.sender.email if last_message.sender else "Unknown User" }}
+                            </div>
+                            <div class="message-snippet">
+                                {{ last_message.message[:150] }}{% if last_message.message|length > 150 %}...{% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="message-preview">
+                            <div class="message-snippet" style="color: rgba(255,255,255,0.5);">
+                                No messages yet in this thread.
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Thread Actions -->
+                        <div class="thread-actions">
+                            <a href="{{ url_for('event_service.service_messages', event_id=thread.event_id) }}" 
+                               class="btn-thread btn-thread-primary">
+                                Open Thread
+                            </a>
+                            <span style="color: rgba(255,255,255,0.5); font-size: 0.875rem; padding: 0.5rem;">
+                                {{ thread_messages|length }} message{{ 's' if thread_messages|length != 1 else '' }}
+                            </span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">💬</div>
+                    <h2 style="color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">No messages yet</h2>
+                    <p style="color: rgba(255,255,255,0.5);">No messages yet for service events.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT COLUMN: Message Summary -->
+        <div class="message-summary">
+            <div class="summary-header">
+                <span>📊</span>
+                <h3>Message Summary</h3>
+            </div>
+            
+            {% if threads %}
+                {% set total_threads = threads|length %}
+                {% set total_messages = messages|length %}
+                {% set active_threads = threads|selectattr('updated_at')|list|length %}
+                
+                {% set unread_messages = 0 %}
+                {% for thread in threads %}
+                    {% set thread_msg_count = messages|selectattr('thread_id', 'equalto', thread.id)|list|length %}
+                    {% if thread_msg_count > 0 %}
+                        {% set unread_messages = unread_messages + thread_msg_count %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% set last_activity = None %}
+                {% for thread in threads %}
+                    {% if thread.updated_at %}
+                        {% if not last_activity or thread.updated_at > last_activity %}
+                            {% set last_activity = thread.updated_at %}
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+                
+                <div class="summary-row">
+                    <span class="summary-label">Total Messages</span>
+                    <span class="summary-value">{{ total_messages }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Active Threads</span>
+                    <span class="summary-value success">{{ active_threads }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Unread Messages</span>
+                    <span class="summary-value {% if unread_messages > 0 %}info{% endif %}">{{ unread_messages }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Total Threads</span>
+                    <span class="summary-value">{{ total_threads }}</span>
+                </div>
+                {% if last_activity %}
+                <div class="summary-row" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 0.5rem; padding-top: 1rem;">
+                    <span class="summary-label">Last Activity</span>
+                    <span class="summary-value" style="font-size: 0.875rem;">
+                        {{ last_activity.strftime("%d %b %Y %H:%M") }}
+                    </span>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="summary-row">
+                    <span class="summary-label">Total Messages</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Active Threads</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Unread Messages</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div style="padding: 1rem; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                    No message threads available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Message View Modal/Expanded View (if needed) -->
+    {% if selected_event_id %}
+        {% set selected_event = events | selectattr("id", "equalto", selected_event_id) | first %}
+        {% set event_threads = threads | selectattr("event_id", "equalto", selected_event_id) | list %}
+        {% set event_thread_ids = event_threads | map(attribute="id") | list %}
+        {% set event_messages = [] %}
+        {% for message in messages %}
+            {% if message.thread_id in event_thread_ids %}
+                {% set _ = event_messages.append(message) %}
+            {% endif %}
+        {% endfor %}
+        
+        {% if event_messages %}
+        <div class="card shadow-sm mt-4" style="background: rgba(17, 17, 17, 0.9); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px;">
+            <div class="card-body">
+                <h5 class="fw-bold mb-3" style="color: var(--accent, #F6BC38);">
+                    Messages for: {{ selected_event.title if selected_event else "Unknown Event" }}
+                </h5>
+
+                <!-- Message Timeline -->
+                <div class="message-timeline mb-4" style="max-height: 500px; overflow-y: auto; border-top: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 1rem 0;">
+                    {% for message in event_messages %}
+                        <div class="message-bubble mb-3" style="animation: fadeIn 0.3s ease-in;">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <strong style="color: #60a5fa;">
+                                        {{ message.sender.email if message.sender else "Unknown User" }}
+                                    </strong>
+                                    {% if message.sender %}
+                                        <small style="color: rgba(255,255,255,0.5); margin-left: 0.5rem;">
+                                            ({{ message.sender.get_role_name() if message.sender.get_role_name else "User" }})
+                                        </small>
+                                    {% endif %}
+                                </div>
+                                <small style="color: rgba(255,255,255,0.5);">
+                                    {{ message.timestamp.strftime("%d %b %Y %H:%M") if message.timestamp else "" }}
+                                </small>
+                            </div>
+                            <div class="message-content p-3 rounded" style="background-color: rgba(0,0,0,0.3); border-left: 3px solid var(--accent, #F6BC38); color: rgba(255,255,255,0.9); word-wrap: break-word; white-space: pre-wrap;">
+                                {{ message.message }}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Message Form -->
+                <div class="card" style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3" style="color: var(--accent, #F6BC38);">Send Message</h6>
+                        <form method="POST" action="{{ url_for('event_service.send_service_message') }}">
+                            <input type="hidden" name="event_id" value="{{ selected_event_id }}">
+                            <div class="mb-3">
+                                <textarea name="content" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Type your message here..."
+                                          required
+                                          style="background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: rgba(255,255,255,0.9);"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-warning w-100">
+                                Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<style>
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fw-semibold {
+    font-weight: 600;
+}
+</style>
+
+{% endblock %}

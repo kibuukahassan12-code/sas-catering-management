@@ -2,8 +2,8 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
 
-from models import db, Branch, UserRole
-from utils import role_required
+from sas_management.models import db, Branch, UserRole
+from sas_management.utils import role_required
 
 branches_bp = Blueprint("branches", __name__, url_prefix="/branches")
 

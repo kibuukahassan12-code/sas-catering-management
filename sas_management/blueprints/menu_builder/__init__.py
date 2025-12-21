@@ -3,9 +3,9 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_login import current_user, login_required
 from decimal import Decimal
 
-from models import db, MenuCategory, MenuItem, MenuPackage, UserRole
-from utils import role_required
-from services.menu_builder_service import (
+from sas_management.models import db, MenuCategory, MenuItem, MenuPackage, UserRole
+from sas_management.utils import role_required
+from sas_management.services.menu_builder_service import (
     create_category, list_categories,
     create_menu_item, update_menu_item, get_menu_item, list_menu_items,
     create_menu_package, attach_item_to_package, get_menu_package,

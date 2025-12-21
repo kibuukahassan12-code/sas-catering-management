@@ -8,8 +8,8 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 import io
 
-from models import FloorPlan, Event, User, UserRole, db
-from services.floorplanner_service import (
+from sas_management.models import FloorPlan, Event, User, UserRole, db
+from sas_management.services.floorplanner_service import (
     create_floorplan,
     update_floorplan,
     save_thumbnail,
@@ -19,7 +19,7 @@ from services.floorplanner_service import (
     export_png,
     export_pdf
 )
-from utils import role_required
+from sas_management.utils import role_required
 
 floorplanner_bp = Blueprint("floorplanner", __name__, url_prefix="/floorplanner")
 

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · User Management</p>
+        <h1>Users Overview</h1>
+        <p class="muted">Summary view of users and their primary roles. For full management use the main Users page.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.manage_users') }}">← Manage Users</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Users</h3>
+        <span class="badge">{{ users|length if users is defined else 0 }} users</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Primary Role</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users|default([]) %}
+                <tr>
+                    <td><strong>{{ user.email }}</strong></td>
+                    <td>
+                        {% if user.role_obj %}
+                        <span class="badge">{{ user.role_obj.name }}</span>
+                        {% else %}
+                        <span class="muted">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.force_password_change %}
+                        <span class="badge" style="background: rgba(255, 92, 92, 0.2); color: #ff5c5c;">
+                            Must Change Password
+                        </span>
+                        {% else %}
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">
+                            Active
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No users available to display.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+

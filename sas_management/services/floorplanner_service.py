@@ -8,7 +8,7 @@ from typing import Optional, Dict, List
 from sqlalchemy.exc import SQLAlchemyError
 from PIL import Image
 
-from models import FloorPlan, SeatingAssignment, Event, User, db
+from sas_management.models import FloorPlan, SeatingAssignment, Event, User, db
 
 
 def create_floorplan(event_id: int, user_id: int, name: str = None) -> FloorPlan:
@@ -94,7 +94,7 @@ def save_thumbnail(id: int, png_data: str) -> FloorPlan:
 def get_floorplan(id: int) -> Optional[FloorPlan]:
     """Get floor plan by ID."""
     try:
-        return FloorPlan.query.get(id)
+        return db.session.get(FloorPlan, id)
     except SQLAlchemyError as e:
         raise Exception(f"Database error getting floor plan: {str(e)}")
 

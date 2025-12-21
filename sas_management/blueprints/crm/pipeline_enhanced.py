@@ -5,10 +5,10 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_login import current_user, login_required
 from sqlalchemy import func, or_
 
-from models import (
+from sas_management.models import (
     Client, Event, IncomingLead, Invoice, User, UserRole, db
 )
-from utils import role_required
+from sas_management.utils import role_required
 
 crm_bp = Blueprint("crm", __name__, url_prefix="/crm")
 

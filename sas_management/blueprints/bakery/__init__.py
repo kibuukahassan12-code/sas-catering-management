@@ -15,17 +15,17 @@ from flask import (
 )
 from flask_login import login_required
 
-from models import (
+from sas_management.models import (
     BakeryItem, BakeryOrder, BakeryOrderItem, BakeryProductionTask,
     PriceHistory, UserRole, User, Client, db
 )
-from utils import get_decimal, paginate_query, role_required
+from sas_management.utils import get_decimal, paginate_query, role_required
 # Safe import - use wildcard to prevent ImportError if functions are missing
 try:
-    from services.bakery_service import *
+    from sas_management.services.bakery_service import *
 except ImportError:
     # Fallback if bakery_service is not fully implemented
-    from services.bakery_service import (
+    from sas_management.services.bakery_service import (
         create_bakery_order, add_item_to_order, update_order_status,
         assign_production_task, start_production_task, complete_production_task,
         get_daily_sales, get_top_items, get_staff_productivity

@@ -7,7 +7,7 @@ from decimal import Decimal
 from flask import current_app
 from werkzeug.utils import secure_filename
 
-from models import (
+from sas_management.models import (
     db, Course, Lesson, LessonResource, Enrollment, Quiz, QuizQuestion,
     QuizAttempt, QuizAnswer, Certificate, CourseProgress, User
 )
@@ -67,7 +67,7 @@ def add_lesson(course_id, data):
     try:
         db.session.begin()
         
-        course = Course.query.get(course_id)
+        course = db.session.get(Course, course_id)
         if not course:
             raise ValueError("Course not found")
         
@@ -102,7 +102,7 @@ def upload_resource(lesson_id, file, resource_type='document', display_name=None
     try:
         db.session.begin()
         
-        lesson = Lesson.query.get(lesson_id)
+        lesson = db.session.get(Lesson, lesson_id)
         if not lesson:
             raise ValueError("Lesson not found")
         
@@ -168,7 +168,7 @@ def enroll_user(user_id, course_id):
         if existing:
             return {"success": False, "error": "User already enrolled in this course"}
         
-        course = Course.query.get(course_id)
+        course = db.session.get(Course, course_id)
         if not course:
             raise ValueError("Course not found")
         
@@ -259,7 +259,7 @@ def submit_quiz(quiz_id, user_id, answers):
     try:
         db.session.begin()
         
-        quiz = Quiz.query.get(quiz_id)
+        quiz = db.session.get(Quiz, quiz_id)
         if not quiz:
             raise ValueError("Quiz not found")
         
@@ -280,7 +280,7 @@ def submit_quiz(quiz_id, user_id, answers):
             question_id = answer_data.get('question_id')
             user_answer = answer_data.get('answer', '')
             
-            question = QuizQuestion.query.get(question_id)
+            question = db.session.get(QuizQuestion, question_id)
             if not question or question.quiz_id != quiz_id:
                 continue
             
@@ -344,7 +344,7 @@ def generate_certificate(enrollment_id):
     try:
         db.session.begin()
         
-        enrollment = Enrollment.query.get(enrollment_id)
+        enrollment = db.session.get(Enrollment, enrollment_id)
         if not enrollment:
             raise ValueError("Enrollment not found")
         
@@ -396,7 +396,7 @@ def get_user_courses(user_id):
     ).all()
     
     # Get available courses (published, matching role if specified)
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     available_query = Course.query.filter_by(published=True)
     
     if user and user.role:

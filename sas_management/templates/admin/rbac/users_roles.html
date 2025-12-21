@@ -9,37 +9,304 @@
     <a class="btn-secondary" href="{{ url_for('rbac.roles_list') }}">← Back to Roles</a>
 </section>
 
-<section class="panel">
-    <form method="POST">
-        <div class="form-group">
-            <label for="user_id">User *</label>
-            <select name="user_id" id="user_id" class="form-control" required>
+{# Reuse Bakery order form layout + card styles #}
+<style>
+.order-form-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+}
+
+.order-form-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.form-section {
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.form-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.form-section-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.form-section-header-icon {
+    font-size: 1.5rem;
+}
+
+.form-grid-modern {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.7);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.5);
+    color: var(--text, #f5f5f5);
+    font-size: 0.9375rem;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--brand, #F26822);
+    background: rgba(0,0,0,0.7);
+    box-shadow: 0 0 0 3px rgba(242,104,34,0.2);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-group small {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    margin-top: -0.25rem;
+}
+
+.add-item-btn {
+    background: rgba(242,104,34,0.2);
+    border: 2px dashed rgba(242,104,34,0.5);
+    color: var(--accent, #F6BC38);
+    padding: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-align: center;
+    width: 100%;
+}
+
+.add-item-btn:hover {
+    background: rgba(242,104,34,0.3);
+    border-color: var(--brand, #F26822);
+    transform: translateY(-1px);
+}
+
+.order-summary {
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(242,104,34,0.3);
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+}
+
+.summary-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+}
+
+.summary-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+}
+
+.summary-total {
+    font-size: 1.25rem;
+    color: var(--accent, #F6BC38);
+}
+
+.form-actions-modern {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin-top: 1rem;
+}
+
+@media (max-width: 1024px) {
+    .order-form-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .order-summary {
+        position: relative;
+        top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .form-grid-modern {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="order-form-container">
+    <div class="order-form-main">
+        <form method="POST" id="roleAssignmentForm">
+            <div class="form-section">
+                <div class="form-section-header">
+                    <span class="form-section-header-icon">👤</span>
+                    <h3>Role Assignment</h3>
+                </div>
+
+                <div id="adminProtectionBadge" style="display:none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(220,53,69,0.4); background: rgba(220,53,69,0.15); font-size: 0.85rem; align-items: flex-start; gap: 0.5rem;">
+                    <span>⚠️</span>
+                    <div>
+                        <strong>Admin Protection</strong>
+                        <div style="color: rgba(255,255,255,0.8); margin-top: 0.25rem;">
+                            You cannot remove or downgrade your own ADMIN role, and it cannot be temporary or expire.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-grid-modern">
+                    <div class="form-group full-width">
+                        <label for="user_id">User <span style="color: #dc3545;">*</span></label>
+                        <select name="user_id" id="user_id" required>
                 <option value="">— Select User —</option>
                 {% for user in users %}
-                <option value="{{ user.id }}">{{ user.email }}</option>
+                            <option value="{{ user.id }}"
+                                    data-email="{{ user.email }}"
+                                    data-current-role="{{ user.get_role_name() }}"
+                                    data-is-admin="{{ '1' if user.is_admin else '0' }}"
+                                    {% if user.id == current_user.id %}data-is-self="1"{% endif %}>
+                                {{ user.email }}
+                            </option>
                 {% endfor %}
             </select>
+                        <small>Select the account to modify.</small>
         </div>
 
-        <div class="form-group">
-            <label for="role_id">Role *</label>
-            <select name="role_id" id="role_id" class="form-control" required>
-                <option value="">— Select Role —</option>
+                    <div class="form-group full-width">
+                        <label for="role_id">Role <span style="color: #dc3545;">*</span></label>
+                        <select name="role_id" id="role_id" required>
+                            <option value="">— Remove Role / Unassign —</option>
                 {% for role in roles %}
-                <option value="{{ role.id }}">{{ role.name }}</option>
+                            {% set is_admin_role = 1 if role.name|lower == 'admin' or role.name|upper == 'ADMIN' else 0 %}
+                            <option value="{{ role.id }}"
+                                    data-role-name="{{ role.name }}"
+                                    data-is-admin-role="{{ is_admin_role }}">
+                                {{ role.name }}
+                            </option>
                 {% endfor %}
             </select>
+                        <small>Available roles include ADMIN, Manager, HR, Accounting, Event Service, Inventory, Kitchen, Sales, Staff, Read-Only, Client Portal User, SAS AI Analyst (when configured).</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="temporary_role_toggle">Temporary Role</label>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" id="temporary_role_toggle" name="is_temporary_role" style="width:auto;">
+                            <span class="muted">Make this role temporary with an expiry date.</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="expiryDateGroup" style="display:none;">
+                        <label for="role_expiry_date">Expiry Date</label>
+                        <input type="datetime-local" id="role_expiry_date" name="role_expiry_date">
+                        <small>After this date, the user's previous role should be restored.</small>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="role_notes">Notes</label>
+                        <textarea id="role_notes" name="role_notes" rows="3" placeholder="Reason for this role change, scope of access, or any internal notes..."></textarea>
+                    </div>
+                </div>
+
+                <button type="button" class="add-item-btn" id="prepareRoleChangeButton">
+                    ➕ Prepare Role Change Summary
+                </button>
+                <small style="display: block; margin-top: 0.75rem; color: rgba(255,255,255,0.5); text-align: center;">
+                    Use this panel to configure role changes, then review the summary on the right before applying.
+                </small>
         </div>
 
-        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-            <button type="submit" class="btn-primary">Assign Role</button>
-            <a href="{{ url_for('rbac.roles_list') }}" class="btn-secondary">Cancel</a>
+            <div class="form-actions-modern">
+                <button type="submit" class="btn-primary" style="flex: 1; padding: 1rem; font-size: 1rem; font-weight: 600;">
+                    ✅ Assign Role
+                </button>
+                <a class="btn-ghost" href="{{ url_for('rbac.roles_list') }}" style="padding: 1rem;">
+                    Cancel
+                </a>
         </div>
     </form>
-</section>
 
-<section class="panel">
-    <div class="panel-header">
+        <div class="form-section">
+            <div class="form-section-header">
+                <span class="form-section-header-icon">📋</span>
         <h3>Current User-Role Assignments</h3>
     </div>
     <div class="table-wrapper table-responsive">
@@ -62,6 +329,215 @@
             </tbody>
         </table>
     </div>
-</section>
+        </div>
+    </div>
+
+    <div class="order-summary">
+        <div class="summary-header">
+            <span>💼</span>
+            <h3>Role Change Summary</h3>
+        </div>
+
+        <div id="roleSummaryContent">
+            <div class="summary-row">
+                <span class="summary-label">Selected User:</span>
+                <span class="summary-value" id="summaryUser">No user selected</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Current Role:</span>
+                <span class="summary-value" id="summaryCurrentRole">Unassigned</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">New Role:</span>
+                <span class="summary-value" id="summaryNewRole">—</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Temporary Role:</span>
+                <span class="summary-value" id="summaryTemporary">No</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Expires:</span>
+                <span class="summary-value summary-total" id="summaryExpiry">—</span>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+            <div style="font-size: 0.8125rem; color: rgba(255,255,255,0.6); line-height: 1.6;">
+                <strong style="color: var(--accent, #F6BC38);">💡 Tip:</strong><br>
+                Review the summary carefully before assigning roles. Use temporary roles for short-lived access only.
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const userSelect = document.getElementById('user_id');
+    const roleSelect = document.getElementById('role_id');
+    const temporaryToggle = document.getElementById('temporary_role_toggle');
+    const expiryGroup = document.getElementById('expiryDateGroup');
+    const expiryInput = document.getElementById('role_expiry_date');
+
+    const summaryUser = document.getElementById('summaryUser');
+    const summaryCurrentRole = document.getElementById('summaryCurrentRole');
+    const summaryNewRole = document.getElementById('summaryNewRole');
+    const summaryTemporary = document.getElementById('summaryTemporary');
+    const summaryExpiry = document.getElementById('summaryExpiry');
+
+    const adminProtectionBadge = document.getElementById('adminProtectionBadge');
+    const prepareButton = document.getElementById('prepareRoleChangeButton');
+    const form = document.getElementById('roleAssignmentForm');
+
+    function formatExpiry(value) {
+        if (!value) {
+            return '—';
+        }
+        try {
+            const d = new Date(value);
+            if (!isNaN(d.getTime())) {
+                return d.toLocaleString();
+            }
+        } catch (e) {
+            // ignore
+        }
+        return value;
+    }
+
+    function applyAdminProtection(userOption, roleOption) {
+        const isSelf = userOption && userOption.dataset.isSelf === '1';
+        const isCurrentAdmin = userOption && userOption.dataset.isAdmin === '1';
+        const isAdminRoleSelected = roleOption && roleOption.dataset.isAdminRole === '1';
+        const removeOption = roleSelect ? roleSelect.querySelector('option[value=""]') : null;
+
+        // Reset defaults
+        if (removeOption) {
+            removeOption.disabled = false;
+        }
+        if (adminProtectionBadge) {
+            adminProtectionBadge.style.display = 'none';
+        }
+        if (temporaryToggle) {
+            temporaryToggle.disabled = false;
+        }
+
+        // Admin role may never be temporary or expiring
+        if (isAdminRoleSelected && temporaryToggle) {
+            temporaryToggle.checked = false;
+            temporaryToggle.disabled = true;
+        }
+
+        // Current admin cannot remove or downgrade their own ADMIN role or set it as temporary
+        if (isSelf && isCurrentAdmin) {
+            if (removeOption) {
+                removeOption.disabled = true;
+            }
+            if (temporaryToggle) {
+                temporaryToggle.checked = false;
+                temporaryToggle.disabled = true;
+            }
+            if (expiryGroup) {
+                expiryGroup.style.display = 'none';
+            }
+            if (expiryInput) {
+                expiryInput.value = '';
+            }
+            if (adminProtectionBadge) {
+                adminProtectionBadge.style.display = 'flex';
+            }
+        }
+    }
+
+    function updateExpiryVisibility() {
+        if (!temporaryToggle || !expiryGroup) return;
+        if (temporaryToggle.checked) {
+            expiryGroup.style.display = 'block';
+        } else {
+            expiryGroup.style.display = 'none';
+            if (expiryInput) {
+                expiryInput.value = '';
+            }
+        }
+    }
+
+    function updateRoleSummary() {
+        const userOption = userSelect && userSelect.value ? userSelect.options[userSelect.selectedIndex] : null;
+        const roleOption = roleSelect && roleSelect.value ? roleSelect.options[roleSelect.selectedIndex] : null;
+
+        const userLabel = userOption && userOption.dataset.email ? userOption.dataset.email : 'No user selected';
+        const currentRoleLabel = userOption && userOption.dataset.currentRole ? userOption.dataset.currentRole : 'Unassigned';
+        const newRoleLabel = roleOption && roleOption.dataset.roleName ? roleOption.dataset.roleName : '—';
+        const isTemporary = temporaryToggle && temporaryToggle.checked;
+        const expiryLabel = isTemporary && expiryInput && expiryInput.value ? formatExpiry(expiryInput.value) : '—';
+
+        if (summaryUser) summaryUser.textContent = userLabel;
+        if (summaryCurrentRole) summaryCurrentRole.textContent = currentRoleLabel;
+        if (summaryNewRole) summaryNewRole.textContent = newRoleLabel;
+        if (summaryTemporary) summaryTemporary.textContent = isTemporary ? 'Yes (temporary)' : 'No';
+        if (summaryExpiry) summaryExpiry.textContent = expiryLabel;
+
+        applyAdminProtection(userOption, roleOption);
+    }
+
+    if (temporaryToggle) {
+        temporaryToggle.addEventListener('change', function() {
+            updateExpiryVisibility();
+            updateRoleSummary();
+        });
+    }
+    if (expiryInput) {
+        expiryInput.addEventListener('change', updateRoleSummary);
+        expiryInput.addEventListener('input', updateRoleSummary);
+    }
+    if (userSelect) {
+        userSelect.addEventListener('change', updateRoleSummary);
+    }
+    if (roleSelect) {
+        roleSelect.addEventListener('change', updateRoleSummary);
+    }
+    if (prepareButton) {
+        prepareButton.addEventListener('click', function() {
+            // Simply refresh the summary; all fields are already bound
+            updateRoleSummary();
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const userOption = userSelect && userSelect.value ? userSelect.options[userSelect.selectedIndex] : null;
+            const roleOption = roleSelect && roleSelect.value ? roleSelect.options[roleSelect.selectedIndex] : null;
+
+            const isSelf = userOption && userOption.dataset.isSelf === '1';
+            const isCurrentAdmin = userOption && userOption.dataset.isAdmin === '1';
+            const isAdminRoleSelected = roleOption && roleOption.dataset.isAdminRole === '1';
+
+            // Protect current admin from removing/downgrading their own ADMIN role
+            if (isSelf && isCurrentAdmin) {
+                if (!isAdminRoleSelected) {
+                    e.preventDefault();
+                    alert("You cannot remove or change your own ADMIN role.");
+                    return false;
+                }
+                if (temporaryToggle && temporaryToggle.checked) {
+                    e.preventDefault();
+                    alert("Your own ADMIN role cannot be temporary or expire.");
+                    return false;
+                }
+            }
+
+            // ADMIN role may not be temporary for any user
+            if (isAdminRoleSelected && temporaryToggle && temporaryToggle.checked) {
+                e.preventDefault();
+                alert("The ADMIN role cannot be marked as temporary or given an expiry date.");
+                return false;
+            }
+        });
+    }
+
+    // Initial paint
+    updateExpiryVisibility();
+    updateRoleSummary();
+});
+</script>
 {% endblock %}
+
 

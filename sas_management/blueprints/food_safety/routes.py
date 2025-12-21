@@ -4,8 +4,8 @@ from flask_login import login_required, current_user
 from datetime import datetime
 from decimal import Decimal
 
-from models import db, HACCPChecklist, TemperatureLog, SafetyIncident, UserRole
-from utils import role_required, permission_required
+from sas_management.models import db, HACCPChecklist, TemperatureLog, SafetyIncident, UserRole
+from sas_management.utils import role_required, permission_required
 
 food_safety_bp = Blueprint("food_safety", __name__, url_prefix="/food-safety")
 

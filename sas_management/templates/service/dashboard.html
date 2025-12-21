@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block content %}
+{% if schema_error %}
+<div class="alert alert-danger" style="margin: 1rem; padding: 1rem; background: #fee; border: 1px solid #fcc; border-radius: 6px;">
+    <strong>⚠️ Database Schema Issue</strong>
+    <p style="margin: 0.5rem 0 0 0;">{{ schema_error }}</p>
+</div>
+{% endif %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Operations · Event Service</p>
+        <h1>Event Service Dashboard</h1>
+        <p class="muted">Manage service events, track assignments, and monitor service delivery.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('service.event_new') }}">+ New Service Event</a>
+        <a class="btn-secondary" href="{{ url_for('service.events') }}">View All Events</a>
+        <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Dashboard</a>
+    </div>
+</section>
+
+<!-- Statistics Cards -->
+<section class="panel">
+    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <article class="kpi-card kpi-primary">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-content">
+                <p>Total Events</p>
+                <h2>{{ total_events }}</h2>
+            </div>
+        </article>
+        <article class="kpi-card kpi-primary">
+            <div class="kpi-icon">🎯</div>
+            <div class="kpi-content">
+                <p>Events Today</p>
+                <h2 style="color: #F26822;">{{ events_today }}</h2>
+            </div>
+        </article>
+        <article class="kpi-card kpi-primary">
+            <div class="kpi-icon">📆</div>
+            <div class="kpi-content">
+                <p>This Week</p>
+                <h2 style="color: #2d5016;">{{ events_this_week }}</h2>
+            </div>
+        </article>
+        <article class="kpi-card kpi-primary">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-content">
+                <p>Completed</p>
+                <h2 style="color: #2ecc71;">{{ completed }}</h2>
+            </div>
+        </article>
+    </div>
+    
+    <!-- Status Breakdown -->
+    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem;">
+        <article class="kpi-card" style="border-left: 4px solid #3498db;">
+            <div class="kpi-content">
+                <p>Planned</p>
+                <h3>{{ planned }}</h3>
+            </div>
+        </article>
+        <article class="kpi-card" style="border-left: 4px solid #f39c12;">
+            <div class="kpi-content">
+                <p>Confirmed</p>
+                <h3>{{ confirmed }}</h3>
+            </div>
+        </article>
+        <article class="kpi-card" style="border-left: 4px solid #9b59b6;">
+            <div class="kpi-content">
+                <p>In Progress</p>
+                <h3>{{ in_progress }}</h3>
+            </div>
+        </article>
+    </div>
+</section>
+
+<!-- Upcoming Events -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Upcoming Events (Next 14 Days)</h3>
+        <a href="{{ url_for('service.events') }}" class="btn-secondary">View All</a>
+    </div>
+    {% if upcoming %}
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Venue</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in upcoming %}
+                <tr>
+                    <td>
+                        <strong>{{ event.title }}</strong>
+                        {% if event.client %}
+                        <br><small class="muted">{{ event.client.name }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ event.event_type or '—' }}</td>
+                    <td>
+                        {% if event.event_date %}
+                        {{ event.event_date.strftime('%b %d, %Y') }}
+                        {% if event.event_date == today %}
+                        <br><small class="badge" style="background: #F26822; color: white;">Today</small>
+                        {% endif %}
+                        {% else %}
+                        <span class="muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ event.venue or '—' }}</td>
+                    <td>
+                        <span class="badge" style="background: {% if event.status == 'Completed' %}#2ecc71{% elif event.status == 'In Progress' %}#9b59b6{% elif event.status == 'Confirmed' %}#f39c12{% else %}#3498db{% endif %}; color: white;">
+                            {{ event.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('service.event_view', event_id=event.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 3rem; color: #6c757d;">
+        <div style="max-width: 400px; margin: 0 auto;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #374151;">No upcoming events</h3>
+            <p class="muted" style="margin-bottom: 1.5rem;">Create your first service event to get started.</p>
+            <a href="{{ url_for('service.event_new') }}" class="btn-primary">+ Create Service Event</a>
+        </div>
+    </div>
+    {% endif %}
+</section>
+
+<!-- Recent Activity -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Events</h3>
+    </div>
+    {% if recent_events %}
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Created</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in recent_events %}
+                <tr>
+                    <td>
+                        <strong>{{ event.title }}</strong>
+                        {% if event.client %}
+                        <br><small class="muted">{{ event.client.name }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ event.created_at.strftime('%b %d, %Y') if event.created_at else '—' }}</td>
+                    <td>
+                        <span class="badge" style="background: {% if event.status == 'Completed' %}#2ecc71{% elif event.status == 'In Progress' %}#9b59b6{% elif event.status == 'Confirmed' %}#f39c12{% else %}#3498db{% endif %}; color: white;">
+                            {{ event.status }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('service.event_view', event_id=event.id) }}" class="btn-ghost btn-sm">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 2rem; color: #6c757d;">
+        <p>No recent events.</p>
+    </div>
+    {% endif %}
+</section>
+{% endblock %}

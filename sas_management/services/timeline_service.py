@@ -4,7 +4,7 @@ from flask import current_app
 def export_timeline_pdf(event_id):
     """Export timeline as PDF."""
     try:
-        from models import Timeline
+        from sas_management.models import Timeline
         timeline = Timeline.query.filter_by(event_id=event_id).first()
         if not timeline:
             return {'success': False, 'error': 'Timeline not found'}

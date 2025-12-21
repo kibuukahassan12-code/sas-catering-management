@@ -1,17 +1,30 @@
 import os
 import json
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, send_from_directory, url_for, jsonify, send_file
+from flask import Blueprint, current_app, flash, redirect, render_template, request, send_from_directory, url_for, jsonify, send_file, abort
 from flask_login import current_user, login_required
 
-from models import (
+from sas_management.models import (
     Course, Material, UserRole, db, Lesson, LessonResource, Enrollment,
     Quiz, QuizQuestion, QuizAttempt, QuizAnswer, Certificate, CourseProgress, User
 )
-from utils import role_required, paginate_query
+from sas_management.utils import role_required, paginate_query
 
-from services.university_service import (
+def require_university_enabled(f):
+    """Decorator to require Employee University module to be enabled."""
+    from functools import wraps
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_app.config.get("EMPLOYEE_UNIVERSITY_ENABLED", True):
+            if request.is_json or request.accept_mimetypes.accept_json:
+                return jsonify({"error": "Employee University is disabled"}), 403
+            return render_template("university/premium_locked.html"), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+from sas_management.services.university_service import (
     create_course,
     add_lesson,
     upload_resource,
@@ -31,111 +44,151 @@ def get_upload_folder():
     os.makedirs(upload_folder, exist_ok=True)
     return upload_folder
 
-@university_bp.route("/")
-@university_bp.route("/dashboard")
+@university_bp.route("/", endpoint="index")
+@university_bp.route("/dashboard", endpoint="dashboard")
 @login_required
-def index():
+@require_university_enabled
+def university_dashboard():
     """Main employee view - shows courses available to the current user's role."""
     try:
-        # Show courses that are published and either unrestricted (target_role=None) or match user's role
-        from sqlalchemy import or_
-        courses = Course.query.filter(
-            Course.published == True
-        ).filter(
-            or_(
-                Course.target_role == current_user.role,
-                Course.target_role.is_(None)
-            )
-        ).order_by(Course.title.asc()).all()
-        
-        # Use dashboard template directly
-        from sqlalchemy import func
-        
-        # Get user's enrolled courses with progress
-        enrollments = Enrollment.query.filter_by(user_id=current_user.id).all()
-        enrolled_courses = [e.course for e in enrollments]
-        
-        # Calculate KPIs
-        total_enrolled = len(enrolled_courses)
-        completed_courses = len([e for e in enrollments if e.completed])
-        in_progress_courses = total_enrolled - completed_courses
-        avg_progress = sum([e.progress for e in enrollments]) / total_enrolled if total_enrolled > 0 else 0
-        
-        # Get available courses (published and accessible) - limit to 5
-        enrolled_course_ids = [c.id for c in enrolled_courses]
-        available_query = Course.query.filter(Course.published == True).filter(
-            or_(
-                Course.target_role == current_user.role,
-                Course.target_role.is_(None)
-            )
-        )
-        if enrolled_course_ids:
-            available_query = available_query.filter(~Course.id.in_(enrolled_course_ids))
-        available_courses = available_query.order_by(Course.title.asc()).limit(5).all()
-        
-        # Recent activity (recent enrollments)
-        recent_enrollments = Enrollment.query.filter_by(user_id=current_user.id).order_by(
-            Enrollment.enrolled_at.desc()
-        ).limit(5).all()
-        
-        # Leaderboard (top users by completed courses)
-        try:
-            top_users = db.session.query(
-                User.id, User.email, func.count(Enrollment.id).label('completed_count')
-            ).join(Enrollment).filter(
-                Enrollment.completed == True
-            ).group_by(User.id, User.email).order_by(
-                func.count(Enrollment.id).desc()
-            ).limit(5).all()
-        except:
-            top_users = []
-        
-        return render_template("university/university_dashboard.html",
-            enrolled_courses=enrolled_courses,
-            available_courses=available_courses,
-            total_enrolled=total_enrolled,
-            completed_courses=completed_courses,
-            in_progress_courses=in_progress_courses,
-            avg_progress=int(avg_progress),
-            recent_enrollments=recent_enrollments,
-            top_users=top_users,
-            enrollments=enrollments
-        )
+        # Safe query - only use existing fields
+        courses = Course.query.filter(Course.published == True).order_by(Course.title.asc()).limit(6).all()
+        return render_template("university/university_dashboard.html", courses=courses)
     except Exception as e:
         current_app.logger.exception(f"Error loading university dashboard: {e}")
-        # Return empty dashboard to prevent crash
-        return render_template("university/university_dashboard.html",
-            enrolled_courses=[],
-            available_courses=[],
-            total_enrolled=0,
-            completed_courses=0,
-            in_progress_courses=0,
-            avg_progress=0,
-            recent_enrollments=[],
-            top_users=[],
-            enrollments=[]
+        return render_template("university/university_dashboard.html", courses=[])
+
+# Alias for compatibility
+dashboard = university_dashboard
+
+@university_bp.route("/upload", methods=["GET", "POST"])
+@login_required
+@require_university_enabled
+def upload():
+    """Upload university material."""
+    if request.method == "POST":
+        file = request.files.get("file")
+        if not file or file.filename == "":
+            flash("No file selected", "danger")
+            return redirect(request.url)
+
+        filename = secure_filename(file.filename)
+        save_path = os.path.join(
+            current_app.root_path,
+            "static",
+            "uploads",
+            "university",
+            filename
         )
+        file.save(save_path)
+        flash("File uploaded successfully", "success")
+        return redirect(url_for("university.dashboard"))
+
+    return render_template("university/upload.html")
 
 @university_bp.route("/course/<int:course_id>")
+@university_bp.route("/courses/<int:course_id>")
 @login_required
-def view_course(course_id):
+def employee_course_detail(course_id):
     """View course details and materials for employees."""
     try:
         course = Course.query.get_or_404(course_id)
         
-        # Check access: course must be published and either unrestricted or match user's role
+        # Check access: course must be published
         if not course.published:
             flash("This course is not available.", "warning")
-            return redirect(url_for("university.index"))
+            return redirect(url_for("university.employee_course_list"))
         
-        if course.target_role and course.target_role != current_user.role:
-            flash("You do not have access to this course.", "warning")
-            return redirect(url_for("university.index"))
+        # Get materials for this course
+        materials = Material.query.filter_by(course_id=course_id).order_by(Material.order_index.asc()).all()
         
-        return render_template("university/course_view.html", course=course)
+        # Check if user is enrolled
+        enrollment = Enrollment.query.filter_by(
+            user_id=current_user.id,
+            course_id=course_id
+        ).first()
+        
+        # Create enrollment if viewing for first time
+        if not enrollment:
+            enrollment = Enrollment(
+                user_id=current_user.id,
+                course_id=course_id
+            )
+            db.session.add(enrollment)
+            db.session.commit()
+        
+        # Check completion status
+        is_completed = enrollment.completed_at is not None
+        
+        return render_template(
+            "university/employee_course_detail.html",
+            course=course,
+            materials=materials,
+            enrollment=enrollment,
+            is_completed=is_completed
+        )
     except Exception as e:
         current_app.logger.exception(f"Error loading course: {e}")
-        return redirect(url_for("university.index"))
+        flash("Error loading course.", "danger")
+        return redirect(url_for("university.employee_course_list"))
+
+@university_bp.route("/course/<int:course_id>/complete", methods=["POST"])
+@login_required
+def mark_course_complete(course_id):
+    """Mark a course as complete for the current user."""
+    try:
+        course = Course.query.get_or_404(course_id)
+        if not course.published:
+            flash("Course not available.", "warning")
+            return redirect(url_for("university.employee_course_list"))
+        
+        enrollment = Enrollment.query.filter_by(
+            user_id=current_user.id,
+            course_id=course_id
+        ).first()
+        
+        if not enrollment:
+            flash("You are not enrolled in this course.", "warning")
+            return redirect(url_for("university.employee_course_detail", course_id=course_id))
+        
+        if enrollment.completed_at is None:
+            enrollment.completed_at = datetime.utcnow()
+            db.session.commit()
+            flash("Course marked as complete!", "success")
+        else:
+            flash("Course already completed.", "info")
+        
+        return redirect(url_for("university.employee_course_detail", course_id=course_id))
+    except Exception as e:
+        current_app.logger.exception(f"Error marking course complete: {e}")
+        flash("Error updating course status.", "danger")
+        return redirect(url_for("university.employee_course_list"))
+
+@university_bp.route("/course/<int:course_id>/certificate")
+@login_required
+def view_certificate_employee(course_id):
+    """View certificate for completed course (HTML only, no PDF)."""
+    try:
+        course = Course.query.get_or_404(course_id)
+        enrollment = Enrollment.query.filter_by(
+            user_id=current_user.id,
+            course_id=course_id
+        ).first()
+        
+        if not enrollment or not enrollment.completed_at:
+            flash("Course must be completed to view certificate.", "warning")
+            return redirect(url_for("university.employee_course_detail", course_id=course_id))
+        
+        return render_template(
+            "university/certificate.html",
+            course=course,
+            enrollment=enrollment,
+            user=current_user
+        )
+    except Exception as e:
+        current_app.logger.exception(f"Error loading certificate: {e}")
+        flash("Error loading certificate.", "danger")
+        return redirect(url_for("university.employee_course_list"))
 
 @university_bp.route("/material/<int:material_id>")
 @login_required
@@ -144,52 +197,74 @@ def view_material(material_id):
     try:
         material = Material.query.get_or_404(material_id)
         
-        # Check access
-        if material.course.target_role and material.course.target_role != current_user.role:
-            flash("You do not have access to this material.", "warning")
-            return redirect(url_for("university.index"))
+        # Check course is published
+        if not material.course.published:
+            flash("This material is not available.", "warning")
+            return redirect(url_for("university.employee_course_list"))
         
         return render_template("university/material_view.html", material=material)
     except Exception as e:
         current_app.logger.exception(f"Error loading material: {e}")
-        return redirect(url_for("university.index"))
+        return redirect(url_for("university.employee_course_list"))
 
 @university_bp.route("/material/<int:material_id>/download")
 @login_required
 def download_material(material_id):
     """Download a material file (protected route)."""
-    material = Material.query.get_or_404(material_id)
-    if material.course.target_role != current_user.role:
-        flash("You do not have access to this material.", "warning")
-        return redirect(url_for("university.index"))
-    
-    upload_folder = get_upload_folder()
-    file_path = os.path.join(upload_folder, material.file_path)
-    
-    if os.path.exists(file_path) and os.path.isfile(file_path):
-        return send_from_directory(
-            upload_folder,
-            material.file_path,
-            as_attachment=True
-        )
-    else:
+    try:
+        material = Material.query.get_or_404(material_id)
+        
+        # Check course is published
+        if not material.course.published:
+            flash("This material is not available.", "warning")
+            return redirect(url_for("university.employee_course_list"))
+        
+        # Get file path
+        if material.file_path:
+            # Try static folder first
+            static_path = os.path.join(current_app.root_path, "static", material.file_path)
+            if os.path.exists(static_path):
+                return send_from_directory(
+                    os.path.dirname(static_path),
+                    os.path.basename(static_path),
+                    as_attachment=True
+                )
+            
+            # Try upload folder
+            upload_folder = get_upload_folder()
+            file_path = os.path.join(upload_folder, os.path.basename(material.file_path))
+            if os.path.exists(file_path):
+                return send_from_directory(
+                    upload_folder,
+                    os.path.basename(material.file_path),
+                    as_attachment=True
+                )
+        
         flash("File not found.", "warning")
         return redirect(url_for("university.view_material", material_id=material_id))
+    except Exception as e:
+        current_app.logger.exception(f"Error downloading material: {e}")
+        flash("Error downloading file.", "danger")
+        return redirect(url_for("university.employee_course_list"))
 
 # Admin routes
 @university_bp.route("/admin/courses")
 @login_required
 @role_required(UserRole.Admin)
-def admin_courses_list():
+def admin_course_list():
     """Admin: List all courses."""
     pagination = paginate_query(Course.query.order_by(Course.title.asc()))
     return render_template(
-        "university/admin/courses_list.html",
+        "university/admin/courses.html",
         courses=pagination.items,
         pagination=pagination,
     )
 
+# Route alias for compatibility
+admin_courses_list = admin_course_list
+
 @university_bp.route("/admin/courses/add", methods=["GET", "POST"])
+@university_bp.route("/admin/course/new", methods=["GET", "POST"], endpoint="admin_course_create")
 @login_required
 @role_required(UserRole.Admin)
 def admin_courses_add():
@@ -197,40 +272,34 @@ def admin_courses_add():
     if request.method == "POST":
         title = request.form.get("title", "").strip()
         description = request.form.get("description", "").strip()
-        target_role_str = request.form.get("target_role", "")
+        published = request.form.get("published") == "on" or request.form.get("published") == "true"
 
-        if not title or not description or not target_role_str:
-            flash("All fields are required.", "danger")
+        if not title:
+            flash("Title is required.", "danger")
             return render_template(
                 "university/admin/course_form.html",
                 action="Add",
                 course=None,
-                roles=UserRole,
             )
 
-        try:
-            target_role = UserRole(target_role_str)
-        except ValueError:
-            flash("Invalid role selected.", "danger")
-            return render_template(
-                "university/admin/course_form.html",
-                action="Add",
-                course=None,
-                roles=UserRole,
-            )
-
-        course = Course(title=title, description=description, target_role=target_role)
+        course = Course(
+            title=title,
+            description=description,
+            published=published
+        )
         db.session.add(course)
         db.session.commit()
         flash("Course created successfully.", "success")
-        return redirect(url_for("university.admin_courses_list"))
+        return redirect(url_for("university.admin_course_list"))
 
     return render_template(
         "university/admin/course_form.html",
         action="Add",
         course=None,
-        roles=UserRole,
     )
+
+# Route alias for requested endpoint name
+admin_course_create = admin_courses_add
 
 @university_bp.route("/admin/courses/edit/<int:course_id>", methods=["GET", "POST"])
 @login_required
@@ -242,29 +311,35 @@ def admin_courses_edit(course_id):
     if request.method == "POST":
         course.title = request.form.get("title", course.title).strip()
         course.description = request.form.get("description", course.description).strip()
-        target_role_str = request.form.get("target_role", "")
+        course.published = request.form.get("published") == "on" or request.form.get("published") == "true"
 
-        if target_role_str:
-            try:
-                course.target_role = UserRole(target_role_str)
-            except ValueError:
-                flash("Invalid role selected.", "danger")
-                return render_template(
-                    "university/admin/course_form.html",
-                    action="Edit",
-                    course=course,
-                    roles=UserRole,
-                )
-
-        db.session.commit()
-        flash("Course updated successfully.", "success")
-        return redirect(url_for("university.admin_courses_list"))
+        try:
+            db.session.commit()
+            flash("Course updated successfully.", "success")
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error updating course: {e}")
+            flash("Error updating course.", "danger")
+        
+        return redirect(url_for("university.admin_course_list"))
 
     return render_template(
         "university/admin/course_form.html",
         action="Edit",
         course=course,
-        roles=UserRole,
+    )
+
+@university_bp.route("/admin/course/<int:id>/materials", endpoint="admin_course_materials")
+@login_required
+@role_required(UserRole.Admin)
+def admin_course_materials(id):
+    """Admin: View and manage materials for a course."""
+    course = Course.query.get_or_404(id)
+    materials = Material.query.filter_by(course_id=id).order_by(Material.order_index.asc()).all()
+    return render_template(
+        "university/admin/course_materials.html",
+        course=course,
+        materials=materials
     )
 
 @university_bp.route("/admin/courses/delete/<int:course_id>", methods=["POST"])
@@ -276,7 +351,54 @@ def admin_courses_delete(course_id):
     db.session.delete(course)
     db.session.commit()
     flash("Course deleted.", "info")
-    return redirect(url_for("university.admin_courses_list"))
+    return redirect(url_for("university.admin_course_list"))
+
+# Admin progress view
+@university_bp.route("/admin/progress")
+@login_required
+@role_required(UserRole.Admin)
+def admin_progress():
+    """Admin: View employee course progress."""
+    try:
+        # Get all employees (users, excluding admins)
+        employees = User.query.filter(User.role != UserRole.Admin).all()
+        
+        progress_data = []
+        for employee in employees:
+            # Get enrollments for this employee
+            enrollments = Enrollment.query.filter_by(user_id=employee.id).all()
+            
+            enrolled_count = len(enrollments)
+            # Check completion: completed_at is not None means completed
+            completed_count = len([e for e in enrollments if e.completed_at is not None])
+            
+            # Calculate progress percentage
+            if enrolled_count > 0:
+                progress_percent = (completed_count / enrolled_count) * 100
+            else:
+                progress_percent = 0
+            
+            progress_data.append({
+                'employee': employee,
+                'enrolled_count': enrolled_count,
+                'completed_count': completed_count,
+                'progress_percent': round(progress_percent, 1)
+            })
+        
+        # Sort by progress percentage (descending)
+        progress_data.sort(key=lambda x: x['progress_percent'], reverse=True)
+        
+        return render_template(
+            "university/admin/progress.html",
+            progress_data=progress_data
+        )
+    except Exception as e:
+        current_app.logger.error(f"Error loading admin progress: {e}")
+        flash("Error loading progress data.", "danger")
+        return render_template(
+            "university/admin/progress.html",
+            progress_data=[]
+        )
 
 @university_bp.route("/admin/materials")
 @login_required
@@ -428,28 +550,107 @@ def admin_materials_delete(material_id):
     flash("Material deleted.", "info")
     return redirect(url_for("university.admin_materials_list"))
 
+@university_bp.route("/admin/course/upload", methods=["GET", "POST"])
+@login_required
+@role_required(UserRole.Admin)
+def admin_course_upload():
+    """Admin: Upload course video."""
+    if request.method == "GET":
+        # Get all courses for dropdown
+        courses = Course.query.order_by(Course.title.asc()).all()
+        return render_template(
+            "university/admin/upload.html",
+            courses=courses
+        )
+    
+    # POST: Handle file upload
+    course_id = request.form.get("course_id", type=int)
+    title = request.form.get("title", "").strip()
+    upload_file = request.files.get("upload_file")
+    
+    if not course_id:
+        flash("Course selection is required.", "danger")
+        courses = Course.query.order_by(Course.title.asc()).all()
+        return render_template("university/admin/upload.html", courses=courses)
+    
+    if not title:
+        flash("Title is required.", "danger")
+        courses = Course.query.order_by(Course.title.asc()).all()
+        return render_template("university/admin/upload.html", courses=courses)
+    
+    if not upload_file or not upload_file.filename:
+        flash("File is required.", "danger")
+        courses = Course.query.order_by(Course.title.asc()).all()
+        return render_template("university/admin/upload.html", courses=courses)
+    
+    # Verify course exists
+    course = Course.query.get_or_404(course_id)
+    
+    # Accept all file formats - no restriction
+    mime_type = upload_file.content_type or "application/octet-stream"
+    
+    # Get upload folder from config
+    upload_folder = current_app.config.get("UNIVERSITY_UPLOAD_FOLDER", "sas_management/static/uploads/university")
+    # Handle both relative and absolute paths
+    if os.path.isabs(upload_folder):
+        upload_path = upload_folder
+    else:
+        upload_path = os.path.join(current_app.root_path, "..", upload_folder)
+        upload_path = os.path.abspath(upload_path)
+    os.makedirs(upload_path, exist_ok=True)
+    
+    # Save file with secure filename
+    original_filename = upload_file.filename
+    filename = secure_filename(original_filename)
+    # Add timestamp to avoid collisions
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_{filename}"
+    file_path = os.path.join(upload_path, filename)
+    
+    upload_file.save(file_path)
+    
+    # Store relative path for Material record (relative to static folder for URL generation)
+    # Use path relative to static folder
+    static_relative = os.path.join("uploads", "university", filename).replace("\\", "/")
+    relative_path = static_relative
+    
+    # Create Material record
+    material = Material(
+        course_id=course_id,
+        title=title,
+        file_path=relative_path,
+        material_type=mime_type,
+        content=f"File upload: {original_filename}"
+    )
+    db.session.add(material)
+    db.session.commit()
+    
+    flash(f"File uploaded successfully: {original_filename}", "success")
+    return redirect(url_for("university.admin_materials_list"))
+
+# Alias for requested endpoint name
+@university_bp.route("/admin/upload", methods=["GET", "POST"], endpoint="admin_material_upload")
+@login_required
+@role_required(UserRole.Admin)
+def admin_material_upload():
+    """Admin: Upload material - alias for admin_course_upload."""
+    return admin_course_upload()
+
 # ============================
 # COMPREHENSIVE ROUTES
 # ============================
 
 @university_bp.route("/courses")
 @login_required
-def courses_list():
-    """Course catalog with search and filters."""
+def employee_course_list():
+    """Course catalog - shows only published courses."""
     try:
         from sqlalchemy import or_
-        import json
         
         search = request.args.get('search', '').strip()
-        category = request.args.get('category', '')
-        difficulty = request.args.get('difficulty', '')
         
-        query = Course.query.filter(Course.published == True).filter(
-            or_(
-                Course.target_role == current_user.role,
-                Course.target_role.is_(None)
-            )
-        )
+        # Only show published courses - no role filtering
+        query = Course.query.filter(Course.published == True)
         
         if search:
             query = query.filter(
@@ -470,20 +671,15 @@ def courses_list():
         # Get user enrollments to show enrollment status
         enrolled_course_ids = [e.course_id for e in Enrollment.query.filter_by(user_id=current_user.id).all()]
         
-        categories = db.session.query(Course.category).distinct().filter(Course.category.isnot(None)).all()
-        categories = [c[0] for c in categories if c[0]]
-        
-        return render_template("university/course_list.html",
+        return render_template("university/employee_courses.html",
             courses=pagination.items,
             pagination=pagination,
             search=search,
-            category=category,
-            difficulty=difficulty,
-            enrolled_course_ids=enrolled_course_ids,
-            categories=categories
+            enrolled_course_ids=enrolled_course_ids
         )
     except Exception as e:
         current_app.logger.exception(f"Error loading courses list: {e}")
+        return render_template("university/employee_courses.html", courses=[], pagination=None, search="", enrolled_course_ids=[])
         return render_template("university/course_list.html",
             courses=[], pagination=None, search="", category="", difficulty="",
             enrolled_course_ids=[], categories=[]
@@ -544,9 +740,10 @@ def course_view_enhanced(course_id=None, slug=None):
         current_app.logger.exception(f"Error loading course: {e}")
         return redirect(url_for("university.courses_list"))
 
+@university_bp.route("/lesson/<int:lesson_id>")
 @university_bp.route("/lessons/<int:lesson_id>")
 @login_required
-def lesson_view(lesson_id):
+def view_lesson(lesson_id):
     """View lesson content and resources."""
     try:
         lesson = Lesson.query.get_or_404(lesson_id)
@@ -623,7 +820,7 @@ def lesson_view(lesson_id):
 
 @university_bp.route("/quiz/<int:quiz_id>")
 @login_required
-def quiz_view(quiz_id):
+def view_quiz(quiz_id):
     """Take a quiz."""
     try:
         quiz = Quiz.query.get_or_404(quiz_id)
@@ -683,18 +880,21 @@ def quiz_view(quiz_id):
         current_app.logger.exception(f"Error loading quiz: {e}")
         return redirect(url_for("university.index"))
 
+@university_bp.route("/certificate/<int:certificate_id>")
 @university_bp.route("/certificates/<int:certificate_id>/view")
 @login_required
-def certificate_view(certificate_id):
+def view_certificate(certificate_id):
     """View certificate."""
     try:
         certificate = Certificate.query.get_or_404(certificate_id)
         enrollment = certificate.enrollment
         
-        # Check ownership
-        if enrollment.user_id != current_user.id and current_user.role != UserRole.Admin:
-            flash("You do not have access to this certificate.", "warning")
-            return redirect(url_for("university.index"))
+        # Check ownership - Admin bypass
+        if enrollment.user_id != current_user.id:
+            if not (hasattr(current_user, 'is_admin') and current_user.is_admin):
+                if current_user.role != UserRole.Admin:
+                    flash("You do not have access to this certificate.", "warning")
+                    return redirect(url_for("university.index"))
         
         course = enrollment.course
         user = enrollment.user
@@ -746,7 +946,7 @@ def mark_lesson_complete(lesson_id):
     except Exception as e:
         current_app.logger.exception(f"Error marking lesson complete: {e}")
     
-    return redirect(url_for("university.lesson_view", lesson_id=lesson_id))
+    return redirect(url_for("university.view_lesson", lesson_id=lesson_id))
 
 # REST API endpoints
 @university_bp.route("/api/quiz/<int:quiz_id>/submit", methods=["POST"])
@@ -770,8 +970,11 @@ def api_submit_quiz(quiz_id):
 @login_required
 def api_user_courses(user_id):
     """API: Get user's courses."""
-    if user_id != current_user.id and current_user.role != UserRole.Admin:
-        return jsonify({"error": "Unauthorized"}), 403
+    # Admin bypass
+    if user_id != current_user.id:
+        if not (hasattr(current_user, 'is_admin') and current_user.is_admin):
+            if current_user.role != UserRole.Admin:
+                return jsonify({"error": "Unauthorized"}), 403
     
     try:
         result = get_user_courses(user_id)
@@ -788,10 +991,12 @@ def api_certificate_download(certificate_id):
         certificate = Certificate.query.get_or_404(certificate_id)
         enrollment = certificate.enrollment
         
-        # Check ownership
-        if enrollment.user_id != current_user.id and current_user.role != UserRole.Admin:
-            flash("You do not have access to this certificate.", "warning")
-            return redirect(url_for("university.index"))
+        # Check ownership - Admin bypass
+        if enrollment.user_id != current_user.id:
+            if not (hasattr(current_user, 'is_admin') and current_user.is_admin):
+                if current_user.role != UserRole.Admin:
+                    flash("You do not have access to this certificate.", "warning")
+                    return redirect(url_for("university.index"))
         
         # Check if PDF exists
         if certificate.pdf_path:
@@ -801,7 +1006,7 @@ def api_certificate_download(certificate_id):
                                download_name=f"certificate_{certificate.certificate_ref}.pdf")
         
         flash("Certificate PDF not found. Please contact administrator.", "warning")
-        return redirect(url_for("university.certificate_view", certificate_id=certificate_id))
+        return redirect(url_for("university.view_certificate", certificate_id=certificate_id))
     except Exception as e:
         current_app.logger.exception(f"Error downloading certificate: {e}")
         return redirect(url_for("university.index"))
@@ -844,4 +1049,34 @@ def export_static():
         current_app.logger.exception(f"Error exporting static HTML: {e}")
         flash(f"Error exporting static HTML: {str(e)}", "danger")
         return redirect(url_for("university.index"))
+
+# Route alias for requested endpoint name (admin_course_edit)
+@university_bp.route("/admin/course/<int:id>/edit", methods=["GET", "POST"], endpoint="admin_course_edit")
+@login_required
+@role_required(UserRole.Admin)
+def admin_course_edit(id):
+    """Admin: Edit an existing course (alias route)."""
+    return admin_courses_edit(id)
+
+# Backward compatibility aliases for existing template references
+@university_bp.route("/lessons/<int:lesson_id>")
+@login_required
+def lesson_view(lesson_id):
+    """Backward compatibility alias for view_lesson."""
+    return view_lesson(lesson_id)
+
+@university_bp.route("/certificates/<int:certificate_id>/view")
+@login_required
+def certificate_view(certificate_id):
+    """Backward compatibility alias for view_certificate."""
+    return view_certificate(certificate_id)
+
+# Backward compatibility: quiz_view endpoint
+# The route /quiz/<id> is handled by view_quiz, but templates may reference quiz_view
+# Flask will use the function name as endpoint, so we need an alias
+def quiz_view(quiz_id):
+    """Backward compatibility alias for view_quiz."""
+    return view_quiz(quiz_id)
+# Register the alias route
+university_bp.add_url_rule("/quiz/<int:quiz_id>", "quiz_view", quiz_view, methods=["GET"])
 

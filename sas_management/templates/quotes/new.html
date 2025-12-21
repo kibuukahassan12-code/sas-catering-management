@@ -30,7 +30,7 @@
             <select name="event_id">
                 <option value="">No event linked</option>
                 {% for event in events %}
-                <option value="{{ event.id }}" {% if selected_event == event.id|string %}selected{% endif %}>{{ event.event_name }} · {{ event.event_date.strftime('%b %d, %Y') }} · {{ event.status }}</option>
+                <option value="{{ event.id }}" {% if selected_event == event.id|string %}selected{% endif %}>{{ event.event_name }} · {{ (event.event_date.strftime('%b %d, %Y') if event.event_date else 'No Date') }} · {{ event.status }}</option>
                 {% endfor %}
             </select>
             <small class="muted">Link this quote to an existing event, or leave blank for standalone quotes</small>

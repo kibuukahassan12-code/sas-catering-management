@@ -8,6 +8,9 @@
     </div>
     <div class="quick-links">
         <a class="btn-primary" href="{{ url_for('pos.launcher') }}">Open Terminal</a>
+        {% if current_user.role in ['Admin'] %}
+        <a class="btn-secondary" href="{{ url_for('pos.terminals_list') }}">Manage Terminals</a>
+        {% endif %}
         <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Dashboard</a>
     </div>
 </section>
@@ -121,7 +124,7 @@
                             {% endif %}
                         </td>
                         <td>{{ CURRENCY }}{{ "{:,.0f}".format(shift.starting_cash or 0) }}</td>
-                        <td><span class="badge" style="background: #2ecc71;">{{ shift.status }}</span></td>
+                        <td><span class="badge" style="background: var(--brand); color: #000;">{{ shift.status }}</span></td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -166,11 +169,11 @@
                         <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(order.total_amount or 0) }}</strong></td>
                         <td>
                             {% if order.status == 'paid' %}
-                            <span class="badge" style="background: #2ecc71;">Paid</span>
+                            <span class="badge" style="background: var(--brand); color: #000;">Paid</span>
                             {% elif order.status == 'partially_paid' %}
-                            <span class="badge" style="background: #f39c12;">Partial</span>
+                            <span class="badge" style="background: var(--accent); color: #000;">Partial</span>
                             {% elif order.status == 'cancelled' %}
-                            <span class="badge" style="background: #e74c3c;">Cancelled</span>
+                            <span class="badge" style="background: #e74c3c; color: white;">Cancelled</span>
                             {% else %}
                             <span class="badge">{{ order.status }}</span>
                             {% endif %}
@@ -225,7 +228,7 @@
 }
 
 .kpi-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
     border-radius: 12px;
     padding: 1.5rem;
     display: flex;
@@ -242,7 +245,7 @@
 }
 
 .kpi-card:nth-child(2) {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
 }
 
 .kpi-card:nth-child(3) {

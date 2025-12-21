@@ -1,0 +1,133 @@
+{% extends "ai/base.html" %}
+{% block ai_content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Premium · SAS AI</p>
+        <h1>{{ feature.name }}</h1>
+        <p class="muted">{{ feature.description }}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('sas_ai.dashboard') }}">← Back to Dashboard</a>
+        <a class="btn-secondary" href="{{ url_for('sas_ai.feature_list') }}">All Features</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div style="display: flex; align-items: start; gap: 2rem; margin-bottom: 2rem;">
+        <div style="font-size: 4rem;">{{ feature.icon }}</div>
+        <div style="flex: 1;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                {% if enabled %}
+                <span class="sas-ai-badge sas-ai-badge-enabled">Enabled</span>
+                {% else %}
+                <span class="sas-ai-badge sas-ai-badge-disabled">Disabled</span>
+                {% endif %}
+                {% if feature.business_value == "Revenue" %}
+                <span class="sas-ai-badge sas-ai-badge-revenue">Revenue Impact</span>
+                {% elif feature.business_value == "Cost" %}
+                <span class="sas-ai-badge sas-ai-badge-cost">Cost Optimization</span>
+                {% elif feature.business_value == "Risk" %}
+                <span class="sas-ai-badge sas-ai-badge-risk">Risk Management</span>
+                {% elif feature.business_value == "Efficiency" %}
+                <span class="sas-ai-badge sas-ai-badge-efficiency">Efficiency</span>
+                {% endif %}
+            </div>
+            <h2 style="margin: 0 0 1rem 0; font-size: 1.5rem; font-weight: 600; color: #111827;">Feature Details</h2>
+            <p style="margin: 0 0 1.5rem 0; color: #374151; line-height: 1.6; font-size: 1rem;">
+                {{ feature.description }}
+            </p>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem;">
+            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;">Category</div>
+            <div style="font-size: 1.125rem; font-weight: 600; color: #111827;">{{ feature.category }}</div>
+        </div>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem;">
+            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;">Integration</div>
+            <div style="font-size: 1.125rem; font-weight: 600; color: #111827;">{{ feature.module_integration|title }} Module</div>
+        </div>
+        <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem;">
+            <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.5rem;">Status</div>
+            <div style="font-size: 1.125rem; font-weight: 600; color: {% if enabled %}var(--sas-primary, #F26822){% else %}#6b7280{% endif %};">
+                {% if enabled %}Active{% else %}Inactive{% endif %}
+            </div>
+        </div>
+    </div>
+    
+    {% if not enabled %}
+    <div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 0.5rem; padding: 1.5rem; margin-top: 2rem;">
+        <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600; color: #92400e;">Feature Disabled</h3>
+        <p style="margin: 0; color: #92400e; font-size: 0.875rem;">
+            This feature is currently disabled. Contact an administrator to enable it in the system configuration.
+        </p>
+    </div>
+    {% else %}
+    <div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 0.5rem; padding: 1.5rem; margin-top: 2rem;">
+        <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 600; color: #065f46;">Feature Active</h3>
+        <p style="margin: 0 0 1rem 0; color: #065f46; font-size: 0.875rem;">
+            {% if feature.key == 'ai_chat' %}
+            This feature is enabled. Open the chat interface to start using SAS AI Chat.
+            {% else %}
+            This feature is enabled and available for use. You can test it using the API endpoint below.
+            {% endif %}
+        </p>
+        <div style="margin-top: 1rem; display: flex; gap: 0.75rem;">
+            {% if feature.key == 'ai_chat' %}
+            <a href="{{ url_for('sas_ai.chat_ui') }}" class="btn-primary">
+                Open Chat Interface
+            </a>
+            {% else %}
+            <button type="button" id="test-feature-btn" class="btn-primary" onclick="testFeature('{{ feature.key }}')">
+                Test Feature
+            </button>
+            {% endif %}
+        </div>
+        {% if feature.key != 'ai_chat' %}
+        <div id="test-results" class="sas-ai-test-results" style="display: none;">
+            <pre id="test-results-content"></pre>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+
+<section class="panel" style="background: #f9fafb; border: 1px solid #e5e7eb;">
+    <div style="padding: 1.5rem;">
+        <h3 style="margin: 0 0 1rem 0; font-size: 1.125rem; font-weight: 600; color: #111827;">About AI Features</h3>
+        <p style="margin: 0 0 0.75rem 0; color: #374151; line-height: 1.6;">
+            All AI features in the SAS Management System are designed to be <strong>assistive only</strong>. 
+            They provide suggestions, recommendations, and insights that help you make better decisions.
+        </p>
+        <ul style="margin: 0.75rem 0 0 0; padding-left: 1.5rem; color: #374151; line-height: 1.6;">
+            <li>All suggestions require manual review and approval</li>
+            <li>No autonomous writes or changes to your data</li>
+            <li>You remain in full control of all decisions</li>
+            <li>AI provides insights, you make the final call</li>
+        </ul>
+    </div>
+</section>
+
+{% if enabled %}
+<script>
+function getTestData(featureKey) {
+    // Prepare test data based on feature
+    const testDataMap = {
+        'event_planner': { event_type: 'Wedding', guest_count: 100 },
+        'quotation_ai': { event_type: 'Corporate' },
+        'profit_analyzer': { timeframe: '30d' },
+        'pricing_advisor': { category: 'Food' },
+        'staff_coach': { staff_id: null },
+        'inventory_predictor': { horizon_days: 30 },
+        'client_analyzer': { client_id: null },
+        'compliance_monitor': { area: 'all' },
+        'ops_chat': { message: 'How can I plan an event?' },
+        'business_forecaster': { horizon_days: 90 },
+    };
+    return testDataMap[featureKey] || {};
+}
+</script>
+{% endif %}
+{% endblock %}
+

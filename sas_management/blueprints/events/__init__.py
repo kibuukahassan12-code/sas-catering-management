@@ -15,14 +15,14 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 from sqlalchemy import func, or_
 
-from models import (
+from sas_management.models import (
     Event, EventStatus, EventTimeline, EventStaffAssignment, EventChecklistItem,
     Venue, MenuPackage, Vendor, EventVendorAssignment, FloorPlan,
     db
 )
-from utils import paginate_query, get_decimal
-from utils.helpers import parse_date
-from utils.pdf_generator import generate_event_brief_pdf
+from sas_management.utils import paginate_query, get_decimal
+from sas_management.utils.helpers import parse_date, get_or_404
+from sas_management.utils.pdf_generator import generate_event_brief_pdf
 
 events_bp = Blueprint("events", __name__, url_prefix="/events")
 
@@ -80,7 +80,7 @@ def events_list():
 @login_required
 def event_view(event_id):
     """View event details."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     # Get assigned floor plan
     floor_plan = FloorPlan.query.filter_by(event_id=event_id).first()
@@ -226,7 +226,7 @@ def event_create():
 @login_required
 def event_edit(event_id):
     """Edit an event."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     venues = Venue.query.order_by(Venue.name.asc()).all()
     menu_packages = MenuPackage.query.order_by(MenuPackage.name.asc()).all()
     
@@ -345,7 +345,7 @@ def event_edit(event_id):
 @login_required
 def event_delete(event_id):
     """Delete an event."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     title = event.title
     db.session.delete(event)
     db.session.commit()
@@ -357,7 +357,7 @@ def event_delete(event_id):
 @login_required
 def event_update_status(event_id):
     """Update event status."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     status_str = request.form.get("status", "")
     
     try:
@@ -378,7 +378,7 @@ def event_update_status(event_id):
 @login_required
 def event_timeline(event_id):
     """View and manage event timeline."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     timelines = event.timelines
     
     return render_template(
@@ -392,7 +392,7 @@ def event_timeline(event_id):
 @login_required
 def timeline_add(event_id):
     """Add timeline milestone."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     timeline = EventTimeline(
         event_id=event.id,
@@ -412,7 +412,7 @@ def timeline_add(event_id):
 @login_required
 def timeline_toggle(event_id, timeline_id):
     """Toggle timeline milestone completion."""
-    timeline = EventTimeline.query.get_or_404(timeline_id)
+    timeline = get_or_404(EventTimeline, timeline_id)
     timeline.completed = not timeline.completed
     timeline.completed_at = datetime.utcnow() if timeline.completed else None
     db.session.commit()
@@ -423,7 +423,7 @@ def timeline_toggle(event_id, timeline_id):
 @login_required
 def timeline_delete(event_id, timeline_id):
     """Delete timeline milestone."""
-    timeline = EventTimeline.query.get_or_404(timeline_id)
+    timeline = get_or_404(EventTimeline, timeline_id)
     db.session.delete(timeline)
     db.session.commit()
     flash("Timeline milestone deleted.", "info")
@@ -438,7 +438,7 @@ def timeline_delete(event_id, timeline_id):
 @login_required
 def event_staffing(event_id):
     """View and manage staff assignments."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     return render_template(
         "events/staffing.html",
@@ -451,7 +451,7 @@ def event_staffing(event_id):
 @login_required
 def staffing_add(event_id):
     """Add staff assignment."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     assignment = EventStaffAssignment(
         event_id=event.id,
@@ -471,7 +471,7 @@ def staffing_add(event_id):
 @login_required
 def staffing_delete(event_id, assignment_id):
     """Delete staff assignment."""
-    assignment = EventStaffAssignment.query.get_or_404(assignment_id)
+    assignment = get_or_404(EventStaffAssignment, assignment_id)
     db.session.delete(assignment)
     db.session.commit()
     flash("Staff assignment removed.", "info")
@@ -486,7 +486,7 @@ def staffing_delete(event_id, assignment_id):
 @login_required
 def event_costing(event_id):
     """Event costing and budgeting page."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     # Calculate costs
     staff_cost = sum(
@@ -519,7 +519,7 @@ def event_costing(event_id):
 @login_required
 def costing_update(event_id):
     """Update event costs."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     event.actual_cost = get_decimal(request.form.get("actual_cost"))
     db.session.commit()
     flash("Costing updated.", "success")
@@ -534,7 +534,7 @@ def costing_update(event_id):
 @login_required
 def event_logistics(event_id):
     """Printable logistics sheet."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     return render_template(
         "events/logistics.html",
@@ -550,7 +550,7 @@ def event_logistics(event_id):
 @login_required
 def event_checklist(event_id):
     """Event checklist management."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     # Group items by category
     items_by_category = {}
@@ -574,7 +574,7 @@ def event_checklist(event_id):
 @login_required
 def checklist_add(event_id):
     """Add checklist item."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     item = EventChecklistItem(
         event_id=event.id,
@@ -593,7 +593,7 @@ def checklist_add(event_id):
 @login_required
 def checklist_toggle(event_id, item_id):
     """Toggle checklist item completion."""
-    item = EventChecklistItem.query.get_or_404(item_id)
+    item = get_or_404(EventChecklistItem, item_id)
     item.completed = not item.completed
     item.completed_at = datetime.utcnow() if item.completed else None
     db.session.commit()
@@ -604,7 +604,7 @@ def checklist_toggle(event_id, item_id):
 @login_required
 def checklist_delete(event_id, item_id):
     """Delete checklist item."""
-    item = EventChecklistItem.query.get_or_404(item_id)
+    item = get_or_404(EventChecklistItem, item_id)
     db.session.delete(item)
     db.session.commit()
     flash("Checklist item deleted.", "info")
@@ -619,7 +619,7 @@ def checklist_delete(event_id, item_id):
 @login_required
 def event_vendors(event_id):
     """View and manage vendor assignments."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     all_vendors = Vendor.query.order_by(Vendor.name.asc()).all()
     
     return render_template(
@@ -634,7 +634,7 @@ def event_vendors(event_id):
 @login_required
 def vendor_assign(event_id):
     """Assign vendor to event."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     assignment = EventVendorAssignment(
         event_id=event.id,
@@ -654,7 +654,7 @@ def vendor_assign(event_id):
 @login_required
 def vendor_unassign(event_id, assignment_id):
     """Remove vendor assignment."""
-    assignment = EventVendorAssignment.query.get_or_404(assignment_id)
+    assignment = get_or_404(EventVendorAssignment, assignment_id)
     db.session.delete(assignment)
     db.session.commit()
     flash("Vendor assignment removed.", "info")
@@ -669,7 +669,7 @@ def vendor_unassign(event_id, assignment_id):
 @login_required
 def event_approval(event_id):
     """Customer approval and signature page."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     return render_template(
         "events/approval.html",
@@ -681,7 +681,7 @@ def event_approval(event_id):
 @login_required
 def approval_submit(event_id):
     """Submit approval with signature."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     # Handle signature image upload
     signature_data = request.form.get("signature", "")
@@ -729,7 +729,7 @@ def approval_submit(event_id):
 @login_required
 def event_brief_pdf(event_id):
     """Generate and download event brief PDF."""
-    event = Event.query.get_or_404(event_id)
+    event = get_or_404(Event, event_id)
     
     try:
         pdf_path = generate_event_brief_pdf(event)
@@ -776,7 +776,7 @@ def venue_create():
 @login_required
 def venue_edit(venue_id):
     """Edit a venue."""
-    venue = Venue.query.get_or_404(venue_id)
+    venue = get_or_404(Venue, venue_id)
     
     if request.method == "POST":
         venue.name = request.form.get("name", "").strip()
@@ -872,7 +872,7 @@ def menu_package_create():
 @login_required
 def menu_package_edit(package_id):
     """Edit a menu package."""
-    package = MenuPackage.query.get_or_404(package_id)
+    package = get_or_404(MenuPackage, package_id)
     
     if request.method == "POST":
         try:
@@ -969,7 +969,7 @@ def vendor_create():
 @login_required
 def vendor_edit(vendor_id):
     """Edit a vendor."""
-    vendor = Vendor.query.get_or_404(vendor_id)
+    vendor = get_or_404(Vendor, vendor_id)
     
     if request.method == "POST":
         vendor.name = request.form.get("name", "").strip()
@@ -989,13 +989,13 @@ def vendor_edit(vendor_id):
 def assign_floor_plan(event_id):
     """Assign a floor plan to an event - silent operation."""
     try:
-        event = Event.query.get_or_404(event_id)
+        event = get_or_404(Event, event_id)
         floor_plan_id = request.json.get("floor_plan_id")
         
         if not floor_plan_id:
             return jsonify({"success": False, "error": "Floor plan ID required"}), 400
         
-        floor_plan = FloorPlan.query.get_or_404(floor_plan_id)
+        floor_plan = get_or_404(FloorPlan, floor_plan_id)
         floor_plan.event_id = event_id
         db.session.commit()
         

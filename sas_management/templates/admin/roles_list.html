@@ -74,10 +74,11 @@
         <h3>Quick Actions</h3>
     </div>
     <div style="padding: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-        <a href="{{ url_for('admin.groups_list') }}" class="btn-secondary">Manage Groups</a>
-        <a href="{{ url_for('admin.permissions_list') }}" class="btn-secondary">View All Permissions</a>
-        <a href="{{ url_for('admin.user_roles') }}" class="btn-secondary">Assign Roles to Users</a>
-        <a href="{{ url_for('admin.users_list') }}" class="btn-secondary">Manage Users</a>
+        <a href="{{ url_for('admin.manage_roles') }}" class="btn-secondary">Manage Groups</a>
+        <a href="{{ url_for('admin.view_permissions') }}" class="btn-secondary">View All Permissions</a>
+        <a href="{{ url_for('admin.ai_permissions') }}" class="btn-secondary">🤖 AI Permissions</a>
+        <a href="{{ url_for('admin.assign_roles') }}" class="btn-secondary">Assign Roles to Users</a>
+        <a href="{{ url_for('admin.manage_users') }}" class="btn-secondary">Manage Users</a>
     </div>
 </section>
 {% endblock %}

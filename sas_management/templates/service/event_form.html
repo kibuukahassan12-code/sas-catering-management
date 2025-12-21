@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Operations · Event Service</p>
+        <h1>{% if event %}Edit Service Event{% else %}New Service Event{% endif %}</h1>
+        <p class="muted">{% if event %}Update event details{% else %}Create a new service event{% endif %}.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('service.events') }}">← Back to Events</a>
+    </div>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <div class="form-control">
+            <label for="title">Event Title <span style="color: #ef4444;">*</span></label>
+            <input type="text" id="title" name="title" value="{{ event.title if event else '' }}" required>
+        </div>
+        
+        <div class="form-control">
+            <label for="event_type">Event Type</label>
+            <select id="event_type" name="event_type">
+                <option value="">Select Type</option>
+                {% for event_type in event_types %}
+                <option value="{{ event_type }}" {% if event and event.event_type == event_type %}selected{% endif %}>{{ event_type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-control">
+            <label for="client_id">Client</label>
+            <select id="client_id" name="client_id">
+                <option value="">No Client</option>
+                {% for client in clients %}
+                <option value="{{ client.id }}" {% if event and event.client_id == client.id %}selected{% endif %}>{{ client.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-control">
+            <label for="event_date">Event Date</label>
+            <input type="date" id="event_date" name="event_date" value="{{ event.event_date.strftime('%Y-%m-%d') if event and event.event_date else '' }}">
+        </div>
+        
+        <div class="form-control">
+            <label for="venue">Venue</label>
+            <input type="text" id="venue" name="venue" value="{{ event.venue if event else '' }}" placeholder="Event venue location">
+        </div>
+        
+        <div class="form-control">
+            <label for="guest_count">Guest Count</label>
+            <input type="number" id="guest_count" name="guest_count" value="{{ event.guest_count if event else '' }}" min="0" placeholder="Number of guests">
+        </div>
+        
+        <div class="form-control">
+            <label for="status">Status</label>
+            <select id="status" name="status">
+                {% for status in statuses %}
+                <option value="{{ status }}" {% if event and event.status == status %}selected{% elif not event and status == 'Planned' %}selected{% endif %}>{{ status }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-control" style="grid-column: 1 / -1;">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" rows="4" placeholder="Additional notes or special requirements...">{{ event.notes if event else '' }}</textarea>
+        </div>
+        
+        {% if ai_planner_enabled %}
+        <div class="form-control" style="grid-column: 1 / -1; border-top: 1px solid #e5e7eb; padding-top: 1.5rem; margin-top: 1rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <div>
+                    <label style="margin-bottom: 0.5rem; display: block; font-weight: 600;">AI Assist Planning</label>
+                    <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">Get AI-powered suggestions based on similar past events</p>
+                </div>
+                <button type="button" id="ai-assist-btn" class="btn-secondary" style="white-space: nowrap;">
+                    <span id="ai-assist-text">🤖 AI Assist Planning</span>
+                    <span id="ai-assist-loading" style="display: none;">⏳ Loading...</span>
+                </button>
+            </div>
+            
+            <div id="ai-suggestions" style="display: none; margin-top: 1rem;">
+                <div id="ai-confidence-note" style="padding: 0.75rem; background: #f3f4f6; border-radius: 0.375rem; margin-bottom: 1rem; font-size: 0.875rem; color: #374151;"></div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <h4 style="margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600;">Suggested Staff</h4>
+                        <div id="ai-staff-suggestions" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.75rem; max-height: 200px; overflow-y: auto;">
+                            <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">No suggestions yet. Click "AI Assist Planning" to generate.</p>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h4 style="margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600;">Estimated Cost</h4>
+                        <div id="ai-cost-estimate" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.75rem;">
+                            <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">No estimate yet.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 style="margin: 0 0 0.75rem 0; font-size: 1rem; font-weight: 600;">Suggested Checklist</h4>
+                    <div id="ai-checklist-suggestions" style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.75rem; max-height: 300px; overflow-y: auto;">
+                        <p style="margin: 0; color: #6b7280; font-size: 0.875rem;">No suggestions yet. Click "AI Assist Planning" to generate.</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 1rem; padding: 0.75rem; background: #fef3c7; border: 1px solid #fbbf24; border-radius: 0.375rem;">
+                    <p style="margin: 0; font-size: 0.875rem; color: #92400e;">
+                        <strong>Note:</strong> These are suggestions only. Please review and manually apply them to your event.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="form-actions" style="grid-column: 1 / -1;">
+            <button type="submit" class="btn-primary">{% if event %}Update Event{% else %}Create Event{% endif %}</button>
+            <a href="{{ url_for('service.events') }}" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</section>
+
+{% if ai_planner_enabled %}
+<script>
+(function() {
+    const aiAssistBtn = document.getElementById('ai-assist-btn');
+    const aiAssistText = document.getElementById('ai-assist-text');
+    const aiAssistLoading = document.getElementById('ai-assist-loading');
+    const aiSuggestions = document.getElementById('ai-suggestions');
+    const aiConfidenceNote = document.getElementById('ai-confidence-note');
+    const aiStaffSuggestions = document.getElementById('ai-staff-suggestions');
+    const aiChecklistSuggestions = document.getElementById('ai-checklist-suggestions');
+    const aiCostEstimate = document.getElementById('ai-cost-estimate');
+    
+    if (!aiAssistBtn) return;
+    
+    aiAssistBtn.addEventListener('click', async function() {
+        // Get form values
+        const eventType = document.getElementById('event_type').value;
+        const guestCount = document.getElementById('guest_count').value;
+        const eventDate = document.getElementById('event_date').value;
+        
+        // Show loading state
+        aiAssistText.style.display = 'none';
+        aiAssistLoading.style.display = 'inline';
+        aiAssistBtn.disabled = true;
+        aiSuggestions.style.display = 'none';
+        
+        try {
+            // Call AI planning API
+            const response = await fetch('{{ url_for("service.ai_plan") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    event_type: eventType || null,
+                    guest_count: guestCount ? parseInt(guestCount) : null,
+                    event_date: eventDate || null,
+                }),
+            });
+            
+            const data = await response.json();
+            
+            // Reset button state
+            aiAssistText.style.display = 'inline';
+            aiAssistLoading.style.display = 'none';
+            aiAssistBtn.disabled = false;
+            
+            // Check if AI is enabled and successful
+            if (!data.enabled) {
+                alert('AI Event Planner is currently disabled. ' + (data.reason || ''));
+                return;
+            }
+            
+            if (!data.success) {
+                alert('Unable to generate suggestions: ' + (data.reason || 'Insufficient data'));
+                return;
+            }
+            
+            // Display confidence note
+            if (data.confidence_note) {
+                aiConfidenceNote.textContent = data.confidence_note;
+                aiConfidenceNote.style.display = 'block';
+            }
+            
+            // Display staff suggestions
+            if (data.staff_suggestions && data.staff_suggestions.length > 0) {
+                let html = '<ul style="margin: 0; padding-left: 1.25rem; list-style: disc;">';
+                data.staff_suggestions.forEach(function(suggestion) {
+                    const confidence = suggestion.confidence || 'medium';
+                    const confidenceColor = confidence === 'high' ? '#10b981' : confidence === 'medium' ? '#f59e0b' : '#6b7280';
+                    html += `<li style="margin-bottom: 0.5rem;">
+                        <strong>${escapeHtml(suggestion.role)}</strong>: ${suggestion.suggested_count}
+                        <span style="color: ${confidenceColor}; font-size: 0.75rem; margin-left: 0.5rem;">(${confidence})</span>
+                    </li>`;
+                });
+                html += '</ul>';
+                aiStaffSuggestions.innerHTML = html;
+            } else {
+                aiStaffSuggestions.innerHTML = '<p style="margin: 0; color: #6b7280; font-size: 0.875rem;">No staff suggestions available.</p>';
+            }
+            
+            // Display cost estimate
+            if (data.estimated_cost && data.estimated_cost > 0) {
+                const currency = '{{ CURRENCY }}';
+                const formattedCost = new Intl.NumberFormat('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(data.estimated_cost);
+                aiCostEstimate.innerHTML = `<p style="margin: 0; font-size: 1.125rem; font-weight: 600; color: #059669;">${currency}${formattedCost}</p>`;
+            } else {
+                aiCostEstimate.innerHTML = '<p style="margin: 0; color: #6b7280; font-size: 0.875rem;">No cost estimate available.</p>';
+            }
+            
+            // Display checklist suggestions
+            if (data.checklist && data.checklist.length > 0) {
+                // Group by stage
+                const byStage = {};
+                data.checklist.forEach(function(item) {
+                    const stage = item.stage || 'General';
+                    if (!byStage[stage]) {
+                        byStage[stage] = [];
+                    }
+                    byStage[stage].push(item);
+                });
+                
+                let html = '';
+                Object.keys(byStage).forEach(function(stage) {
+                    html += `<div style="margin-bottom: 1rem;">`;
+                    html += `<h5 style="margin: 0 0 0.5rem 0; font-size: 0.875rem; font-weight: 600; color: #374151; text-transform: uppercase;">${escapeHtml(stage)}</h5>`;
+                    html += '<ul style="margin: 0; padding-left: 1.25rem; list-style: disc;">';
+                    byStage[stage].forEach(function(item) {
+                        const confidence = item.confidence || 'medium';
+                        const confidenceColor = confidence === 'high' ? '#10b981' : confidence === 'medium' ? '#f59e0b' : '#6b7280';
+                        html += `<li style="margin-bottom: 0.375rem; font-size: 0.875rem;">
+                            ${escapeHtml(item.description)}
+                            <span style="color: ${confidenceColor}; font-size: 0.75rem; margin-left: 0.5rem;">(${confidence})</span>
+                        </li>`;
+                    });
+                    html += '</ul>';
+                    html += '</div>';
+                });
+                aiChecklistSuggestions.innerHTML = html;
+            } else {
+                aiChecklistSuggestions.innerHTML = '<p style="margin: 0; color: #6b7280; font-size: 0.875rem;">No checklist suggestions available.</p>';
+            }
+            
+            // Show suggestions section
+            aiSuggestions.style.display = 'block';
+            
+        } catch (error) {
+            console.error('AI planning error:', error);
+            alert('An error occurred while generating suggestions. Please try again.');
+            
+            // Reset button state
+            aiAssistText.style.display = 'inline';
+            aiAssistLoading.style.display = 'none';
+            aiAssistBtn.disabled = false;
+        }
+    });
+    
+    // Helper function to escape HTML
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+})();
+</script>
+{% endif %}
+{% endblock %}

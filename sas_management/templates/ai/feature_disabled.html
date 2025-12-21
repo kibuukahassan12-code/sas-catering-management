@@ -1,0 +1,26 @@
+{% extends "ai/base.html" %}
+{% block ai_content %}
+<div class="sas-ai-header">
+    <p class="eyebrow">Premium · SAS AI</p>
+    <h1>🔒 Feature Disabled</h1>
+</div>
+
+<section class="panel">
+    <div class="sas-ai-empty-state">
+        <div class="sas-ai-empty-state-icon">🔒</div>
+        <h2 style="color: var(--sas-primary); margin-bottom: 1rem;">{{ feature.name or feature_key }} is Disabled</h2>
+        <p style="color: #6b7280; margin-bottom: 1.5rem;">
+            This AI feature is currently disabled and cannot be accessed.
+        </p>
+        <p style="color: #9ca3af; font-size: 0.875rem;">
+            Contact an administrator to enable this feature in the system configuration.
+        </p>
+        <div style="margin-top: 2rem;">
+            <a href="{{ url_for('sas_ai.dashboard') }}" class="sas-ai-button sas-ai-button-secondary">
+                ← Back to AI Dashboard
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

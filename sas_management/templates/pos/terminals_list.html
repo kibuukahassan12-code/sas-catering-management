@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Point of Sale · Terminal Management</p>
+        <h1>POS Terminals</h1>
+        <p class="muted">Manage all POS terminals and monitor their performance.</p>
+    </div>
+    <div class="quick-links">
+        {% if current_user.role in ['Admin'] %}
+        <a class="btn-primary" href="{{ url_for('pos.terminal_new') }}">+ Add Terminal</a>
+        {% endif %}
+        <a class="btn-secondary" href="{{ url_for('pos.index') }}">← Dashboard</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>All Terminals</h3>
+        <span class="badge">{{ terminal_stats|length }} total</span>
+    </div>
+    
+    {% if terminal_stats %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Terminal</th>
+                    <th>Code</th>
+                    <th>Location</th>
+                    <th>Status</th>
+                    <th>Today</th>
+                    <th>This Week</th>
+                    <th>Open Shifts</th>
+                    <th>Last Seen</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in terminal_stats %}
+                {% set terminal = stat.terminal %}
+                <tr>
+                    <td>
+                        <strong>{{ terminal.name }}</strong>
+                    </td>
+                    <td>
+                        <code style="background: rgba(102, 126, 234, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.875rem;">{{ terminal.terminal_code }}</code>
+                    </td>
+                    <td>{{ terminal.location or '—' }}</td>
+                    <td>
+                        {% if terminal.is_active %}
+                        <span class="badge badge-success">Active</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="font-size: 0.875rem;">
+                            <div><strong>{{ stat.today_orders }}</strong> orders</div>
+                            <div style="color: #667eea;">{{ CURRENCY }}{{ "{:,.2f}".format(stat.today_revenue) }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size: 0.875rem;">
+                            <div><strong>{{ stat.week_orders }}</strong> orders</div>
+                            <div style="color: #667eea;">{{ CURRENCY }}{{ "{:,.2f}".format(stat.week_revenue) }}</div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if stat.open_shifts > 0 %}
+                        <span class="badge badge-warning">{{ stat.open_shifts }} open</span>
+                        {% else %}
+                        <span class="muted">None</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if terminal.last_seen %}
+                        <div style="font-size: 0.875rem;">
+                            {{ terminal.last_seen.strftime('%H:%M') }}<br>
+                            <span style="color: #6c757d;">{{ terminal.last_seen.strftime('%b %d') }}</span>
+                        </div>
+                        {% else %}
+                        <span class="muted">Never</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <a href="{{ url_for('pos.terminal', device_code=terminal.terminal_code) }}" class="btn-secondary btn-sm">Open</a>
+                            {% if current_user.role in ['Admin'] %}
+                            <a href="{{ url_for('pos.terminal_edit', terminal_id=terminal.id) }}" class="btn-secondary btn-sm">Edit</a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+        <p class="muted" style="font-size: 1.1rem; margin-bottom: 1rem;">No terminals registered.</p>
+        {% if current_user.role in ['Admin'] %}
+        <a href="{{ url_for('pos.terminal_new') }}" class="btn-primary">Create First Terminal</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

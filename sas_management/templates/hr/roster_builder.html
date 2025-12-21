@@ -1,5 +1,188 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+.roster-container {
+    background: var(--surface, #111111);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.roster-header {
+    background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%);
+    padding: 1.5rem;
+    border-radius: 12px 12px 0 0;
+    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.roster-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface, #111111);
+}
+
+.roster-table th {
+    background: rgba(242, 104, 34, 0.1);
+    color: var(--text, #f5f5f5);
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.roster-table th:first-child {
+    text-align: left;
+    background: rgba(242, 104, 34, 0.15);
+    position: sticky;
+    left: 0;
+    z-index: 11;
+}
+
+.roster-table td {
+    padding: 0.75rem;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+}
+
+.roster-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+    background: rgba(17, 17, 17, 0.5);
+    position: sticky;
+    left: 0;
+    z-index: 9;
+}
+
+.shift-badge {
+    display: inline-block;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%);
+    color: #000;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.shift-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.4);
+}
+
+.assign-btn {
+    background: transparent;
+    border: 1px dashed rgba(246, 188, 56, 0.4);
+    color: var(--accent, #F6BC38);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.assign-btn:hover {
+    background: rgba(246, 188, 56, 0.1);
+    border-color: var(--accent, #F6BC38);
+    border-style: solid;
+}
+
+.week-nav {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.week-nav button {
+    background: var(--brand, #F26822);
+    color: #000;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.week-nav button:hover {
+    background: var(--accent, #F6BC38);
+    transform: translateY(-2px);
+}
+
+.shift-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.shift-modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--surface, #111111);
+    padding: 0;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 90%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(242, 104, 34, 0.3);
+}
+
+.shift-modal-header {
+    background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%);
+    padding: 1.5rem;
+    border-radius: 12px 12px 0 0;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shift-modal-body {
+    padding: 1.5rem;
+}
+
+.shift-option {
+    padding: 1rem;
+    margin: 0.5rem 0;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.shift-option:hover {
+    background: rgba(242, 104, 34, 0.2);
+    border-color: var(--brand, #F26822);
+    transform: translateX(4px);
+}
+
+.shift-option.selected {
+    background: linear-gradient(135deg, rgba(242, 104, 34, 0.3) 0%, rgba(246, 188, 56, 0.3) 100%);
+    border-color: var(--brand, #F26822);
+}
+</style>
+
 <section class="page-header">
     <div>
         <p class="eyebrow">HR Department</p>
@@ -13,37 +196,50 @@
 
 <!-- Week Selector -->
 <section class="panel">
-    <form method="get" class="form-grid">
-        <label class="form-control">
-            <span>Start Date</span>
-            <input type="date" name="start_date" value="{{ start_date.isoformat() if start_date else '' }}">
+    <div class="week-nav">
+        <button onclick="changeWeek(-7)">← Previous Week</button>
+        <form method="get" style="display: flex; gap: 1rem; align-items: center; flex: 1;">
+            <label class="form-control" style="flex: 1;">
+                <span style="color: var(--text, #f5f5f5); font-weight: 500; margin-bottom: 0.5rem; display: block;">Start Date</span>
+                <input type="date" name="start_date" value="{{ start_date.isoformat() if start_date else '' }}" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);" onchange="this.form.submit()">
         </label>
-        <label class="form-control">
-            <span>End Date</span>
-            <input type="date" name="end_date" value="{{ end_date.isoformat() if end_date else '' }}">
+            <label class="form-control" style="flex: 1;">
+                <span style="color: var(--text, #f5f5f5); font-weight: 500; margin-bottom: 0.5rem; display: block;">End Date</span>
+                <input type="date" name="end_date" value="{{ end_date.isoformat() if end_date else '' }}" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);" onchange="this.form.submit()">
         </label>
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">Load Week</button>
+            <button type="submit" class="btn-primary" style="background: linear-gradient(120deg, var(--brand, #F26822), var(--accent, #F6BC38)); color: #000; border: none; margin-top: 1.5rem;">Load Week</button>
+        </form>
+        <button onclick="changeWeek(7)">Next Week →</button>
         </div>
-    </form>
 </section>
 
 <!-- Roster Grid -->
 {% if start_date and end_date %}
-<section class="panel">
-    <div class="panel-header">
-        <h3>Weekly Roster: {{ start_date.strftime('%B %d') }} - {{ end_date.strftime('%B %d, %Y') }}</h3>
+<section class="panel roster-container">
+    <div class="roster-header">
+        <div style="flex: 1;">
+            <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Weekly Roster: {{ start_date.strftime('%B %d') }} - {{ end_date.strftime('%B %d, %Y') }}</h3>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">{{ employees|length }} employees · {{ assignments|length }} assignments</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <button onclick="openAssignEmployeeModal()" class="btn-primary" style="background: rgba(0, 0, 0, 0.3); color: #000; border: 2px solid rgba(0, 0, 0, 0.2); font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(0, 0, 0, 0.4)'" onmouseout="this.style.background='rgba(0, 0, 0, 0.3)'">👤 Assign Employee</button>
+            <button onclick="copyFromPreviousWeek()" class="btn-primary" style="background: rgba(0, 0, 0, 0.3); color: #000; border: 2px solid rgba(0, 0, 0, 0.2); font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(0, 0, 0, 0.4)'" onmouseout="this.style.background='rgba(0, 0, 0, 0.3)'">📥 Copy Last Week</button>
+            <button onclick="clearWeek()" class="btn-primary" style="background: rgba(220, 53, 69, 0.3); color: #fff; border: 2px solid rgba(220, 53, 69, 0.4); font-weight: 600; padding: 0.6rem 1.2rem; border-radius: 6px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(220, 53, 69, 0.4)'" onmouseout="this.style.background='rgba(220, 53, 69, 0.3)'">🗑️ Clear Week</button>
+        </div>
     </div>
     
-    <div class="table-wrapper" style="overflow-x: auto;">
-        <table style="min-width: 800px;">
+    <div class="table-wrapper" style="overflow-x: auto; max-height: 70vh; overflow-y: auto;">
+        <table class="roster-table">
             <thead>
                 <tr>
                     <th>Employee</th>
                     {% if start_date and end_date %}
                     {% for day in range(7) %}
                     {% set current_date = date_range[day] if day < date_range|length else start_date %}
-                    <th>{{ current_date.strftime('%a %d') }}</th>
+                    <th>
+                        <div style="font-weight: 700; font-size: 1rem;">{{ current_date.strftime('%a') }}</div>
+                        <div style="font-size: 0.85rem; opacity: 0.8; margin-top: 0.25rem;">{{ current_date.strftime('%d %b') }}</div>
+                    </th>
                     {% endfor %}
                     {% else %}
                     <th>No dates selected</th>
@@ -53,25 +249,49 @@
             <tbody>
                 {% for employee in employees %}
                 <tr>
-                    <td><strong>{{ employee.full_name }}</strong></td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            {% if employee.photo_url %}
+                            <img src="{{ url_for('static', filename=employee.photo_url) }}" alt="{{ employee.full_name }}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                            {% else %}
+                            <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%); display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; font-size: 0.9rem;">{{ employee.first_name[0] }}{{ employee.last_name[0] }}</div>
+                            {% endif %}
+                            <div>
+                                <strong style="color: var(--text, #f5f5f5);">{{ employee.full_name }}</strong>
+                                {% if employee.department %}
+                                <div style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.6);">{{ employee.department.name }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
                     {% if start_date and end_date and date_range %}
                     {% for day in range(7) %}
                     <td>
                         {% if day < date_range|length %}
                         {% set current_date = date_range[day] %}
-                        {% set assignment = assignments|selectattr('employee_id', 'equalto', employee.id)|selectattr('date', 'equalto', current_date)|first %}
+                        {% set assignment = assignments|selectattr('employee_id', 'equalto', employee.id)|selectattr('assignment_date', 'equalto', current_date)|first %}
                         {% if assignment %}
-                        <span class="badge">{{ assignment.shift.name if assignment.shift else 'N/A' }}</span>
+                        <div style="position: relative; display: inline-block;">
+                            <button class="shift-badge" onclick="editShift({{ assignment.id }}, {{ employee.id }}, '{{ current_date.isoformat() }}', {{ assignment.shift_id }})" title="Click to change shift">
+                                {{ assignment.shift.name if assignment.shift else 'N/A' }}
+                                {% if assignment.shift %}
+                                <div style="font-size: 0.7rem; opacity: 0.8; margin-top: 0.25rem;">
+                                    {{ assignment.shift.start_time.strftime('%H:%M') }} - {{ assignment.shift.end_time.strftime('%H:%M') }}
+                                </div>
+                                {% endif %}
+                            </button>
+                            <button onclick="deleteAssignment({{ assignment.id }}, event)" style="position: absolute; top: -8px; right: -8px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3); z-index: 5;" title="Remove assignment">×</button>
+                        </div>
                         {% else %}
-                        <button class="btn-ghost btn-sm" onclick="assignShift({{ employee.id }}, '{{ current_date.isoformat() }}')">Assign</button>
+                        <button class="assign-btn" onclick="openShiftModal({{ employee.id }}, '{{ current_date.isoformat() }}')">+ Assign</button>
                         {% endif %}
                         {% else %}
-                        <td>-</td>
+                        <span style="color: rgba(255, 255, 255, 0.3);">-</span>
                         {% endif %}
                     </td>
                     {% endfor %}
                     {% else %}
-                    <td colspan="7">Select date range to view roster</td>
+                    <td colspan="7" style="text-align: center; color: rgba(255, 255, 255, 0.6);">Select date range to view roster</td>
                     {% endif %}
                 </tr>
                 {% endfor %}
@@ -79,28 +299,449 @@
         </table>
     </div>
 </section>
+{% else %}
+<section class="panel">
+    <div style="text-align: center; padding: 3rem; color: rgba(255, 255, 255, 0.6);">
+        <p style="font-size: 1.1rem;">Select a date range to view and manage the roster</p>
+    </div>
+</section>
 {% endif %}
 
+<!-- Assign Employee Modal -->
+<div id="assign-employee-modal" class="shift-modal">
+    <div class="shift-modal-content" style="max-width: 600px;">
+        <div class="shift-modal-header">
+            <h3 style="margin: 0; font-weight: 700;">Assign Shifts to Employee</h3>
+            <button onclick="closeAssignEmployeeModal()" style="background: rgba(0, 0, 0, 0.2); border: none; color: #000; font-size: 1.5rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
+        </div>
+        <div class="shift-modal-body">
+            <p style="margin: 0 0 1.5rem 0; color: rgba(255, 255, 255, 0.7);">Select an employee and assign shifts for multiple days.</p>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; color: var(--text, #f5f5f5); font-weight: 500; margin-bottom: 0.5rem;">Select Employee *</label>
+                <select id="assign-employee-select" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5); font-size: 1rem; cursor: pointer;" onfocus="this.style.borderColor='var(--brand, #F26822)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.2)'">
+                    <option value="">-- Choose Employee --</option>
+                    {% for employee in employees %}
+                    <option value="{{ employee.id }}" style="background: var(--surface, #111111);">
+                        {{ employee.full_name }}{% if employee.department %} - {{ employee.department.name }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; color: var(--text, #f5f5f5); font-weight: 500; margin-bottom: 0.5rem;">Select Shift *</label>
+                <select id="assign-shift-select" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5); font-size: 1rem; cursor: pointer;" onfocus="this.style.borderColor='var(--brand, #F26822)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.2)'">
+                    <option value="">-- Select Shift --</option>
+                    {% for shift in shifts %}
+                    <option value="{{ shift.id }}" style="background: var(--surface, #111111);">
+                        {{ shift.name }} ({{ shift.start_time.strftime('%H:%M') }} - {{ shift.end_time.strftime('%H:%M') }}){% if shift.department %} - {{ shift.department.name }}{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; color: var(--text, #f5f5f5); font-weight: 500; margin-bottom: 0.5rem;">Select Days *</label>
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
+                    {% if start_date and end_date and date_range %}
+                    {% for day in range(7) %}
+                    {% if day < date_range|length %}
+                    {% set current_date = date_range[day] %}
+                    <label style="display: block; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border: 2px solid rgba(255, 255, 255, 0.1); border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--brand, #F26822)'" onmouseout="if(!this.querySelector('input').checked) this.style.borderColor='rgba(255, 255, 255, 0.1)'">
+                        <input type="checkbox" class="assign-day-check" value="{{ current_date.isoformat() }}" onchange="updateDayBorder(this)" style="margin-bottom: 0.5rem;">
+                        <div style="font-weight: 600; color: var(--text, #f5f5f5); font-size: 0.9rem;">{{ current_date.strftime('%a') }}</div>
+                        <div style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.6);">{{ current_date.strftime('%d %b') }}</div>
+                    </label>
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+                    <button onclick="selectAllDays()" class="btn-ghost btn-sm" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4); padding: 0.4rem 0.8rem; font-size: 0.85rem;">Select All Days</button>
+                    <button onclick="selectWeekdays()" class="btn-ghost btn-sm" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4); padding: 0.4rem 0.8rem; font-size: 0.85rem;">Weekdays Only</button>
+                    <button onclick="clearDaySelection()" class="btn-ghost btn-sm" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4); padding: 0.4rem 0.8rem; font-size: 0.85rem;">Clear</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.5rem;">
+                <button onclick="closeAssignEmployeeModal()" class="btn-ghost" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4);">Cancel</button>
+                <button onclick="confirmEmployeeAssignment()" class="btn-primary" style="background: linear-gradient(120deg, var(--brand, #F26822), var(--accent, #F6BC38)); color: #000; border: none; font-weight: 600; min-width: 140px;">Assign Shifts</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shift Selection Modal -->
+<div id="shift-modal" class="shift-modal">
+    <div class="shift-modal-content">
+        <div class="shift-modal-header">
+            <h3 style="margin: 0; font-weight: 700;">Select Shift</h3>
+            <button onclick="closeShiftModal()" style="background: rgba(0, 0, 0, 0.2); border: none; color: #000; font-size: 1.5rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
+        </div>
+        <div class="shift-modal-body">
+            <p style="margin: 0 0 1rem 0; color: rgba(255, 255, 255, 0.7);" id="modal-employee-info"></p>
+            <div id="shift-options">
+                {% for shift in shifts %}
+                <div class="shift-option" onclick="selectShift({{ shift.id }}, '{{ shift.name }}', '{{ shift.start_time.strftime('%H:%M') }}', '{{ shift.end_time.strftime('%H:%M') }}')">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: var(--text, #f5f5f5);">{{ shift.name }}</strong>
+                            <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.7); margin-top: 0.25rem;">
+                                {{ shift.start_time.strftime('%H:%M') }} - {{ shift.end_time.strftime('%H:%M') }}
+                            </div>
+                        </div>
+                        {% if shift.department %}
+                        <span style="font-size: 0.75rem; color: var(--accent, #F6BC38);">{{ shift.department.name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.5rem;">
+                <button onclick="closeShiftModal()" class="btn-ghost" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4);">Cancel</button>
+                <button onclick="confirmShiftAssignment()" class="btn-primary" style="background: linear-gradient(120deg, var(--brand, #F26822), var(--accent, #F6BC38)); color: #000; border: none; font-weight: 600; min-width: 120px;" id="confirm-btn" disabled>Assign Shift</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-function assignShift(employeeId, date) {
-    // Simple shift assignment - would need shift selection modal in production
-    const shiftId = prompt('Enter Shift ID:');
-    if (shiftId) {
+let currentEmployeeId = null;
+let currentDate = null;
+let selectedShiftId = null;
+let currentAssignmentId = null;
+
+function changeWeek(days) {
+    const startInput = document.querySelector('input[name="start_date"]');
+    const endInput = document.querySelector('input[name="end_date"]');
+    
+    if (startInput.value && endInput.value) {
+        const start = new Date(startInput.value);
+        const end = new Date(endInput.value);
+        start.setDate(start.getDate() + days);
+        end.setDate(end.getDate() + days);
+        
+        startInput.value = start.toISOString().split('T')[0];
+        endInput.value = end.toISOString().split('T')[0];
+        
+        document.querySelector('form').submit();
+    }
+}
+
+function openShiftModal(employeeId, date) {
+    currentEmployeeId = employeeId;
+    currentDate = date;
+    currentAssignmentId = null;
+    selectedShiftId = null;
+    
+    // Get employee name from employees list
+    const employees = {{ employees|map(attribute='full_name')|list|tojson }};
+    const employeeIds = {{ employees|map(attribute='id')|list|tojson }};
+    const employeeIndex = employeeIds.indexOf(employeeId);
+    const employee = employeeIndex >= 0 ? employees[employeeIndex] : 'Employee';
+    const dateObj = new Date(date);
+    document.getElementById('modal-employee-info').textContent = 
+        `Assign shift for ${employee} on ${dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+    
+    document.getElementById('shift-modal').style.display = 'flex';
+    document.getElementById('confirm-btn').disabled = true;
+    
+    // Reset selection
+    document.querySelectorAll('.shift-option').forEach(opt => opt.classList.remove('selected'));
+}
+
+function editShift(assignmentId, employeeId, date, currentShiftId) {
+    openShiftModal(employeeId, date);
+    currentAssignmentId = assignmentId;
+    selectedShiftId = currentShiftId;
+    
+    // Highlight current shift
+    const currentOption = document.querySelector(`.shift-option[onclick*="selectShift(${currentShiftId}"]`);
+    if (currentOption) {
+        currentOption.classList.add('selected');
+        document.getElementById('confirm-btn').disabled = false;
+        document.getElementById('confirm-btn').textContent = 'Update Shift';
+    }
+}
+
+function selectShift(shiftId, shiftName, startTime, endTime) {
+    selectedShiftId = shiftId;
+    
+    // Update UI
+    document.querySelectorAll('.shift-option').forEach(opt => opt.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    document.getElementById('confirm-btn').disabled = false;
+}
+
+function closeShiftModal() {
+    document.getElementById('shift-modal').style.display = 'none';
+    currentEmployeeId = null;
+    currentDate = null;
+    selectedShiftId = null;
+    currentAssignmentId = null;
+}
+
+function confirmShiftAssignment() {
+    if (!selectedShiftId || !currentEmployeeId || !currentDate) {
+        alert('Please select a shift');
+        return;
+    }
+    
+    const url = currentAssignmentId 
+        ? "{{ url_for('hr.api_update_shift_assignment') }}" 
+        : "{{ url_for('hr.api_assign_shift') }}";
+    
+    const data = {
+        shift_id: selectedShiftId,
+        employee_id: currentEmployeeId,
+        date: currentDate
+    };
+    
+    if (currentAssignmentId) {
+        data.assignment_id = currentAssignmentId;
+    }
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to assign shift'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Assign Employee Functions
+function openAssignEmployeeModal() {
+    document.getElementById('assign-employee-modal').style.display = 'flex';
+    // Reset selections
+    document.getElementById('assign-employee-select').value = '';
+    document.getElementById('assign-shift-select').value = '';
+    document.querySelectorAll('.assign-day-check').forEach(cb => {
+        cb.checked = false;
+        updateDayBorder(cb);
+    });
+}
+
+function closeAssignEmployeeModal() {
+    document.getElementById('assign-employee-modal').style.display = 'none';
+}
+
+function updateDayBorder(checkbox) {
+    const label = checkbox.closest('label');
+    if (checkbox.checked) {
+        label.style.borderColor = 'var(--brand, #F26822)';
+        label.style.background = 'rgba(242, 104, 34, 0.1)';
+    } else {
+        label.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+        label.style.background = 'rgba(255, 255, 255, 0.05)';
+    }
+}
+
+function selectAllDays() {
+    document.querySelectorAll('.assign-day-check').forEach(cb => {
+        cb.checked = true;
+        updateDayBorder(cb);
+    });
+}
+
+function selectWeekdays() {
+    document.querySelectorAll('.assign-day-check').forEach((cb, index) => {
+        // Monday=0, Tuesday=1, ..., Friday=4 (weekdays)
+        cb.checked = (index < 5);
+        updateDayBorder(cb);
+    });
+}
+
+function clearDaySelection() {
+    document.querySelectorAll('.assign-day-check').forEach(cb => {
+        cb.checked = false;
+        updateDayBorder(cb);
+    });
+}
+
+function confirmEmployeeAssignment() {
+    const employeeId = document.getElementById('assign-employee-select').value;
+    const shiftId = document.getElementById('assign-shift-select').value;
+    const dates = Array.from(document.querySelectorAll('.assign-day-check:checked')).map(cb => cb.value);
+    
+    if (!employeeId) {
+        alert('Please select an employee');
+        return;
+    }
+    
+    if (!shiftId) {
+        alert('Please select a shift');
+        return;
+    }
+    
+    if (dates.length === 0) {
+        alert('Please select at least one day');
+        return;
+    }
+    
+    // Get employee name for confirmation
+    const employeeSelect = document.getElementById('assign-employee-select');
+    const employeeName = employeeSelect.options[employeeSelect.selectedIndex].text;
+    
+    if (!confirm(`Assign shift to ${employeeName} for ${dates.length} day(s)?`)) {
+        return;
+    }
+    
+    // Disable button
+    const btn = event.target;
+    btn.disabled = true;
+    btn.textContent = 'Assigning...';
+    
+    // Create assignments
+    let completed = 0;
+    let failed = 0;
+    const total = dates.length;
+    
+    dates.forEach(date => {
         fetch("{{ url_for('hr.api_assign_shift') }}", {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({shift_id: parseInt(shiftId), employee_id: employeeId, date: date})
+            body: JSON.stringify({
+                shift_id: parseInt(shiftId),
+                employee_id: parseInt(employeeId),
+                date: date
+            })
         })
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
+            completed++;
+            if (!data.success) {
+                failed++;
+            }
+            
+            if (completed + failed >= total) {
+                if (failed > 0) {
+                    alert(`Completed: ${completed - failed} assignments. ${failed} failed (may already exist).`);
+                } else {
+                    alert(`Successfully assigned ${completed} shift(s) to ${employeeName}!`);
+                }
                 window.location.reload();
-            } else {
-                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            failed++;
+            completed++;
+            if (completed + failed >= total) {
+                alert(`Completed: ${completed - failed} assignments. ${failed} failed.`);
+                window.location.reload();
             }
         });
+    });
+}
+
+// Copy from Previous Week
+function copyFromPreviousWeek() {
+    if (!confirm('Copy all shift assignments from the previous week to this week?')) {
+        return;
     }
+    
+    const startInput = document.querySelector('input[name="start_date"]');
+    const endInput = document.querySelector('input[name="end_date"]');
+    
+    if (!startInput.value || !endInput.value) {
+        alert('Please select a date range first');
+        return;
+    }
+    
+    fetch("{{ url_for('hr.api_copy_previous_week') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            start_date: startInput.value,
+            end_date: endInput.value
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Successfully copied ${data.copied_count || 0} shift assignment(s) from previous week!`);
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to copy assignments'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Clear Week
+function clearWeek() {
+    if (!confirm('Are you sure you want to clear ALL shift assignments for this week? This cannot be undone.')) {
+        return;
+    }
+    
+    const startInput = document.querySelector('input[name="start_date"]');
+    const endInput = document.querySelector('input[name="end_date"]');
+    
+    if (!startInput.value || !endInput.value) {
+        alert('Please select a date range first');
+        return;
+    }
+    
+    fetch("{{ url_for('hr.api_clear_week') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            start_date: startInput.value,
+            end_date: endInput.value
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Successfully cleared ${data.deleted_count || 0} shift assignment(s)!`);
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to clear assignments'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
+}
+
+// Delete Assignment
+function deleteAssignment(assignmentId, event) {
+    event.stopPropagation();
+    
+    if (!confirm('Remove this shift assignment?')) {
+        return;
+    }
+    
+    fetch("{{ url_for('hr.api_delete_shift_assignment') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            assignment_id: assignmentId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Failed to delete assignment'));
+        }
+    })
+    .catch(error => {
+        alert('Error: ' + error.message);
+    });
 }
 </script>
 {% endblock %}
-

@@ -1,3 +1,4 @@
+{% set _ = none %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -46,19 +47,6 @@
             <span class="app-brand-name">SAS</span>
         </a>
         {% if current_user.is_authenticated %}
-        <div class="app-search-container">
-            <form action="{{ url_for('search.search') }}" method="GET">
-                <input type="search" 
-                       name="q" 
-                       id="app-search-input"
-                       placeholder="Search..." 
-                       value="{{ request.args.get('q', '') }}"
-                       autocomplete="off"
-                       class="app-search-input">
-                <span class="app-search-icon">🔍</span>
-                <div id="app-search-suggestions" class="app-search-suggestions"></div>
-            </form>
-        </div>
         <div class="app-user-menu-wrapper">
             <button class="app-user-btn" onclick="toggleAppUserMenu()" aria-label="User menu">
                 <span class="app-user-avatar">{{ current_user.email[0].upper() }}</span>
@@ -85,46 +73,49 @@
             <button class="app-drawer-close" id="app-drawer-close" aria-label="Close">×</button>
         </div>
         <div class="app-drawer-content">
+            {% if current_user.is_authenticated %}
+            <ul class="app-nav-menu">
+                <li class="app-nav-item">
+                    <a href="{{ url_for('university.dashboard') }}" class="app-nav-link">
+                        🎓 Employee University
+                    </a>
+                </li>
+                {% if current_user.is_admin %}
+                <li class="app-nav-item">
+                    <a href="{{ url_for('admin.dashboard') }}" class="app-nav-link">
+                        <span class="app-nav-icon">🛡️</span>
+                        <span class="app-nav-text">Admin Dashboard</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% if current_user.is_authenticated %}
+                <li class="app-nav-item">
+                    <a href="{{ url_for('ai.chat') }}" class="app-nav-link">
+                        <span class="app-nav-icon">🤖</span>
+                        <span class="app-nav-text">SAS AI</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
             {% if modules %}
             <ul class="app-nav-menu">
                 {% for module in modules %}
-                {% if module.get('permission_module') %}
-                    {# ALL PERMISSIONS GRANTED - No restrictions #}
-                    {% set has_access = True %}
-                    {% if True %}
-                        <li class="app-nav-item">
-                            {% if module.children is defined %}
-                            <div class="app-nav-parent">
-                                <a href="{{ module.url }}" class="app-nav-link">{{ module.name }}</a>
-                                <button class="app-nav-toggle" onclick="toggleAppSubmenu(this)">▼</button>
-                            </div>
-                            <ul class="app-nav-submenu">
-                                {% for child in module.children %}
-                                <li><a href="{{ child.url }}">{{ child.name }}</a></li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                            <a href="{{ module.url }}" class="app-nav-link">{{ module.name }}</a>
-                            {% endif %}
-                        </li>
-                    {% endif %}
-                {% else %}
-                <li class="app-nav-item">
+                <li class='app-nav-item'>
                     {% if module.children is defined %}
-                    <div class="app-nav-parent">
-                        <a href="{{ module.url }}" class="app-nav-link">{{ module.name }}</a>
-                        <button class="app-nav-toggle" onclick="toggleAppSubmenu(this)">▼</button>
+                    <div class='app-nav-parent'>
+                        <a href='{{ module.url }}' class='app-nav-link'>{{ module.name }}</a>
+                        <button class='app-nav-toggle' onclick='toggleAppSubmenu(this)'>▼</button>
                     </div>
-                    <ul class="app-nav-submenu">
+                    <ul class='app-nav-submenu'>
                         {% for child in module.children %}
-                        <li><a href="{{ child.url }}">{{ child.name }}</a></li>
+                        <li><a href='{{ child.url }}'>{{ child.name }}</a></li>
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <a href="{{ module.url }}" class="app-nav-link">{{ module.name }}</a>
+                    <a href='{{ module.url }}' class='app-nav-link'>{{ module.name }}</a>
                     {% endif %}
                 </li>
-                {% endif %}
                 {% endfor %}
             </ul>
             {% endif %}
@@ -270,75 +261,9 @@
                 item.classList.add('active');
             }
         });
-
-        // Search functionality
-        const searchInput = document.getElementById('app-search-input');
-        if (searchInput) {
-            searchInput.addEventListener('input', function(e) {
-                performAppSearch(e.target.value);
-            });
-        }
     });
 
-    // App search function
-    function performAppSearch(query) {
-        const suggestionsDiv = document.getElementById('app-search-suggestions');
-        if (!suggestionsDiv) return;
-        
-        if (!query || query.length < 2) {
-            suggestionsDiv.innerHTML = '';
-            suggestionsDiv.style.display = 'none';
-            return;
-        }
-        
-        if (window.searchTimeout) {
-            clearTimeout(window.searchTimeout);
-        }
-        
-        window.searchTimeout = setTimeout(() => {
-            fetch(`/search/api/quick?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.success || !data.results || data.results.length === 0) {
-                        suggestionsDiv.innerHTML = '<div class="app-search-empty">No results found</div>';
-                        suggestionsDiv.style.display = 'block';
-                        return;
-                    }
-                    
-                    let html = '<div class="app-search-results">';
-                    data.results.forEach(item => {
-                        html += `
-                            <a href="${item.url}" class="app-search-result">
-                                <span class="app-search-icon">${item.icon || '🔍'}</span>
-                                <div>
-                                    <div class="app-search-title">${item.text || 'Item'}</div>
-                                    ${item.subtext ? `<div class="app-search-subtitle">${item.subtext}</div>` : ''}
-                                </div>
-                            </a>
-                        `;
-                    });
-                    html += '</div>';
-                    suggestionsDiv.innerHTML = html;
-                    suggestionsDiv.style.display = 'block';
-                })
-                .catch(error => {
-                    console.error('Search error:', error);
-                    suggestionsDiv.innerHTML = '<div class="app-search-empty">Unable to load results</div>';
-                    suggestionsDiv.style.display = 'block';
-                });
-        }, 300);
-    }
-
-    // Close search suggestions when clicking outside
-    document.addEventListener('click', function(event) {
-        const suggestionsDiv = document.getElementById('app-search-suggestions');
-        const searchInput = document.getElementById('app-search-input');
-        if (suggestionsDiv && searchInput && 
-            !suggestionsDiv.contains(event.target) && 
-            !searchInput.contains(event.target)) {
-            suggestionsDiv.style.display = 'none';
-        }
-    });
+    // (Global app search UI removed; backend search APIs remain available for page-level UIs)
     </script>
     {% block scripts %}{% endblock %}
 </body>

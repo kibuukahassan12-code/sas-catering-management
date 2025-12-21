@@ -9,7 +9,7 @@ import os
 from flask import current_app
 from sqlalchemy import func
 
-from models import (
+from sas_management.models import (
     db, BakeryOrder, BakeryOrderItem, BakeryItem, BakeryProductionTask,
     Ingredient, InventoryItem, User, Client
 )
@@ -72,7 +72,7 @@ def add_item_to_order(order_id, item_id=None, item_name=None, qty=1,
         
         # Get item details if item_id provided
         if item_id:
-            item = BakeryItem.query.get(item_id)
+            item = db.session.get(BakeryItem, item_id)
             if not item:
                 raise ValueError(f"Bakery item {item_id} not found")
             item_name = item.name
@@ -106,7 +106,7 @@ def add_item_to_order(order_id, item_id=None, item_name=None, qty=1,
 
 def _recalculate_order_total(order_id):
     """Recalculate total amount for a bakery order."""
-    order = BakeryOrder.query.get(order_id)
+    order = db.session.get(BakeryOrder, order_id)
     if not order:
         return
     

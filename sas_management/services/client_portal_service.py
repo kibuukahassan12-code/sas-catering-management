@@ -10,7 +10,7 @@ def generate_access_token():
 def create_client_portal_user(client_id, email, password):
     """Create client portal user account."""
     try:
-        from models import ClientPortalUser, db
+        from sas_management.models import ClientPortalUser, db
         
         existing = ClientPortalUser.query.filter_by(email=email).first()
         if existing:
@@ -34,7 +34,7 @@ def create_client_portal_user(client_id, email, password):
 def authenticate_client(email, password):
     """Authenticate client portal user."""
     try:
-        from models import ClientPortalUser
+        from sas_management.models import ClientPortalUser
         
         user = ClientPortalUser.query.filter_by(email=email, is_active=True).first()
         if user and check_password_hash(user.password_hash, password):
@@ -48,7 +48,7 @@ def authenticate_client(email, password):
 def create_shareable_link(client_id, event_id):
     """Create shareable link for client to view event/quotes."""
     try:
-        from models import ClientEventLink, db
+        from sas_management.models import ClientEventLink, db
         
         token = generate_access_token()
         link = ClientEventLink(

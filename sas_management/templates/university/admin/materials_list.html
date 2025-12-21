@@ -6,7 +6,10 @@
         <h1>Material Management</h1>
         <p class="muted">Manage training materials and link them to courses.</p>
     </div>
-    <a class="btn-primary" href="{{ url_for('university.admin_materials_add') }}">+ Add Material</a>
+    <div style="display: flex; gap: 0.5rem;">
+        <a class="btn-primary" href="{{ url_for('university.admin_materials_add') }}">+ Add Material</a>
+        <a class="btn-secondary" href="{{ url_for('university.admin_course_upload') }}">📁 Upload File</a>
+    </div>
 </section>
 
 <section class="panel">

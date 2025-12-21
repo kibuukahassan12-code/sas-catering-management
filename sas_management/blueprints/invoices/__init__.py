@@ -5,7 +5,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from flask_login import current_user, login_required
 from sqlalchemy.orm import joinedload
 
-from models import (
+from sas_management.models import (
     Event,
     Invoice,
     InvoiceStatus,
@@ -15,7 +15,7 @@ from models import (
     UserRole,
     db,
 )
-from utils import role_required, paginate_query
+from sas_management.utils import role_required, paginate_query
 
 invoices_bp = Blueprint("invoices", __name__, url_prefix="/invoices")
 
@@ -73,7 +73,7 @@ def invoice_list():
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def invoice_new():
     """Create a new invoice."""
-    from models import Client
+    from sas_management.models import Client
     
     if request.method == "POST":
         try:
@@ -117,7 +117,7 @@ def invoice_new():
             
             # Generate PDF
             try:
-                from services.invoice_service import generate_invoice_pdf
+                from sas_management.services.invoice_service import generate_invoice_pdf
                 generate_invoice_pdf(invoice.id)
             except Exception as pdf_error:
                 current_app.logger.warning(f"Could not generate PDF for invoice {invoice.id}: {pdf_error}")
@@ -166,7 +166,7 @@ def invoice_view(invoice_id):
 def invoice_pdf(invoice_id):
     """Generate and download invoice PDF."""
     from flask import send_file
-    from services.invoice_service import generate_invoice_pdf
+    from sas_management.services.invoice_service import generate_invoice_pdf
     
     invoice = Invoice.query.get_or_404(invoice_id)
     

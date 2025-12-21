@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Inventory</p>
+        <h1>Add New Equipment</h1>
+        <p class="muted">Add a new item to the hire inventory.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('hire.inventory_list') }}">← Back to Inventory</a>
+    </div>
+</section>
+
+<section class="panel">
+    <form method="POST" class="form-grid">
+        <label class="form-control">
+            <span>Item Name *</span>
+            <input type="text" name="name" required placeholder="e.g., Round Table 8-seater">
+        </label>
+        
+        <label class="form-control">
+            <span>Category</span>
+            <input type="text" name="category" placeholder="e.g., Furniture, Equipment, Tableware">
+        </label>
+        
+        <label class="form-control">
+            <span>SKU</span>
+            <input type="text" name="sku" placeholder="Stock keeping unit">
+        </label>
+        
+        <label class="form-control">
+            <span>Stock Count *</span>
+            <input type="number" name="stock_count" min="0" value="1" required>
+        </label>
+        
+        <label class="form-control">
+            <span>Rental Price ({{ CURRENCY.rstrip() }}) *</span>
+            <input type="number" name="rental_price" min="0" step="0.01" required placeholder="0.00">
+        </label>
+        
+        <label class="form-control">
+            <span>Replacement Cost ({{ CURRENCY.rstrip() }})</span>
+            <input type="number" name="replacement_cost" min="0" step="0.01" placeholder="Cost if damaged">
+        </label>
+        
+        <label class="form-control">
+            <span>Condition *</span>
+            <select name="condition" required>
+                <option value="Good" selected>Good</option>
+                <option value="Fair">Fair</option>
+                <option value="Poor">Poor</option>
+                <option value="Damaged">Damaged</option>
+            </select>
+        </label>
+        
+        <label class="form-control">
+            <span>Location</span>
+            <input type="text" name="location" placeholder="Warehouse location">
+        </label>
+        
+        <label class="form-control">
+            <span>Tags</span>
+            <input type="text" name="tags" placeholder="Comma-separated tags">
+        </label>
+        
+        <label class="form-control">
+            <span>Status *</span>
+            <select name="status" required>
+                <option value="Available" selected>Available</option>
+                <option value="Rented">Rented</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Retired">Retired</option>
+            </select>
+        </label>
+        
+        <div class="form-actions" style="grid-column: 1 / -1;">
+            <button type="submit" class="btn-primary">Add Equipment</button>
+            <a href="{{ url_for('hire.inventory_list') }}" class="btn-ghost">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h1>All Events - Service Execution View</h1>
+            <p class="muted">Monitor service execution, readiness, and progress across all events</p>
+        </div>
+        <a href="{{ url_for('event_service.event_create') }}" class="btn-primary">+ New Event</a>
+    </div>
+
+    <!-- Filters and Search -->
+    <div class="panel" style="margin-bottom: 1.5rem;">
+        <h2 style="margin-bottom: 1rem;">Filters & Search</h2>
+        <form method="GET" action="{{ url_for('event_service.events_list') }}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+            <!-- Search -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem;">Search</label>
+                <input 
+                    type="text" 
+                    name="search" 
+                    value="{{ search_query }}" 
+                    placeholder="Event name, venue, or ID"
+                    style="width: 100%; padding: 0.5rem; background: #1f2937; border: 1px solid #374151; border-radius: 4px; color: #f3f4f6;"
+                >
+            </div>
+            
+            <!-- Service Status Filter -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem;">Service Status</label>
+                <select 
+                    name="service_status" 
+                    style="width: 100%; padding: 0.5rem; background: #1f2937; border: 1px solid #374151; border-radius: 4px; color: #f3f4f6;"
+                >
+                    <option value="">All Statuses</option>
+                    <option value="Not Started" {% if service_status_filter == "Not Started" %}selected{% endif %}>Not Started</option>
+                    <option value="Setup" {% if service_status_filter == "Setup" %}selected{% endif %}>Setup</option>
+                    <option value="In Progress" {% if service_status_filter == "In Progress" %}selected{% endif %}>In Progress</option>
+                    <option value="Completed" {% if service_status_filter == "Completed" %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+            
+            <!-- Execution Phase Filter -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem;">Execution Phase</label>
+                <select 
+                    name="execution_phase" 
+                    style="width: 100%; padding: 0.5rem; background: #1f2937; border: 1px solid #374151; border-radius: 4px; color: #f3f4f6;"
+                >
+                    <option value="">All Phases</option>
+                    <option value="Planning" {% if execution_phase_filter == "Planning" %}selected{% endif %}>Planning</option>
+                    <option value="Prep" {% if execution_phase_filter == "Prep" %}selected{% endif %}>Prep</option>
+                    <option value="Execution" {% if execution_phase_filter == "Execution" %}selected{% endif %}>Execution</option>
+                    <option value="Post-Event" {% if execution_phase_filter == "Post-Event" %}selected{% endif %}>Post-Event</option>
+                </select>
+            </div>
+            
+            <!-- Readiness Filter -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem;">Readiness</label>
+                <select 
+                    name="readiness" 
+                    style="width: 100%; padding: 0.5rem; background: #1f2937; border: 1px solid #374151; border-radius: 4px; color: #f3f4f6;"
+                >
+                    <option value="">All</option>
+                    <option value="Ready" {% if readiness_filter == "Ready" %}selected{% endif %}>Ready</option>
+                    <option value="At Risk" {% if readiness_filter == "At Risk" %}selected{% endif %}>At Risk</option>
+                </select>
+            </div>
+            
+            <!-- Date From -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem;">Date From</label>
+                <input 
+                    type="date" 
+                    name="date_from" 
+                    value="{{ date_from }}"
+                    style="width: 100%; padding: 0.5rem; background: #1f2937; border: 1px solid #374151; border-radius: 4px; color: #f3f4f6;"
+                >
+            </div>
+            
+            <!-- Date To -->
+            <div>
+                <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem;">Date To</label>
+                <input 
+                    type="date" 
+                    name="date_to" 
+                    value="{{ date_to }}"
+                    style="width: 100%; padding: 0.5rem; background: #1f2937; border: 1px solid #374151; border-radius: 4px; color: #f3f4f6;"
+                >
+            </div>
+            
+            <!-- Submit Button -->
+            <div>
+                <button type="submit" class="btn-primary" style="width: 100%;">Apply Filters</button>
+            </div>
+            
+            <!-- Clear Filters -->
+            <div>
+                <a href="{{ url_for('event_service.events_list') }}" class="btn-secondary" style="display: block; text-align: center; width: 100%;">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Events Table -->
+    {% if events %}
+    <div class="panel">
+        <h2 style="margin-bottom: 1rem;">Service Events ({{ events|length }})</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #374151;">
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Event</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Service Status</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Phase</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Checklist</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Risks</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Readiness</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Completed</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for se in events %}
+                    <tr style="border-bottom: 1px solid #374151; {% if not se.service_ready_flag %}background-color: rgba(245, 158, 11, 0.1);{% endif %}">
+                        <td style="padding: 1rem;">
+                            <div>
+                                <strong style="font-size: 1.05rem; color: #f3f4f6;">{{ se.event.title }}</strong>
+                                <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                    ID: {{ se.event.id }} • {{ se.event_date.strftime('%Y-%m-%d') }}
+                                </div>
+                                <div class="muted" style="font-size: 0.85rem;">
+                                    {{ se.venue_name or 'Venue TBD' }}
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if se.service_status == "Not Started" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #374151; color: #9ca3af; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    Not Started
+                                </span>
+                            {% elif se.service_status == "Setup" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #3b82f6; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    Setup
+                                </span>
+                            {% elif se.service_status == "In Progress" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #10b981; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    In Progress
+                                </span>
+                            {% elif se.service_status == "Completed" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #6b7280; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    Completed
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            <span class="muted" style="font-size: 0.9rem;">{{ se.execution_phase }}</span>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="min-width: 120px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                    <div style="background: #1f2937; border-radius: 4px; height: 8px; flex: 1; overflow: hidden;">
+                                        <div style="background: {% if se.checklist_completion_percent >= 80 %}#10b981{% elif se.checklist_completion_percent >= 50 %}#f59e0b{% else %}#ef4444{% endif %}; height: 100%; width: {{ se.checklist_completion_percent }}%; transition: width 0.3s;"></div>
+                                    </div>
+                                    <span style="font-size: 0.85rem; font-weight: 600; color: #f3f4f6; min-width: 40px;">{{ se.checklist_completion_percent }}%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="font-size: 0.85rem;">
+                                {% if se.overdue_tasks_count > 0 %}
+                                    <div style="color: #ef4444; margin-bottom: 0.25rem;">
+                                        ⚠ {{ se.overdue_tasks_count }} overdue task{{ 's' if se.overdue_tasks_count != 1 else '' }}
+                                    </div>
+                                {% endif %}
+                                {% if se.missing_required_documents_count > 0 %}
+                                    <div style="color: #f59e0b;">
+                                        📄 Missing documents
+                                    </div>
+                                {% endif %}
+                                {% if se.overdue_tasks_count == 0 and se.missing_required_documents_count == 0 %}
+                                    <span style="color: #10b981;">✓ No risks</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if se.service_ready_flag %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #10b981; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    ✓ Ready
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #f59e0b; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    ⚠ At Risk
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if se.service_completed_timestamp %}
+                                <span class="muted" style="font-size: 0.85rem;">
+                                    {{ se.service_completed_timestamp.strftime('%Y-%m-%d %H:%M') }}
+                                </span>
+                                <div class="muted" style="font-size: 0.75rem; margin-top: 0.25rem;">
+                                    Review: {{ se.post_event_review_status }}
+                                </div>
+                            {% else %}
+                                <span class="muted" style="font-size: 0.85rem;">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <a href="{{ url_for('event_service.timeline', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Timeline</a>
+                                <a href="{{ url_for('event_service.checklists', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Checklists</a>
+                                <a href="{{ url_for('event_service.documents', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Docs</a>
+                                <a href="{{ url_for('event_service.messages', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Messages</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="panel">
+        <div style="text-align: center; padding: 3rem 1rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+            <h2 style="color: #9ca3af; margin-bottom: 0.5rem;">No service events found</h2>
+            <p class="muted">No events match your current filters. Try adjusting your search criteria.</p>
+            <div style="margin-top: 1.5rem;">
+                <a href="{{ url_for('event_service.events_list') }}" class="btn-primary">Clear Filters</a>
+                <a href="{{ url_for('event_service.event_create') }}" class="btn-secondary">Create New Event</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 1.5rem;">
+        <a href="{{ url_for('event_service.dashboard') }}" class="btn-secondary">Back to Dashboard</a>
+        <a href="{{ url_for('event_service.services_overview') }}" class="btn-secondary">Services Overview</a>
+    </div>
+</div>
+{% endblock %}
+
+
+

@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import (
+from sas_management.models import (
     Event,
     Ingredient,
     ProductionLineItem,
@@ -84,7 +84,7 @@ def create_production_order(event_id, items, schedule_times):
         total_cost = Decimal("0.00")
         
         for item in items:
-            recipe = Recipe.query.get(item["recipe_id"])
+            recipe = db.session.get(Recipe, item["recipe_id"])
             if not recipe:
                 raise ValueError(f"Recipe {item['recipe_id']} not found")
             
@@ -157,7 +157,7 @@ def reserve_ingredients(ingredients_map):
         reserved = []
         
         for ingredient_id, qty_needed in ingredients_map.items():
-            ingredient = Ingredient.query.get(ingredient_id)
+            ingredient = db.session.get(Ingredient, ingredient_id)
             if not ingredient:
                 raise ValueError(f"Ingredient {ingredient_id} not found")
             
@@ -190,7 +190,7 @@ def release_reservations(order_id):
         
         # Get all recipes from line items
         for line_item in order.items:
-            recipe = Recipe.query.get(line_item.recipe_id)
+            recipe = db.session.get(Recipe, line_item.recipe_id)
             if recipe:
                 try:
                     ingredients_data = json.loads(recipe.ingredients) if isinstance(recipe.ingredients, str) else recipe.ingredients
@@ -204,7 +204,7 @@ def release_reservations(order_id):
                     qty_per_portion = Decimal(str(ing.get("qty_per_portion", 0)))
                     qty_to_restore = qty_per_portion * scale_factor
                     
-                    ingredient = Ingredient.query.get(ingredient_id)
+                    ingredient = db.session.get(Ingredient, ingredient_id)
                     if ingredient:
                         ingredient.stock_count += qty_to_restore
         
@@ -229,7 +229,7 @@ def compute_cogs_for_order(order_id):
     total_cogs = Decimal("0.00")
     
     for line_item in order.items:
-        recipe = Recipe.query.get(line_item.recipe_id)
+        recipe = db.session.get(Recipe, line_item.recipe_id)
         if recipe:
             try:
                 ingredients_data = json.loads(recipe.ingredients) if isinstance(recipe.ingredients, str) else recipe.ingredients
@@ -264,7 +264,7 @@ def generate_production_sheet(order_id):
     all_ingredients = {}
     
     for line_item in order.items:
-        recipe = Recipe.query.get(line_item.recipe_id)
+        recipe = db.session.get(Recipe, line_item.recipe_id)
         if recipe:
             try:
                 ingredients_data = json.loads(recipe.ingredients) if isinstance(recipe.ingredients, str) else recipe.ingredients
@@ -276,7 +276,7 @@ def generate_production_sheet(order_id):
             recipe_ingredients = []
             for ing in ingredients_data:
                 ingredient_id = ing.get("ingredient_id")
-                ingredient = Ingredient.query.get(ingredient_id)
+                ingredient = db.session.get(Ingredient, ingredient_id)
                 if ingredient:
                     qty_per_portion = Decimal(str(ing.get("qty_per_portion", 0)))
                     unit = ing.get("unit", ingredient.unit_of_measure)

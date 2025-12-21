@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 2rem auto; padding: 2rem;">
+    <div style="border: 3px solid #4ade80; border-radius: 12px; padding: 3rem; background: linear-gradient(135deg, #1a472a 0%, #0f2817 100%); text-align: center;">
+        <div style="margin-bottom: 2rem;">
+            <div style="font-size: 4rem; margin-bottom: 1rem;">🎓</div>
+            <h1 style="color: #4ade80; margin: 0 0 0.5rem 0; font-size: 2.5rem;">Certificate of Completion</h1>
+            <p style="color: #86efac; font-size: 1.1rem; margin: 0;">Employee University</p>
+        </div>
+        
+        <div style="margin: 2rem 0; padding: 2rem 0; border-top: 2px solid #4ade80; border-bottom: 2px solid #4ade80;">
+            <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; margin: 0.5rem 0;">
+                This certifies that
+            </p>
+            <h2 style="color: #fff; font-size: 2rem; margin: 1rem 0; font-weight: 600;">
+                {{ user.full_name or user.username }}
+            </h2>
+            <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.1rem; margin: 0.5rem 0;">
+                has successfully completed the course
+            </p>
+            <h3 style="color: #4ade80; font-size: 1.5rem; margin: 1rem 0; font-weight: 600;">
+                {{ course.title }}
+            </h3>
+        </div>
+        
+        <div style="margin-top: 2rem; color: rgba(255, 255, 255, 0.7);">
+            <p style="margin: 0.5rem 0;">
+                Completed on {{ enrollment.completed_at.strftime('%B %d, %Y') if enrollment.completed_at else 'N/A' }}
+            </p>
+            <p style="margin: 0.5rem 0; font-size: 0.9rem;">
+                Certificate ID: {{ enrollment.id }}-{{ course.id }}-{{ enrollment.completed_at.strftime('%Y%m%d') if enrollment.completed_at else '' }}
+            </p>
+        </div>
+    </div>
+    
+    <div style="text-align: center; margin-top: 2rem;">
+        <a href="{{ url_for('university.employee_course_detail', course_id=course.id) }}" 
+           class="btn-secondary">Back to Course</a>
+        <button onclick="window.print()" class="btn-primary" style="margin-left: 0.5rem;">Print Certificate</button>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn-secondary, .btn-primary {
+        display: none;
+    }
+    body {
+        background: white;
+    }
+}
+</style>
+{% endblock %}
+

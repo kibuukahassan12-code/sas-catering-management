@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">University Admin · Progress</p>
+        <h1>Employee Course Progress</h1>
+        <p class="muted">View training completion status for all employees.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('university.admin_courses_list') }}">← Back to Courses</a>
+</section>
+
+<section class="panel">
+    {% if progress_data %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Email</th>
+                <th>Enrolled Courses</th>
+                <th>Completed</th>
+                <th>Progress</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in progress_data %}
+            <tr>
+                <td>{{ item.employee.email.split('@')[0] if item.employee.email else 'N/A' }}</td>
+                <td>{{ item.employee.email }}</td>
+                <td>{{ item.enrolled_count }}</td>
+                <td>{{ item.completed_count }}</td>
+                <td>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ item.progress_percent }}%"></div>
+                        <span class="progress-text">{{ item.progress_percent }}%</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="muted">No employee progress data available.</p>
+    {% endif %}
+</section>
+
+<style>
+.progress-bar {
+    position: relative;
+    width: 100%;
+    height: 24px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #10b981;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #111827;
+}
+</style>
+{% endblock %}
+

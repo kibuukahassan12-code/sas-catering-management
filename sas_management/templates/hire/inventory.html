@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Inventory</p>
+        <h1>Equipment Inventory</h1>
+        <p class="muted">Manage all hireable equipment and assets.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hire.new_item') }}">+ New Item</a>
+        <a class="btn-secondary" href="{{ url_for('hire.index') }}">← Overview</a>
+    </div>
+</section>
+
+<!-- Filters -->
+<section class="panel" style="margin-bottom: 1rem;">
+    <form method="GET" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+        <label class="form-control" style="flex: 1; min-width: 150px;">
+            <span>Category</span>
+            <select name="category" onchange="this.form.submit()">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                <option value="{{ cat }}" {% if current_category == cat %}selected{% endif %}>{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-control" style="flex: 1; min-width: 150px;">
+            <span>Status</span>
+            <select name="status" onchange="this.form.submit()">
+                <option value="">All Status</option>
+                <option value="Available" {% if current_status == 'Available' %}selected{% endif %}>Available</option>
+                <option value="Rented" {% if current_status == 'Rented' %}selected{% endif %}>Rented</option>
+                <option value="Maintenance" {% if current_status == 'Maintenance' %}selected{% endif %}>Maintenance</option>
+                <option value="Retired" {% if current_status == 'Retired' %}selected{% endif %}>Retired</option>
+            </select>
+        </label>
+        {% if current_category or current_status %}
+        <a href="{{ url_for('hire.inventory_list') }}" class="btn-ghost">Clear Filters</a>
+        {% endif %}
+    </form>
+</section>
+
+<!-- Inventory Table -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Equipment Items</h3>
+        <span class="badge">{{ pagination.total }} items</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item Name</th>
+                    <th>Category</th>
+                    <th>Quantity</th>
+                    <th>Status</th>
+                    <th>Rental Price</th>
+                    <th>Condition</th>
+                    <th>Location</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td><strong>{{ item.name }}</strong>{% if item.sku %}<br><small class="muted">SKU: {{ item.sku }}</small>{% endif %}</td>
+                    <td>{{ item.category or '—' }}</td>
+                    <td><strong>{{ item.stock_count }}</strong></td>
+                    <td>
+                        <span class="badge" style="background: {% if item.status == 'Available' %}#10b981{% elif item.status == 'Rented' %}#3b82f6{% elif item.status == 'Maintenance' %}#ff5c5c{% else %}#6b7280{% endif %};">
+                            {{ item.status }}
+                        </span>
+                    </td>
+                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(item.rental_price or 0) }}</td>
+                    <td>
+                        <span class="badge" style="background: {% if item.condition == 'Good' %}#10b981{% elif item.condition == 'Fair' %}#f59e0b{% elif item.condition == 'Poor' %}#ff5c5c{% else %}#6b7280{% endif %};">
+                            {{ item.condition or 'Good' }}
+                        </span>
+                    </td>
+                    <td>{{ item.location or '—' }}</td>
+                    <td>
+                        <a href="{{ url_for('hire.inventory_list') }}" class="btn-ghost btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No equipment items found.</p>
+                        <a href="{{ url_for('hire.new_item') }}" class="btn-primary" style="margin-top: 1rem;">Add First Item</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if pagination.pages > 1 %}
+    <nav class="pagination" style="padding: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        <div style="display: flex; gap: 0.5rem;">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('hire.inventory_list', page=pagination.prev_num, category=current_category, status=current_status) }}" class="btn-secondary btn-sm">← Previous</a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="{{ url_for('hire.inventory_list', page=pagination.next_num, category=current_category, status=current_status) }}" class="btn-secondary btn-sm">Next →</a>
+            {% endif %}
+        </div>
+    </nav>
+    {% endif %}
+</section>
+{% endblock %}
+

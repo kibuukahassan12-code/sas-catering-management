@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import (
+from sas_management.models import (
     CateringItem,
     BakeryItem,
     POSDevice,
@@ -86,7 +86,7 @@ def create_order(payload, device_code=None, shift_id=None):
         # Validate shift if provided
         shift = None
         if shift_id:
-            shift = POSShift.query.get(shift_id)
+            shift = db.session.get(POSShift, shift_id)
             if not shift:
                 raise ValueError(f"Shift with ID {shift_id} not found")
             if shift.status != "open":
@@ -129,8 +129,8 @@ def create_order(payload, device_code=None, shift_id=None):
                 
                 # Try to get product name from database if product_id provided
                 if product_id:
-                    catering_item = CateringItem.query.get(product_id)
-                    bakery_item = BakeryItem.query.get(product_id)
+                    catering_item = db.session.get(CateringItem, product_id)
+                    bakery_item = db.session.get(BakeryItem, product_id)
                     if catering_item:
                         product_name = catering_item.name
                     elif bakery_item:
@@ -191,7 +191,7 @@ def add_payment(order_id, amount, method, ref=None, received_by=None):
     """
     try:
         # Validate and find order
-        order = POSOrder.query.get(order_id)
+        order = db.session.get(POSOrder, order_id)
         if not order:
             raise ValueError(f"Order with ID {order_id} not found")
         
@@ -213,17 +213,19 @@ def add_payment(order_id, amount, method, ref=None, received_by=None):
             order_id=order.id,
             amount=payment_amount,
             method=method or "cash",
-            ref=ref,
-            payment_time=datetime.utcnow(),
+            reference=ref,  # Use 'reference' field name from model
         )
         db.session.add(payment)
         db.session.flush()  # Flush to get payment.id for receipt
         
         # Generate receipt IMMEDIATELY after payment is created (before finalizing)
         # This ensures receipt is available before payment is fully processed
-        receipt = POSReceipt(
+        receipt_ref = generate_pos_receipt_ref()
+        receipt_number = receipt_ref  # auto-fill because DB requires NOT NULL
+        receipt = POSReceipt(receipt_number=receipt_number, 
+            order_id=order.id,
             payment_id=payment.id,
-            receipt_ref=generate_pos_receipt_ref(),
+            receipt_ref=receipt_ref,
             issued_at=datetime.utcnow(),
         )
         db.session.add(receipt)

@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% block title %}{{ event.event_name }}{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card mb-3 p-3">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h3>{{ event.event_name }}</h3>
+          <div>
+            <a href="{{ url_for('service.event_edit', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">Edit Event</a>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Client:</strong> {{ event.client_name or 'N/A' }}</p>
+            <p><strong>Type:</strong> {{ event.event_type or 'N/A' }}</p>
+            <p><strong>Venue:</strong> {{ event.venue or 'N/A' }}</p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Start:</strong> {{ event.start_date.strftime('%Y-%m-%d') if event.start_date else 'N/A' }}</p>
+            <p><strong>End:</strong> {{ event.end_date.strftime('%Y-%m-%d') if event.end_date else 'N/A' }}</p>
+            <p>
+              <strong>Status:</strong> 
+              <select id="status-select" class="form-select d-inline-block" style="width:auto;">
+                <option value="Pending" {% if event.status == 'Pending' %}selected{% endif %}>Pending</option>
+                <option value="Confirmed" {% if event.status == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                <option value="In Progress" {% if event.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+                <option value="Completed" {% if event.status == 'Completed' %}selected{% endif %}>Completed</option>
+                <option value="Cancelled" {% if event.status == 'Cancelled' %}selected{% endif %}>Cancelled</option>
+              </select>
+            </p>
+          </div>
+        </div>
+        {% if event.notes %}
+          <p><strong>Notes:</strong> {{ event.notes }}</p>
+        {% endif %}
+      </div>
+
+      <div class="card mb-3 p-3">
+        <h5>Items</h5>
+        <form method="post" action="{{ url_for('service.event_items_add', event_id=event.id) }}">
+          <div class="row g-2">
+            <div class="col-md-4"><input name="item_name" placeholder="Item name" class="form-control" required></div>
+            <div class="col-md-3"><input name="category" placeholder="Category" class="form-control"></div>
+            <div class="col-md-2"><input name="quantity_needed" type="number" placeholder="Qty Needed" class="form-control" min="0"></div>
+            <div class="col-md-3"><button class="btn btn-primary w-100">Add Item</button></div>
+          </div>
+        </form>
+        <div class="table-responsive mt-2">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Category</th>
+                <th>Qty Needed</th>
+                <th>Qty Assigned</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for it in items %}
+              <tr data-item-id="{{ it.id }}">
+                <td><strong>{{ it.item_name }}</strong></td>
+                <td>{{ it.category or '-' }}</td>
+                <td>{{ it.quantity_needed }}</td>
+                <td>{{ it.quantity_assigned }}</td>
+                <td><small>{{ it.notes or '-' }}</small></td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary edit-item-btn" data-id="{{ it.id }}" data-name="{{ it.item_name }}" data-category="{{ it.category or '' }}" data-qty-needed="{{ it.quantity_needed }}" data-qty-assigned="{{ it.quantity_assigned }}" data-notes="{{ it.notes or '' }}">Edit</button>
+                  <form method="post" action="{{ url_for('service.event_item_delete', event_id=event.id, item_id=it.id) }}" style="display:inline;" onsubmit="return confirm('Delete this item?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="6" class="text-muted text-center">No items</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card mb-3 p-3">
+        <h5>Checklist</h5>
+        <form method="post" action="{{ url_for('service.event_checklist_add', event_id=event.id) }}">
+          <div class="input-group">
+            <input name="task" class="form-control" placeholder="New task" required>
+            <button class="btn btn-outline-primary">Add</button>
+          </div>
+        </form>
+        <ul class="list-group mt-2" id="checklist">
+          {% for ck in checklist %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div class="flex-grow-1">
+                <input type="checkbox" class="chk-toggle" data-id="{{ ck.id }}" {% if ck.is_complete %}checked{% endif %}> 
+                <span class="{% if ck.is_complete %}text-decoration-line-through text-muted{% endif %}">{{ ck.task }}</span>
+              </div>
+              <div>
+                <button class="btn btn-sm btn-outline-primary edit-checklist-btn" data-id="{{ ck.id }}" data-task="{{ ck.task }}">Edit</button>
+                <form method="post" action="{{ url_for('service.event_checklist_delete', event_id=event.id, item_id=ck.id) }}" style="display:inline;" onsubmit="return confirm('Delete this checklist item?');">
+                  <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                </form>
+              </div>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted">No checklist items</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="col-md-4">
+      <div class="card p-3 mb-3">
+        <h6>Team</h6>
+        <form method="post" action="{{ url_for('service.event_staff_add', event_id=event.id) }}">
+          <input name="staff_name" placeholder="Name" class="form-control mb-2" required>
+          <input name="staff_role" placeholder="Role" class="form-control mb-2">
+          <input name="phone" placeholder="Phone" class="form-control mb-2">
+          <button class="btn btn-primary w-100">Assign</button>
+        </form>
+        <ul class="list-group mt-2">
+          {% for tm in team %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <strong>{{ tm.staff_name }}</strong><br>
+                  <small>{{ tm.staff_role or 'Role' }}</small><br>
+                  {% if tm.phone %}<small class="text-muted">{{ tm.phone }}</small>{% endif %}
+                  {% if tm.notes %}<small class="text-muted d-block">{{ tm.notes }}</small>{% endif %}
+                </div>
+                <div>
+                  <button class="btn btn-sm btn-outline-primary edit-team-btn" data-id="{{ tm.id }}" data-name="{{ tm.staff_name }}" data-role="{{ tm.staff_role or '' }}" data-phone="{{ tm.phone or '' }}" data-notes="{{ tm.notes or '' }}">Edit</button>
+                  <form method="post" action="{{ url_for('service.event_staff_delete', event_id=event.id, assignment_id=tm.id) }}" style="display:inline;" onsubmit="return confirm('Remove this team member?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                  </form>
+                </div>
+              </div>
+            </li>
+          {% else %}
+            <li class="list-group-item text-muted">No team assigned</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div class="card p-3">
+        <h6>Actions</h6>
+        <!-- CSV export functionality not available -->
+        <a class="btn btn-sm btn-outline-primary w-100 mb-2" href="{{ url_for('service.event_edit', event_id=event.id) }}">Edit Event</a>
+        <!-- Event delete functionality not available -->
+          <button type="submit" class="btn btn-sm btn-outline-danger w-100 mb-2">Delete Event</button>
+        </form>
+        <a class="btn btn-sm btn-outline-secondary w-100" href="{{ url_for('service.events') }}">Back to list</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div class="modal fade" id="editItemModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="edit-item-form" method="post">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Item Name</label>
+            <input type="text" name="item_name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Category</label>
+            <input type="text" name="category" class="form-control">
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Quantity Needed</label>
+              <input type="number" name="quantity_needed" class="form-control" min="0">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Quantity Assigned</label>
+              <input type="number" name="quantity_assigned" class="form-control" min="0">
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Team Modal -->
+<div class="modal fade" id="editTeamModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Team Member</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="edit-team-form" method="post">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" name="staff_name" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Role</label>
+            <input type="text" name="staff_role" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <input type="text" name="phone" class="form-control">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea name="notes" class="form-control" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Team Member</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Checklist Modal -->
+<div class="modal fade" id="editChecklistModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Edit Checklist Item</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="edit-checklist-form" method="post">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Task</label>
+            <input type="text" name="task" class="form-control" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Update Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // Status update
+  const statusSelect = document.getElementById('status-select');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', function(){
+      const newStatus = this.value;
+      fetch('{{ url_for("service.event_status_update", event_id=event.id) }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({status: newStatus})
+      }).then(r => r.json()).then(j => {
+        if (j.ok) {
+          location.reload();
+        } else {
+          alert('Failed to update status');
+          this.value = '{{ event.status }}';
+        }
+      });
+    });
+  }
+  
+  // Checklist toggle
+  document.querySelectorAll('.chk-toggle').forEach(function(chk){
+    chk.addEventListener('change', function(){
+      var id = this.dataset.id;
+      fetch('/service/checklist/' + id + '/toggle', {method:'POST'}).then(r=>r.json()).then(j=>{
+        if(!j.ok) {
+          alert('Failed to toggle');
+          this.checked = !this.checked;
+        } else {
+          location.reload();
+        }
+      });
+    });
+  });
+  
+  // Edit Item
+  document.querySelectorAll('.edit-item-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const form = document.getElementById('edit-item-form');
+      form.action = '{{ url_for("service.event_item_edit", event_id=event.id, item_id=0) }}'.replace('/0/', '/' + this.dataset.id + '/');
+      form.querySelector('[name="item_name"]').value = this.dataset.name;
+      form.querySelector('[name="category"]').value = this.dataset.category;
+      form.querySelector('[name="quantity_needed"]').value = this.dataset.qtyNeeded;
+      form.querySelector('[name="quantity_assigned"]').value = this.dataset.qtyAssigned;
+      form.querySelector('[name="notes"]').value = this.dataset.notes;
+      const modal = document.getElementById('editItemModal');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        new bootstrap.Modal(modal).show();
+      } else if (typeof $ !== 'undefined') {
+        $(modal).modal('show');
+      } else {
+        modal.style.display = 'block';
+        modal.classList.add('show');
+      }
+    });
+  });
+  
+  // Edit Team
+  document.querySelectorAll('.edit-team-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const form = document.getElementById('edit-team-form');
+      form.action = '{{ url_for("service.event_team_edit", event_id=event.id, tid=0) }}'.replace('/0/', '/' + this.dataset.id + '/');
+      form.querySelector('[name="staff_name"]').value = this.dataset.name;
+      form.querySelector('[name="staff_role"]').value = this.dataset.role;
+      form.querySelector('[name="phone"]').value = this.dataset.phone;
+      form.querySelector('[name="notes"]').value = this.dataset.notes;
+      const modal = document.getElementById('editTeamModal');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        new bootstrap.Modal(modal).show();
+      } else if (typeof $ !== 'undefined') {
+        $(modal).modal('show');
+      } else {
+        modal.style.display = 'block';
+        modal.classList.add('show');
+      }
+    });
+  });
+  
+  // Edit Checklist
+  document.querySelectorAll('.edit-checklist-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const form = document.getElementById('edit-checklist-form');
+      form.action = '{{ url_for("service.checklist_edit", event_id=event.id, id=0) }}'.replace('/0/', '/' + this.dataset.id + '/');
+      form.querySelector('[name="task"]').value = this.dataset.task;
+      const modal = document.getElementById('editChecklistModal');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        new bootstrap.Modal(modal).show();
+      } else if (typeof $ !== 'undefined') {
+        $(modal).modal('show');
+      } else {
+        modal.style.display = 'block';
+        modal.classList.add('show');
+      }
+    });
+  });
+  
+  // Close modals on cancel/close buttons
+  document.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      const modal = this.closest('.modal');
+      if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        bootstrap.Modal.getInstance(modal)?.hide();
+      } else if (typeof $ !== 'undefined') {
+        $(modal).modal('hide');
+      } else {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+      }
+    });
+  });
+});
+</script>
+{% endblock %}
+

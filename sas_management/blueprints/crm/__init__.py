@@ -6,11 +6,11 @@ from flask import Blueprint, current_app, flash, jsonify, redirect, render_templ
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
-from models import (
+from sas_management.models import (
     Client, ClientNote, ClientDocument, ClientActivity, ClientCommunication,
     Event, IncomingLead, Invoice, Task, User, UserRole, db
 )
-from utils import role_required, permission_required
+from sas_management.utils import role_required, permission_required
 
 crm_bp = Blueprint("crm", __name__, url_prefix="/crm")
 
@@ -425,7 +425,7 @@ def api_assign_lead(lead_id):
         user_id = data.get("user_id")
         
         if user_id:
-            user = User.query.get(user_id)
+            user = db.session.get(User, user_id)
             if user:
                 lead.assigned_user_id = user_id
                 lead.updated_at = datetime.utcnow()
@@ -500,7 +500,7 @@ def client_profile(client_id):
         
         # Calculate open tasks count (not Complete)
         try:
-            from models import TaskStatus
+            from sas_management.models import TaskStatus
             open_tasks_count = sum(1 for t in tasks if hasattr(t, 'status') and t.status != TaskStatus.Complete)
         except Exception:
             open_tasks_count = 0

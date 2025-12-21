@@ -5,8 +5,8 @@ from datetime import datetime, date
 import json
 import uuid
 
-from models import db, Proposal, Client, Event, UserRole
-from utils import role_required
+from sas_management.models import db, Proposal, Client, Event, UserRole
+from sas_management.utils import role_required
 
 proposals_bp = Blueprint("proposals", __name__, url_prefix="/proposals")
 

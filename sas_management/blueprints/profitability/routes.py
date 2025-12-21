@@ -8,9 +8,9 @@ from decimal import Decimal
 from flask import render_template, request, abort, send_file, current_app, flash, redirect, url_for
 from flask_login import login_required, current_user
 
-from models import Event, EventCostItem, EventRevenueItem, UserRole, db
+from sas_management.models import Event, EventCostItem, EventRevenueItem, UserRole, db
 from blueprints.profitability import profitability_bp
-from utils import role_required
+from sas_management.utils import role_required
 
 # Try to import matplotlib
 try:

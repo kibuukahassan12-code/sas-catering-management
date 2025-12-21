@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% block title %}Hire Orders{% endblock %}
+
+{% block content %}
+<style>
+/* Clean, user-friendly styling - no animations */
+.hire-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 24px; 
+}
+.hire-cards { 
+    display: flex; 
+    gap: 16px; 
+    margin-bottom: 24px; 
+    flex-wrap: wrap; 
+}
+.stat-card { 
+    background: var(--surface); 
+    border-radius: 8px; 
+    padding: 20px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    flex: 1; 
+    min-width: 180px; 
+    border: 1px solid rgba(255,255,255,0.05);
+}
+.stat-card strong {
+    display: block;
+    font-size: 1.5rem;
+    color: var(--accent);
+    margin-top: 8px;
+}
+.table-wrap { 
+    background: var(--surface); 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    border: 1px solid rgba(255,255,255,0.05);
+    margin-bottom: 24px;
+}
+.pagination { 
+    display: flex; 
+    gap: 8px; 
+    list-style: none; 
+    padding: 0; 
+    margin: 20px 0 0 0; 
+    justify-content: center;
+}
+.page-item { }
+.page-link { 
+    padding: 8px 12px; 
+    background: var(--surface); 
+    border: 1px solid rgba(255,255,255,0.1); 
+    border-radius: 4px; 
+    color: var(--text); 
+    text-decoration: none; 
+    display: block;
+}
+.page-item.active .page-link { 
+    background: var(--accent); 
+    color: #000; 
+    border-color: var(--accent); 
+    font-weight: 600;
+}
+.page-link:hover { 
+    background: rgba(255,255,255,0.1); 
+}
+.badge { 
+    display: inline-block; 
+    padding: 4px 12px; 
+    border-radius: 4px; 
+    font-size: 0.875rem; 
+    font-weight: 500; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.badge.Pending { background: #ffc107; color: #000; }
+.badge.Confirmed { background: #17a2b8; color: #fff; }
+.badge.Completed { background: #28a745; color: #fff; }
+.badge.Cancelled { background: #dc3545; color: #fff; }
+.badge.Draft { background: #6c757d; color: #fff; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+table th {
+    text-align: left;
+    padding: 12px;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.02);
+}
+table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+table tr:hover {
+    background: rgba(255,255,255,0.02);
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Orders</p>
+        <h1>Hire Orders</h1>
+        <p class="muted">View and manage all equipment hire orders.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hire.new_order') }}">+ New Order</a>
+        <a class="btn-secondary" href="{{ url_for('hire.index') }}">← Overview</a>
+    </div>
+</section>
+
+<div class="hire-cards">
+    <div class="stat-card">
+        <div style="font-size: 0.875rem; color: rgba(255,255,255,0.6);">Total Orders</div>
+        <strong>{{ pagination.total if pagination else orders|length }}</strong>
+    </div>
+    <div class="stat-card">
+        <div style="font-size: 0.875rem; color: rgba(255,255,255,0.6);">Total Pages</div>
+        <strong>{{ pagination.pages if pagination else 1 }}</strong>
+    </div>
+    <div class="stat-card">
+        <div style="font-size: 0.875rem; color: rgba(255,255,255,0.6);">Current Page</div>
+        <strong>{{ pagination.page if pagination else 1 }}</strong>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reference</th>
+                    <th>Client</th>
+                    <th>Contact</th>
+                    <th>Start Date</th>
+                    <th>End Date</th>
+                    <th>Status</th>
+                    <th>Total Cost</th>
+                    <th>Paid</th>
+                    <th>Balance</th>
+                    <th>Items</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in orders %}
+                <tr>
+                    <td><strong>{{ o.reference if o.reference else ('HO-' + (o.id|string if o.id else '0')) }}</strong></td>
+                    <td>{{ o.client_name if o.client_name else 'Unknown' }}</td>
+                    <td>
+                        {% if o.telephone %}{{ o.telephone }}<br>{% endif %}
+                        {% if o.email %}<small class="muted">{{ o.email }}</small>{% endif %}
+                        {% if not o.telephone and not o.email %}-{% endif %}
+                    </td>
+                    <td>{{ o.start_date[:10] if o.start_date and o.start_date|length >= 10 else '-' }}</td>
+                    <td>{{ o.end_date[:10] if o.end_date and o.end_date|length >= 10 else '-' }}</td>
+                    <td><span class="badge {{ o.status if o.status else 'Pending' }}">{{ o.status if o.status else 'Pending' }}</span></td>
+                    <td><strong>{{ CURRENCY }}{{ "%.2f"|format(o.total_cost if o.total_cost else 0) }}</strong></td>
+                    <td>{{ CURRENCY }}{{ "%.2f"|format(o.amount_paid if o.amount_paid else 0) }}</td>
+                    <td>
+                        {% set balance = o.balance_due if o.balance_due else 0 %}
+                        {% if balance > 0 %}
+                        <span style="color: #ff6b6b; font-weight: 600;">{{ CURRENCY }}{{ "%.2f"|format(balance) }}</span>
+                        {% else %}
+                        <span style="color: #28a745; font-weight: 600;">{{ CURRENCY }}0.00</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ o.items_count if o.items_count else 0 }}</td>
+                    <td>
+                        {% if o.id %}
+                        <a href="{{ url_for('hire.order_details', order_id=o.id) }}" class="btn-ghost btn-sm" style="text-decoration: none;">View Details</a>
+                        {% else %}
+                        <span class="muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="11" style="text-align: center; padding: 3rem; color: rgba(255,255,255,0.5);">
+                        <div style="font-size: 2rem; margin-bottom: 1rem;">📋</div>
+                        <div>No orders found.</div>
+                        <div style="margin-top: 1rem;">
+                            <a href="{{ url_for('hire.new_order') }}" class="btn-primary">Create First Order</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- pagination links -->
+    {% if pagination and pagination.pages > 1 %}
+    <nav aria-label="Page navigation" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.1);">
+        <ul class="pagination">
+            {% if pagination.has_prev %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('hire.orders_list', page=pagination.page - 1) }}">Prev</a></li>
+            {% endif %}
+            {% for p in pagination.iter_pages() %}
+            <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('hire.orders_list', page=p) }}">{{ p }}</a>
+            </li>
+            {% endfor %}
+            {% if pagination.has_next %}
+            <li class="page-item"><a class="page-link" href="{{ url_for('hire.orders_list', page=pagination.page + 1) }}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Permission Management</p>
+        <h1>Permissions Overview</h1>
+        <p class="muted">High-level view of system permissions. For full details use the main Permissions page.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.view_permissions') }}">← View All Permissions</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Sample of Permissions</h3>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for perm in permissions|default([])[:25] %}
+                <tr>
+                    <td><span class="badge">{{ perm.code }}</span></td>
+                    <td>{{ perm.name or '—' }}</td>
+                    <td>{{ perm.description or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No permissions provided to this view. Use the main Permissions page for full details.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+

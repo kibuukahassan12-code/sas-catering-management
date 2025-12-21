@@ -1,0 +1,722 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Sales · Quotations</p>
+        <h1>Create New Quotation</h1>
+        <p class="muted">Generate a professional quotation for a client. Enter client details or select an existing client.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('quotes.dashboard') }}">← Back to Quotations</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Quotation Information</h3>
+    </div>
+    
+    <form method="POST" action="{{ url_for('quotes.create_quote') }}" id="quotationForm">
+        <!-- Client Selection Toggle -->
+        <div class="client-selection-toggle" style="margin-bottom: 2rem;">
+            <div class="toggle-buttons">
+                <button type="button" class="toggle-btn active" onclick="switchClientMode('existing')" id="toggleExisting">
+                    <span>📋</span> Select Existing Client
+                </button>
+                <button type="button" class="toggle-btn" onclick="switchClientMode('new')" id="toggleNew">
+                    <span>➕</span> Enter New Client Details
+                </button>
+            </div>
+        </div>
+        
+        <div class="form-grid">
+            <!-- Existing Client Selection -->
+            <div id="existingClientSection" class="client-section active">
+                <label class="form-control" style="grid-column: 1 / -1;">
+                    <span>Select Client *</span>
+                    <select name="client_id" id="clientSelect">
+                        <option value="">-- Select Client --</option>
+                        {% for client in clients %}
+                        <option value="{{ client.id }}">{{ client.name }} {% if client.email %}({{ client.email }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+            
+            <!-- New Client Details -->
+            <div id="newClientSection" class="client-section" style="display: none;">
+                <div class="client-details-card">
+                    <h4 style="margin: 0 0 1rem 0; color: rgba(255,255,255,0.9); font-size: 1rem;">Client Information</h4>
+                    
+                    <label class="form-control">
+                        <span>Client Name *</span>
+                        <input type="text" name="client_name" id="clientName" placeholder="Enter client name">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Contact Person *</span>
+                        <input type="text" name="contact_person" id="contactPerson" placeholder="Contact person name">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Phone Number *</span>
+                        <input type="tel" name="client_phone" id="clientPhone" placeholder="+256 700 000 000">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Email Address *</span>
+                        <input type="email" name="client_email" id="clientEmail" placeholder="client@example.com">
+                    </label>
+                    
+                    <label class="form-control">
+                        <span>Company (Optional)</span>
+                        <input type="text" name="client_company" id="clientCompany" placeholder="Company name">
+                    </label>
+                    
+                    <label class="form-control" style="grid-column: 1 / -1;">
+                        <span>Address (Optional)</span>
+                        <textarea name="client_address" id="clientAddress" rows="2" placeholder="Physical address"></textarea>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Quotation Details -->
+            <div class="quotation-details-section" style="grid-column: 1 / -1; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid rgba(255,255,255,0.1);">
+                <h4 style="margin: 0 0 1rem 0; color: rgba(255,255,255,0.9); font-size: 1rem;">Quotation Details</h4>
+                
+                <label class="form-control">
+                    <span>Quote Title (Optional)</span>
+                    <input type="text" name="title" id="title" placeholder="e.g., Wedding Catering Package">
+                </label>
+                
+                <label class="form-control">
+                    <span>Event Type (Optional)</span>
+                    <select name="event_type" id="eventType">
+                        <option value="">-- Select Event Type --</option>
+                        <option value="Wedding">Wedding</option>
+                        <option value="Kwanjula">Kwanjula</option>
+                        <option value="Kukyala">Kukyala</option>
+                        <option value="Kuhingira">Kuhingira</option>
+                        <option value="Nikkah">Nikkah</option>
+                        <option value="Corporate">Corporate</option>
+                        <option value="Birthday">Birthday</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </label>
+                
+                <label class="form-control">
+                    <span>Event Date (Optional)</span>
+                    <input type="date" name="event_date" id="eventDate">
+                </label>
+                
+                <label class="form-control">
+                    <span>Quote Date *</span>
+                    <input type="date" name="quote_date" id="quoteDate" value="{{ default_quote_date }}" required>
+                </label>
+                
+                <label class="form-control">
+                    <span>Expiry Date *</span>
+                    <input type="date" name="expiry_date" id="expiryDate" value="{{ default_expiry_date }}" required>
+                </label>
+                
+                <label class="form-control">
+                    <span>Tax Rate (%)</span>
+                    <input type="number" name="tax_rate" id="taxRate" step="0.01" min="0" max="100" value="0" placeholder="0.00">
+                </label>
+            </div>
+            
+            <!-- Line Items Section -->
+            <div class="line-items-section" style="grid-column: 1 / -1; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid rgba(255,255,255,0.1);">
+                <h4 style="margin: 0 0 1rem 0; color: rgba(255,255,255,0.9); font-size: 1rem;">Line Items</h4>
+                
+                <div id="lineItemsContainer">
+                    <!-- Line items will be added here dynamically -->
+                </div>
+                
+                <button type="button" class="btn-secondary" id="addItemBtn" style="margin-top: 1rem;">
+                    <span>➕</span> Add Line Item
+                </button>
+            </div>
+            
+            <!-- Totals Section -->
+            <div class="totals-section" style="grid-column: 1 / -1; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid rgba(255,255,255,0.1);">
+                <h4 style="margin: 0 0 1rem 0; color: rgba(255,255,255,0.9); font-size: 1rem;">Summary</h4>
+                
+                <div class="totals-display">
+                    <div class="total-row">
+                        <span class="total-label">Subtotal:</span>
+                        <span class="total-value" id="subtotalDisplay">UGX 0.00</span>
+                    </div>
+                    <div class="total-row">
+                        <span class="total-label">Tax:</span>
+                        <span class="total-value" id="taxDisplay">UGX 0.00</span>
+                    </div>
+                    <div class="total-row total-row-final">
+                        <span class="total-label">Total Amount:</span>
+                        <span class="total-value total-value-final" id="totalDisplay">UGX 0.00</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions" style="grid-column: 1 / -1;">
+                <button type="submit" class="btn-primary" id="submitBtn" style="font-size: 1rem; padding: 0.875rem 2rem;">
+                    <span id="submitText">💾 Create Quotation</span>
+                </button>
+                <a href="{{ url_for('quotes.dashboard') }}" class="btn-ghost">Cancel</a>
+            </div>
+        </div>
+    </form>
+</section>
+
+<!-- Line Item Template -->
+<template id="lineItemTemplate">
+    <div class="line-item-card" data-item-index="">
+        <div class="line-item-header">
+            <span class="line-item-number">Item #<span class="item-index">1</span></span>
+            <button type="button" class="btn-remove-item" onclick="removeLineItem(this)">
+                <span>🗑️</span> Remove
+            </button>
+        </div>
+        <div class="line-item-body">
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Item Name *</span>
+                <input type="text" name="item_name[]" class="item-name" placeholder="Enter item name" required>
+            </label>
+            
+            <label class="form-control" style="grid-column: 1 / -1;">
+                <span>Description (Optional)</span>
+                <textarea name="item_description[]" class="item-description" rows="2" placeholder="Item description"></textarea>
+            </label>
+            
+            <label class="form-control">
+                <span>Quantity *</span>
+                <input type="number" name="item_quantity[]" class="item-quantity" min="1" value="1" required>
+            </label>
+            
+            <label class="form-control">
+                <span>Unit Price (UGX) *</span>
+                <input type="number" name="item_unit_price[]" class="item-unit-price" min="0" step="0.01" value="0" placeholder="0.00" required>
+            </label>
+            
+            <div class="form-control" style="display: flex; align-items: flex-end;">
+                <div style="width: 100%;">
+                    <span style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem; font-weight: 500; color: rgba(255,255,255,0.9);">Line Total</span>
+                    <div class="line-total-display">
+                        UGX <span class="line-total-value">0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style>
+.client-selection-toggle {
+    display: flex;
+    justify-content: center;
+    margin: 1.5rem 0;
+}
+
+.toggle-buttons {
+    display: flex;
+    gap: 0.5rem;
+    background: rgba(255,255,255,0.05);
+    padding: 0.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.toggle-btn {
+    flex: 1;
+    padding: 0.875rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.toggle-btn:hover {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+}
+
+.toggle-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.client-section {
+    animation: fadeIn 0.3s ease;
+}
+
+.client-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.client-details-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.client-details-card h4 {
+    color: rgba(255,255,255,0.9);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+}
+
+.quotation-details-section h4,
+.line-items-section h4,
+.totals-section h4 {
+    color: rgba(255,255,255,0.9);
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+.form-control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-control span {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+}
+
+.form-control input,
+.form-control select,
+.form-control textarea {
+    padding: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9375rem;
+    transition: all 0.3s ease;
+}
+
+.form-control input:focus,
+.form-control select:focus,
+.form-control textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control input::placeholder,
+.form-control textarea::placeholder {
+    color: rgba(255,255,255,0.4);
+}
+
+.form-control small {
+    font-size: 0.8125rem;
+    color: rgba(255,255,255,0.6);
+    margin-top: 0.25rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid rgba(255,255,255,0.1);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 0.875rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-block;
+    cursor: pointer;
+    font-size: 0.9375rem;
+}
+
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+}
+
+.btn-ghost {
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 0.875rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+
+.btn-ghost:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+}
+
+/* Line Items Styling */
+.line-item-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.line-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.line-item-number {
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9375rem;
+}
+
+.btn-remove-item {
+    background: rgba(220, 53, 69, 0.2);
+    color: rgba(255,255,255,0.9);
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+}
+
+.btn-remove-item:hover {
+    background: rgba(220, 53, 69, 0.3);
+    border-color: rgba(220, 53, 69, 0.5);
+}
+
+.line-item-body {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.line-total-display {
+    padding: 0.75rem;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #667eea;
+    text-align: center;
+}
+
+/* Totals Styling */
+.totals-display {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.total-row:last-child {
+    border-bottom: none;
+}
+
+.total-row-final {
+    padding-top: 1rem;
+    margin-top: 0.5rem;
+    border-top: 2px solid rgba(102, 126, 234, 0.3);
+}
+
+.total-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+}
+
+.total-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: rgba(255,255,255,0.9);
+}
+
+.total-value-final {
+    font-size: 1.25rem;
+    color: #667eea;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .line-item-body {
+        grid-template-columns: 1fr;
+    }
+    
+    .toggle-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+let currentClientMode = 'existing';
+let itemIndex = 0;
+
+function switchClientMode(mode) {
+    currentClientMode = mode;
+    const existingSection = document.getElementById('existingClientSection');
+    const newSection = document.getElementById('newClientSection');
+    const toggleExisting = document.getElementById('toggleExisting');
+    const toggleNew = document.getElementById('toggleNew');
+    const clientSelect = document.getElementById('clientSelect');
+    
+    if (mode === 'existing') {
+        existingSection.style.display = 'block';
+        newSection.style.display = 'none';
+        toggleExisting.classList.add('active');
+        toggleNew.classList.remove('active');
+        clientSelect.required = true;
+        // Clear new client fields
+        document.getElementById('clientName').required = false;
+        document.getElementById('contactPerson').required = false;
+        document.getElementById('clientPhone').required = false;
+        document.getElementById('clientEmail').required = false;
+    } else {
+        existingSection.style.display = 'none';
+        newSection.style.display = 'block';
+        toggleExisting.classList.remove('active');
+        toggleNew.classList.add('active');
+        clientSelect.required = false;
+        // Require new client fields
+        document.getElementById('clientName').required = true;
+        document.getElementById('contactPerson').required = true;
+        document.getElementById('clientPhone').required = true;
+        document.getElementById('clientEmail').required = true;
+    }
+}
+
+function addLineItem() {
+    const template = document.getElementById('lineItemTemplate');
+    const container = document.getElementById('lineItemsContainer');
+    const clone = template.content.cloneNode(true);
+    const itemDiv = clone.querySelector('.line-item-card');
+    const indexSpan = itemDiv.querySelector('.item-index');
+    
+    itemIndex++;
+    itemDiv.setAttribute('data-item-index', itemIndex);
+    indexSpan.textContent = itemIndex;
+    
+    // Add event listeners for calculation
+    const quantityInput = itemDiv.querySelector('.item-quantity');
+    const priceInput = itemDiv.querySelector('.item-unit-price');
+    
+    quantityInput.addEventListener('input', function() {
+        calculateItemTotal(this);
+    });
+    priceInput.addEventListener('input', function() {
+        calculateItemTotal(this);
+    });
+    
+    container.appendChild(clone);
+    calculateTotals();
+}
+
+function removeLineItem(button) {
+    const container = document.getElementById('lineItemsContainer');
+    if (container.children.length <= 1) {
+        alert('At least one line item is required.');
+        return;
+    }
+    button.closest('.line-item-card').remove();
+    // Update item numbers
+    updateItemNumbers();
+    calculateTotals();
+}
+
+function updateItemNumbers() {
+    const items = document.querySelectorAll('.line-item-card');
+    items.forEach((item, index) => {
+        item.querySelector('.item-index').textContent = index + 1;
+    });
+}
+
+function calculateItemTotal(input) {
+    const item = input.closest('.line-item-card');
+    const quantity = parseFloat(item.querySelector('.item-quantity').value) || 0;
+    const unitPrice = parseFloat(item.querySelector('.item-unit-price').value) || 0;
+    const total = quantity * unitPrice;
+    
+    item.querySelector('.line-total-value').textContent = total.toFixed(2);
+    calculateTotals();
+}
+
+function calculateTotals() {
+    let subtotal = 0;
+    
+    // Calculate subtotal from all line items
+    document.querySelectorAll('.line-item-card').forEach(function(item) {
+        const quantity = parseFloat(item.querySelector('.item-quantity').value) || 0;
+        const unitPrice = parseFloat(item.querySelector('.item-unit-price').value) || 0;
+        subtotal += quantity * unitPrice;
+    });
+    
+    // Calculate tax
+    const taxRate = parseFloat(document.getElementById('taxRate').value) || 0;
+    const tax = subtotal * (taxRate / 100);
+    const total = subtotal + tax;
+    
+    // Update displays
+    document.getElementById('subtotalDisplay').textContent = 'UGX ' + subtotal.toFixed(2);
+    document.getElementById('taxDisplay').textContent = 'UGX ' + tax.toFixed(2);
+    document.getElementById('totalDisplay').textContent = 'UGX ' + total.toFixed(2);
+}
+
+// Form validation
+document.addEventListener('DOMContentLoaded', function() {
+    // Add initial line item
+    addLineItem();
+    
+    // Add item button
+    document.getElementById('addItemBtn').addEventListener('click', function() {
+        addLineItem();
+    });
+    
+    // Calculate totals on input change
+    document.getElementById('taxRate').addEventListener('input', calculateTotals);
+    
+    // Form submission
+    document.getElementById('quotationForm').addEventListener('submit', function(e) {
+        let errors = [];
+        
+        if (currentClientMode === 'existing') {
+            const clientSelect = document.getElementById('clientSelect');
+            if (!clientSelect.value) {
+                errors.push('Please select a client or switch to "Enter New Client Details"');
+            }
+        } else {
+            const name = document.getElementById('clientName').value.trim();
+            const contact = document.getElementById('contactPerson').value.trim();
+            const phone = document.getElementById('clientPhone').value.trim();
+            const email = document.getElementById('clientEmail').value.trim();
+            
+            if (!name) errors.push('Client name is required');
+            if (!contact) errors.push('Contact person is required');
+            if (!phone) errors.push('Phone number is required');
+            if (!email) errors.push('Email address is required');
+            
+            // Basic email validation
+            if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errors.push('Please enter a valid email address');
+            }
+        }
+        
+        // Validate quote date
+        const quoteDate = document.getElementById('quoteDate').value;
+        const expiryDate = document.getElementById('expiryDate').value;
+        if (!quoteDate) errors.push('Quote date is required');
+        if (!expiryDate) errors.push('Expiry date is required');
+        if (quoteDate && expiryDate && expiryDate <= quoteDate) {
+            errors.push('Expiry date must be later than quote date');
+        }
+        
+        // Validate line items
+        const items = document.querySelectorAll('.line-item-card');
+        if (items.length === 0) {
+            errors.push('Please add at least one line item');
+        } else {
+            items.forEach(function(item) {
+                const name = item.querySelector('.item-name').value.trim();
+                const quantity = parseFloat(item.querySelector('.item-quantity').value) || 0;
+                const unitPrice = parseFloat(item.querySelector('.item-unit-price').value) || 0;
+                
+                if (!name) errors.push('All line items must have a name');
+                if (quantity <= 0) errors.push('All line items must have a quantity greater than 0');
+                if (unitPrice < 0) errors.push('All line items must have a valid unit price');
+            });
+        }
+        
+        if (errors.length > 0) {
+            e.preventDefault();
+            const errorMsg = errors.join('\\n');
+            alert('Please fix the following errors:\\n\\n' + errorMsg);
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        if (submitBtn && submitText) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.cursor = 'not-allowed';
+            submitText.textContent = '⏳ Creating Quotation...';
+        }
+    });
+});
+</script>
+{% endblock %}
+

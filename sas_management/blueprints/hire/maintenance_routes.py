@@ -4,9 +4,8 @@ from flask_login import login_required, current_user
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
-from models import db, InventoryItem, UserRole
-from models import EquipmentMaintenance, EquipmentConditionReport, EquipmentDepreciation
-from utils import role_required
+from sas_management.models import db, InventoryItem, UserRole, EquipmentMaintenance, EquipmentConditionReport, EquipmentDepreciation
+from sas_management.utils import role_required
 
 maintenance_bp = Blueprint("maintenance", __name__, url_prefix="/hire/maintenance")
 
@@ -155,7 +154,7 @@ def condition_report():
             db.session.add(report)
             
             # Update item condition based on rating
-            item = InventoryItem.query.get(report.hire_item_id)
+            item = db.session.get(InventoryItem, report.hire_item_id)
             if item:
                 if report.condition_rating <= 3:
                     item.condition = "Poor"

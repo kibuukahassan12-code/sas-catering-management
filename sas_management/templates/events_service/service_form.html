@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Event Service Department</p>
+        <h1>{{ action }} Service</h1>
+        <p class="muted">{% if action == 'Add' %}Create a new service package for events.{% else %}Update service details and pricing.{% endif %}</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('events_service.dashboard') }}">← Back to Services</a>
+</section>
+
+<section class="panel">
+    <form method="POST" class="form-grid">
+        <label class="form-control">
+            <span>Service Title <span style="color: #dc3545;">*</span></span>
+            <input 
+                type="text" 
+                name="title" 
+                id="title"
+                value="{{ service.title if service else '' }}" 
+                required
+                placeholder="Enter service title (e.g., Full Catering Service)"
+                autofocus
+            >
+        </label>
+
+        <label class="form-control">
+            <span>Description</span>
+            <textarea 
+                name="description" 
+                id="description"
+                rows="4"
+                placeholder="Provide a detailed description of this service package (optional)"
+            >{{ service.description if service else '' }}</textarea>
+            <small style="color: #6b7280; margin-top: 0.25rem; display: block;">Optional: Describe what this service includes, setup requirements, duration, etc.</small>
+        </label>
+
+        <label class="form-control">
+            <span>Base Price ({{ CURRENCY.rstrip() }})</span>
+            <input 
+                type="number" 
+                name="price" 
+                id="price"
+                min="0" 
+                step="0.01" 
+                value="{% if service and service.price %}{{ "{:.2f}".format(service.price) }}{% else %}0.00{% endif %}"
+                placeholder="0.00"
+            >
+            <small style="color: #6b7280; margin-top: 0.25rem; display: block;">Base price for this service package. Can be adjusted per event.</small>
+        </label>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">{{ action }} Service</button>
+            <a class="btn-ghost" href="{{ url_for('events_service.dashboard') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

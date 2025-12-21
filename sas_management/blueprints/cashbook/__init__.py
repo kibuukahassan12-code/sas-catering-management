@@ -11,9 +11,9 @@ from flask import (
 )
 from flask_login import login_required
 
-from models import Event, Transaction, TransactionType, UserRole, db
-from utils import get_decimal, paginate_query, role_required
-from utils.helpers import parse_date
+from sas_management.models import Event, Transaction, TransactionType, UserRole, db
+from sas_management.utils import get_decimal, paginate_query, role_required
+from sas_management.utils.helpers import parse_date
 
 cashbook_bp = Blueprint("cashbook", __name__, url_prefix="/cashbook")
 
@@ -30,9 +30,12 @@ def _coerce_transaction_type(value):
 
 
 def _get_filtered_query(start_date=None, end_date=None, category=None, tx_type=None):
-    """Build a filtered query for transactions."""
-    query = Transaction.query
+    """Build a filtered query for transactions with LEFT JOIN to events."""
+    # Use explicit query to ensure LEFT JOIN for events
+    from sqlalchemy.orm import joinedload
+    query = Transaction.query.options(joinedload(Transaction.related_event))
 
+    # Only apply filters if values are provided (not None/empty)
     if start_date:
         query = query.filter(Transaction.date >= start_date)
     if end_date:
@@ -46,7 +49,7 @@ def _get_filtered_query(start_date=None, end_date=None, category=None, tx_type=N
 
 
 def _sum_transactions_filtered(tx_type, start_date=None, end_date=None, category=None):
-    """Calculate sum of transactions with filters."""
+    """Calculate sum of transactions with filters (for filtered totals display)."""
     query = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0)).filter(
         Transaction.type == tx_type
     )
@@ -62,33 +65,50 @@ def _sum_transactions_filtered(tx_type, start_date=None, end_date=None, category
     return Decimal(value or 0)
 
 
+def _sum_transactions_unfiltered(tx_type):
+    """Calculate sum of ALL transactions of a given type (no filters applied)."""
+    query = db.session.query(db.func.coalesce(db.func.sum(Transaction.amount), 0)).filter(
+        Transaction.type == tx_type
+    )
+    value = query.scalar()
+    return Decimal(value or 0)
+
+
 @cashbook_bp.route("/")
 @login_required
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def index():
     # Get filter parameters
-    start_date_str = request.args.get("start_date", "")
-    end_date_str = request.args.get("end_date", "")
-    category = request.args.get("category", "")
-    tx_type_str = request.args.get("type", "")
+    start_date_str = request.args.get("start_date", "").strip()
+    end_date_str = request.args.get("end_date", "").strip()
+    category = request.args.get("category", "").strip()
+    tx_type_str = request.args.get("type", "").strip()
 
+    # Normalize filters: treat empty strings and "All" as None
     start_date = parse_date(start_date_str) if start_date_str else None
     end_date = parse_date(end_date_str) if end_date_str else None
+    category = category if category and category != "All Categories" else None
     tx_type = None
-    if tx_type_str:
+    if tx_type_str and tx_type_str != "All Types":
         try:
             tx_type = TransactionType(tx_type_str)
         except ValueError:
             pass
 
-    # Get filtered transactions
+    # Calculate summary from UNFILTERED base (all transactions)
+    # This ensures totals always reflect the complete financial picture
+    income_total = _sum_transactions_unfiltered(TransactionType.Income)
+    expense_total = _sum_transactions_unfiltered(TransactionType.Expense)
+    net_profit = income_total - expense_total
+
+    # Get filtered transactions for the table (filters apply only to list view)
     filtered_query = _get_filtered_query(start_date, end_date, category, tx_type)
     pagination = paginate_query(filtered_query)
-
-    # Calculate summary with filters
-    income_total = _sum_transactions_filtered(TransactionType.Income, start_date, end_date, category)
-    expense_total = _sum_transactions_filtered(TransactionType.Expense, start_date, end_date, category)
-    net_profit = income_total - expense_total
+    
+    # Calculate filtered totals for display (optional - can show "X of Y" if needed)
+    filters_active = bool(start_date or end_date or category or tx_type)
+    filtered_income = _sum_transactions_filtered(TransactionType.Income, start_date, end_date, category) if filters_active else income_total
+    filtered_expense = _sum_transactions_filtered(TransactionType.Expense, start_date, end_date, category) if filters_active else expense_total
 
     # Get unique categories for filter dropdown
     categories = (
@@ -99,10 +119,16 @@ def index():
     )
     categories = [cat[0] for cat in categories]
 
+    # Get total count for "X of Y" display
+    total_count = Transaction.query.count()
+    filtered_count = pagination.total
+
     summary = {
         "income": income_total,
         "expense": expense_total,
         "net": net_profit,
+        "filtered_income": filtered_income,
+        "filtered_expense": filtered_expense,
     }
 
     return render_template(
@@ -114,8 +140,11 @@ def index():
         categories=categories,
         start_date=start_date_str,
         end_date=end_date_str,
-        selected_category=category,
+        selected_category=category or "",
         selected_type=tx_type_str,
+        filters_active=filters_active,
+        total_count=total_count,
+        filtered_count=filtered_count,
     )
 
 
@@ -190,7 +219,8 @@ def add_transaction():
 @login_required
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def edit_transaction(transaction_id):
-    transaction = Transaction.query.get_or_404(transaction_id)
+    from sas_management.utils.helpers import get_or_404
+    transaction = get_or_404(Transaction, transaction_id)
     events = Event.query.order_by(Event.event_date.desc()).all()
 
     if request.method == "POST":
@@ -247,7 +277,8 @@ def edit_transaction(transaction_id):
 @login_required
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def delete_transaction(transaction_id):
-    transaction = Transaction.query.get_or_404(transaction_id)
+    from sas_management.utils.helpers import get_or_404
+    transaction = get_or_404(Transaction, transaction_id)
     db.session.delete(transaction)
     db.session.commit()
     flash("Transaction deleted.", "info")

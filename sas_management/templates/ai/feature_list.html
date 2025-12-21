@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Premium · SAS AI</p>
+        <h1>AI Features</h1>
+        <p class="muted">Complete list of all AI features in the system.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('sas_ai.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+{# Build a stable mapping from feature.key -> numeric feature_id (1-based) #}
+{% if features %}
+    {% set ns = namespace(feature_ids={}) %}
+    {% for f in features %}
+        {% set _ = ns.feature_ids.update({ f.key: loop.index }) %}
+    {% endfor %}
+    {% set feature_ids = ns.feature_ids %}
+{% endif %}
+
+{% if features_by_category %}
+{% for category, category_features in features_by_category.items() %}
+<section class="panel">
+    <h2 style="margin: 0 0 1.5rem 0; font-size: 1.5rem; font-weight: 600; color: var(--brand);">{{ category }}</h2>
+    <div style="display: grid; gap: 1rem;">
+        {% for feature in category_features %}
+        {% set fid = feature_ids[feature.key] if feature_ids is defined else loop.index %}
+        <div class="ai-feature-card"
+             data-feature-id="{{ fid }}"
+             data-feature-key="{{ feature.key }}"
+             data-enabled="{{ 'true' if feature.enabled else 'false' }}"
+             style="border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; display: flex; align-items: flex-start; gap: 1rem;">
+            <div style="font-size: 2rem;">{{ feature.icon }}</div>
+            <div style="flex: 1;">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.5rem; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0;">
+                        <h3 style="margin: 0; font-size: 1.125rem; font-weight: 600;">
+                            <a href="{{ url_for('sas_ai.feature_detail', feature_key=feature.key) }}"
+                               style="color: var(--brand); text-decoration: none;">
+                                {{ feature.name }}
+                            </a>
+                        </h3>
+                        {% if feature.enabled %}
+                        <span class="sas-ai-badge sas-ai-badge-enabled ai-feature-status">Enabled</span>
+                        {% else %}
+                        <span class="sas-ai-badge sas-ai-badge-disabled ai-feature-status">Disabled</span>
+                        {% endif %}
+                    </div>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                    <button type="button"
+                            class="btn-secondary ai-feature-toggle-btn"
+                            data-feature-id="{{ fid }}"
+                            data-feature-key="{{ feature.key }}"
+                            data-enabled="{{ 'true' if feature.enabled else 'false' }}"
+                            style="font-size: 0.8rem; padding: 0.4rem 0.9rem; border-radius: 999px; white-space: nowrap;">
+                        {% if feature.enabled %}Disable{% else %}Enable{% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+                <p style="margin: 0 0 0.75rem 0; color: var(--brand); font-size: 0.875rem; line-height: 1.5;">
+                    {{ feature.description }}
+                </p>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--brand);">
+                    <span>Module: <strong>{{ feature.module_integration|title }}</strong></span>
+                    <span>•</span>
+                    <span>Value: <strong>{{ feature.business_value }}</strong></span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+{% else %}
+<section class="panel">
+    <div style="text-align: center; padding: 2rem;">
+        <p style="color: var(--brand);">No AI features available.</p>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggleButtons = document.querySelectorAll('.ai-feature-toggle-btn');
+
+    toggleButtons.forEach((button) => {
+        button.addEventListener('click', function (event) {
+            event.preventDefault();
+            const featureId = this.dataset.featureId;
+            if (!featureId) {
+                return;
+            }
+            toggleAiFeature(this, featureId);
+        });
+    });
+
+    async function toggleAiFeature(button, featureId) {
+        const card = button.closest('.ai-feature-card');
+        if (!card) return;
+
+        const statusBadge = card.querySelector('.ai-feature-status');
+
+        const originalText = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Updating...';
+
+        try {
+            const response = await fetch(`/admin/ai-features/toggle/${featureId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                alert(data.error || 'Unable to update feature status.');
+                button.textContent = originalText;
+                return;
+            }
+
+            const isEnabled = !!data.is_enabled;
+
+            card.dataset.enabled = isEnabled ? 'true' : 'false';
+            button.dataset.enabled = isEnabled ? 'true' : 'false';
+            button.textContent = isEnabled ? 'Disable' : 'Enable';
+
+            if (statusBadge) {
+                statusBadge.textContent = isEnabled ? 'Enabled' : 'Disabled';
+                statusBadge.classList.toggle('sas-ai-badge-enabled', isEnabled);
+                statusBadge.classList.toggle('sas-ai-badge-disabled', !isEnabled);
+            }
+        } catch (error) {
+            console.error('Error toggling feature:', error);
+            alert('Error toggling feature. Please try again.');
+            button.textContent = originalText;
+        } finally {
+            button.disabled = false;
+        }
+    }
+});
+</script>
+{% endblock %}
+

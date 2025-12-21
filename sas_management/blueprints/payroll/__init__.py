@@ -5,9 +5,9 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import login_required
 from sqlalchemy.orm import joinedload
 
-from models import PayrollRecord, Transaction, TransactionType, User, UserRole, db
-from utils import get_decimal, paginate_query, role_required
-from utils.helpers import parse_date
+from sas_management.models import PayrollRecord, Transaction, TransactionType, User, UserRole, db
+from sas_management.utils import get_decimal, paginate_query, role_required
+from sas_management.utils.helpers import parse_date
 
 payroll_bp = Blueprint("payroll", __name__, url_prefix="/admin/payroll")
 

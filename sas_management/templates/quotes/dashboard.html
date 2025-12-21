@@ -7,7 +7,8 @@
         <p class="muted">Manage all quotations, track pipeline value, and convert quotes to invoices.</p>
     </div>
     <div class="quick-links">
-        <a class="btn-primary" href="{{ url_for('quotes.new_quote') }}">+ New Quotation</a>
+        <a class="btn-primary" href="{{ url_for('quotes.create_quote') }}">+ New Quotation</a>
+        <a class="btn-secondary" href="{{ url_for('quotes.new_quote') }}">Legacy Builder</a>
         <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Dashboard</a>
     </div>
 </section>
@@ -117,10 +118,10 @@
                     <td>
                         {% if quote.expiry_date %}
                             {% if quote.expiry_date < today %}
-                            <span style="color: #ff5c5c;">{{ quote.expiry_date.strftime('%b %d, %Y') }}</span>
+                            <span style="color: #ff5c5c;">{{ quote.expiry_date.strftime('%b %d, %Y') if quote.expiry_date else 'No Date' }}</span>
                             <br><small class="muted" style="color: #ff5c5c;">Expired</small>
                             {% else %}
-                            {{ quote.expiry_date.strftime('%b %d, %Y') }}
+                            {{ quote.expiry_date.strftime('%b %d, %Y') if quote.expiry_date else 'No Date' }}
                             <br><small class="muted">{{ (quote.expiry_date - today).days }} day{% if (quote.expiry_date - today).days != 1 %}s{% endif %} left</small>
                             {% endif %}
                         {% else %}
@@ -166,9 +167,12 @@
     
     {% else %}
     <div style="text-align: center; padding: 3rem; color: #6c757d;">
-        <p style="font-size: 1.2rem; margin-bottom: 0.5rem;">No quotations found</p>
-        <p class="muted">Get started by creating your first quotation.</p>
-        <a href="{{ url_for('quotes.new_quote') }}" class="btn-primary" style="margin-top: 1rem;">+ Create First Quotation</a>
+        <div style="max-width: 400px; margin: 0 auto;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📄</div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #374151;">No quotations created yet</h3>
+            <p class="muted" style="margin-bottom: 1.5rem;">Create your first quotation to get started.</p>
+            <a href="{{ url_for('quotes.create_quote') }}" class="btn-primary">+ Create First Quotation</a>
+        </div>
     </div>
     {% endif %}
 </section>

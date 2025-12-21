@@ -3,7 +3,7 @@ import os
 from datetime import datetime, date
 from flask import current_app
 from werkzeug.utils import secure_filename
-from models import (
+from sas_management.models import (
     db, Announcement, BulletinPost, DirectMessageThread, DirectMessage,
     DepartmentMessage, EventMessageThread, EventMessage, StaffTask,
     User, Event
@@ -73,7 +73,7 @@ def list_announcements(limit=None):
 def get_announcement(announcement_id):
     """Get a specific announcement."""
     try:
-        announcement = Announcement.query.get(announcement_id)
+        announcement = db.session.get(Announcement, announcement_id)
         if not announcement:
             return {"success": False, "error": "Announcement not found"}
         return {"success": True, "announcement": announcement}
@@ -333,7 +333,7 @@ def create_task(assigned_to, assigned_by, data):
 def update_task_status(task_id, status, user_id=None):
     """Update task status."""
     try:
-        task = StaffTask.query.get(task_id)
+        task = db.session.get(StaffTask, task_id)
         if not task:
             return {"success": False, "error": "Task not found"}
         
@@ -366,7 +366,7 @@ def list_tasks_for_user(user_id, status_filter=None):
 def get_task(task_id):
     """Get a specific task."""
     try:
-        task = StaffTask.query.get(task_id)
+        task = db.session.get(StaffTask, task_id)
         if not task:
             return {"success": False, "error": "Task not found"}
         return {"success": True, "task": task}

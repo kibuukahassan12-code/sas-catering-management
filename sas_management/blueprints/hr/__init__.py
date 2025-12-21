@@ -4,15 +4,15 @@ from datetime import datetime
 from flask import Blueprint, flash, redirect, render_template, request, url_for, jsonify, send_file, send_from_directory, current_app
 from flask_login import login_required
 
-from models import (
+from sas_management.models import (
     db, Department, Position, Employee, Attendance, Shift, ShiftAssignment,
     LeaveRequest, PayrollExport, User, UserRole
 )
-from services.hr_service import (
+from sas_management.services.hr_service import (
     create_employee, get_employee, update_employee, list_employees,
     clock_in, clock_out, assign_shift, request_leave, generate_payroll_export
 )
-from utils import paginate_query, role_required
+from sas_management.utils import paginate_query, role_required
 
 hr_bp = Blueprint("hr", __name__, url_prefix="/hr")
 
@@ -164,9 +164,9 @@ def roster_builder():
         
         # Get assignments for this week
         assignments = ShiftAssignment.query.filter(
-            ShiftAssignment.date >= start_date,
-            ShiftAssignment.date <= end_date
-        ).order_by(ShiftAssignment.date.asc()).all()
+            ShiftAssignment.assignment_date >= start_date,
+            ShiftAssignment.assignment_date <= end_date
+        ).order_by(ShiftAssignment.assignment_date.asc()).all()
         
         # Calculate date range for template
         from datetime import timedelta
@@ -240,9 +240,11 @@ def attendance_review():
         # Get date range from request
         start_str = request.args.get('start_date', start_date.isoformat())
         end_str = request.args.get('end_date', end_date.isoformat())
+        review_date_str = request.args.get('review_date', '')
         
         start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
         end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
+        review_date = datetime.strptime(review_date_str, '%Y-%m-%d').date() if review_date_str else None
         
         # Get attendances in date range - use date field if available, otherwise clock_in date
         attendances = Attendance.query.filter(
@@ -257,7 +259,19 @@ def attendance_review():
                 db.func.date(Attendance.clock_in) <= end_date
             ).order_by(Attendance.clock_in.desc()).all()
         
-        employees = Employee.query.filter_by(status='active').all()
+        employees = Employee.query.filter_by(status='active').order_by(Employee.last_name.asc()).all()
+        
+        # If review_date is specified, get attendances for that specific day
+        day_attendances = None
+        if review_date:
+            day_attendances = Attendance.query.filter(
+                Attendance.date == review_date
+            ).order_by(Employee.last_name.asc()).all()
+            # Also try by clock_in date
+            if not day_attendances:
+                day_attendances = Attendance.query.filter(
+                    db.func.date(Attendance.clock_in) == review_date
+                ).order_by(Employee.last_name.asc()).all()
         
         # Calculate summary statistics
         total_records = len(attendances)
@@ -271,6 +285,8 @@ def attendance_review():
             employees=employees,
             start_date=start_date,
             end_date=end_date,
+            review_date=review_date,
+            day_attendances=day_attendances,
             total_records=total_records,
             present_count=present_count,
             late_count=late_count,
@@ -284,6 +300,8 @@ def attendance_review():
             employees=[],
             start_date=None,
             end_date=None,
+            review_date=None,
+            day_attendances=None,
             total_records=0,
             present_count=0,
             late_count=0,
@@ -451,6 +469,186 @@ def api_assign_shift():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@hr_bp.route("/api/shift-assignment/update", methods=["POST"])
+@login_required
+def api_update_shift_assignment():
+    """API: Update existing shift assignment."""
+    try:
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        assignment_id = data.get('assignment_id')
+        shift_id = data.get('shift_id')
+        
+        if not assignment_id or not shift_id:
+            return jsonify({"success": False, "error": "assignment_id and shift_id are required"}), 400
+        
+        assignment = db.session.get(ShiftAssignment, assignment_id)
+        if not assignment:
+            return jsonify({"success": False, "error": "Assignment not found"}), 404
+        
+        assignment.shift_id = shift_id
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "Shift assignment updated successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error updating shift assignment via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/api/shift-assignment/delete", methods=["POST"])
+@login_required
+def api_delete_shift_assignment():
+    """API: Delete shift assignment."""
+    try:
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        assignment_id = data.get('assignment_id')
+        
+        if not assignment_id:
+            return jsonify({"success": False, "error": "assignment_id is required"}), 400
+        
+        assignment = db.session.get(ShiftAssignment, assignment_id)
+        if not assignment:
+            return jsonify({"success": False, "error": "Assignment not found"}), 404
+        
+        db.session.delete(assignment)
+        db.session.commit()
+        
+        return jsonify({"success": True, "message": "Shift assignment deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error deleting shift assignment via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/api/roster/copy-previous-week", methods=["POST"])
+@login_required
+def api_copy_previous_week():
+    """API: Copy shift assignments from previous week."""
+    try:
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+        
+        if not all([start_date_str, end_date_str]):
+            return jsonify({"success": False, "error": "start_date and end_date are required"}), 400
+        
+        from datetime import date, timedelta
+        start_date = date.fromisoformat(start_date_str)
+        end_date = date.fromisoformat(end_date_str)
+        
+        # Calculate previous week
+        week_duration = (end_date - start_date).days + 1
+        prev_start = start_date - timedelta(days=week_duration)
+        prev_end = start_date - timedelta(days=1)
+        
+        # Get assignments from previous week
+        prev_assignments = ShiftAssignment.query.filter(
+            ShiftAssignment.assignment_date >= prev_start,
+            ShiftAssignment.assignment_date <= prev_end
+        ).all()
+        
+        if not prev_assignments:
+            return jsonify({"success": True, "copied_count": 0, "message": "No assignments found in previous week"}), 200
+        
+        # Create new assignments for current week
+        copied_count = 0
+        skipped_count = 0
+        
+        for prev_assignment in prev_assignments:
+            # Calculate offset from previous week start
+            days_offset = (prev_assignment.assignment_date - prev_start).days
+            new_date = start_date + timedelta(days=days_offset)
+            
+            # Skip if date is beyond current week
+            if new_date > end_date:
+                continue
+            
+            # Check if assignment already exists
+            existing = ShiftAssignment.query.filter_by(
+                employee_id=prev_assignment.employee_id,
+                assignment_date=new_date
+            ).first()
+            
+            if existing:
+                skipped_count += 1
+                continue
+            
+            # Create new assignment
+            new_assignment = ShiftAssignment(
+                shift_id=prev_assignment.shift_id,
+                employee_id=prev_assignment.employee_id,
+                assignment_date=new_date,
+                notes=prev_assignment.notes
+            )
+            db.session.add(new_assignment)
+            copied_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "copied_count": copied_count,
+            "skipped_count": skipped_count,
+            "message": f"Copied {copied_count} assignment(s) from previous week"
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error copying previous week via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/api/roster/clear-week", methods=["POST"])
+@login_required
+def api_clear_week():
+    """API: Clear all shift assignments for a week."""
+    try:
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        start_date_str = data.get('start_date')
+        end_date_str = data.get('end_date')
+        
+        if not all([start_date_str, end_date_str]):
+            return jsonify({"success": False, "error": "start_date and end_date are required"}), 400
+        
+        from datetime import date
+        start_date = date.fromisoformat(start_date_str)
+        end_date = date.fromisoformat(end_date_str)
+        
+        # Get and delete all assignments for the week
+        assignments = ShiftAssignment.query.filter(
+            ShiftAssignment.assignment_date >= start_date,
+            ShiftAssignment.assignment_date <= end_date
+        ).all()
+        
+        deleted_count = len(assignments)
+        
+        for assignment in assignments:
+            db.session.delete(assignment)
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "deleted_count": deleted_count,
+            "message": f"Cleared {deleted_count} assignment(s)"
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error clearing week via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @hr_bp.route("/api/leave", methods=["POST"])
 @login_required
 def api_request_leave():
@@ -571,4 +769,221 @@ def api_approve_attendance(attendance_id):
         db.session.rollback()
         current_app.logger.exception(f"Error approving attendance: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/api/attendance/mark", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin)
+def api_mark_attendance():
+    """API: Mark attendance for employees (HR form)."""
+    try:
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        employee_id = data.get('employee_id')
+        date_str = data.get('date')
+        status = data.get('status')  # Present, Absent, Late
+        clock_in_str = data.get('clock_in')
+        clock_out_str = data.get('clock_out')
+        notes = data.get('notes', '')
+        
+        if not all([employee_id, date_str, status]):
+            return jsonify({"success": False, "error": "employee_id, date, and status are required"}), 400
+        
+        from datetime import date
+        attendance_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Check if attendance already exists for this employee and date
+        existing = Attendance.query.filter_by(
+            employee_id=employee_id,
+            date=attendance_date
+        ).first()
+        
+        if existing:
+            # Update existing record
+            attendance = existing
+        else:
+            # Create new record
+            attendance = Attendance(
+                employee_id=employee_id,
+                date=attendance_date
+            )
+            db.session.add(attendance)
+        
+        attendance.status = status
+        attendance.notes = notes
+        
+        # Set clock in/out times if provided
+        if clock_in_str:
+            attendance.clock_in = datetime.strptime(clock_in_str, '%Y-%m-%d %H:%M')
+        if clock_out_str:
+            attendance.clock_out = datetime.strptime(clock_out_str, '%Y-%m-%d %H:%M')
+        
+        # Calculate hours worked if both times are present
+        if attendance.clock_in and attendance.clock_out:
+            delta = attendance.clock_out - attendance.clock_in
+            attendance.hours_worked = delta.total_seconds() / 3600.0
+        
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Attendance marked successfully",
+            "attendance_id": attendance.id
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error marking attendance via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/api/attendance/review", methods=["GET"])
+@login_required
+def api_review_attendance():
+    """API: Get attendance for a specific date."""
+    try:
+        date_str = request.args.get('date')
+        if not date_str:
+            return jsonify({"success": False, "error": "date parameter is required"}), 400
+        
+        from datetime import date
+        review_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Get all attendances for this date
+        attendances = Attendance.query.join(Employee).filter(
+            Attendance.date == review_date
+        ).order_by(Employee.last_name.asc()).all()
+        
+        # Also try by clock_in date
+        if not attendances:
+            attendances = Attendance.query.join(Employee).filter(
+                db.func.date(Attendance.clock_in) == review_date
+            ).order_by(Employee.last_name.asc()).all()
+        
+        # Get all active employees to show who didn't attend
+        all_employees = Employee.query.filter_by(status='active').order_by(Employee.last_name.asc()).all()
+        attended_employee_ids = {a.employee_id for a in attendances}
+        
+        result = {
+            "success": True,
+            "date": review_date.isoformat(),
+            "attended": [
+                {
+                    "employee_id": a.employee_id,
+                    "employee_name": a.employee.full_name,
+                    "status": a.status,
+                    "clock_in": a.clock_in.strftime('%H:%M') if a.clock_in else None,
+                    "clock_out": a.clock_out.strftime('%H:%M') if a.clock_out else None,
+                    "hours_worked": float(a.hours_worked or 0)
+                }
+                for a in attendances
+            ],
+            "absent": [
+                {
+                    "employee_id": emp.id,
+                    "employee_name": emp.full_name,
+                    "department": emp.department.name if emp.department else None
+                }
+                for emp in all_employees
+                if emp.id not in attended_employee_ids
+            ],
+            "total_attended": len(attendances),
+            "total_absent": len(all_employees) - len(attendances)
+        }
+        
+        return jsonify(result), 200
+    except Exception as e:
+        current_app.logger.exception(f"Error reviewing attendance via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/api/employees/<int:employee_id>/salary", methods=["POST", "PUT", "PATCH"])
+@login_required
+@role_required(UserRole.Admin)
+def api_update_salary(employee_id):
+    """API: Update employee salary."""
+    try:
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        salary = data.get('monthly_salary')
+        
+        if salary is None:
+            return jsonify({"success": False, "error": "monthly_salary is required"}), 400
+        
+        employee = Employee.query.get_or_404(employee_id)
+        employee.monthly_salary = float(salary)
+        db.session.commit()
+        
+        return jsonify({
+            "success": True,
+            "message": "Salary updated successfully",
+            "monthly_salary": float(employee.monthly_salary or 0)
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception(f"Error updating salary via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/api/payroll/export-pdf", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.SalesManager)
+def api_payroll_export_pdf():
+    """API: Generate payroll PDF export."""
+    try:
+        if not request.is_json:
+            return jsonify({"success": False, "error": "Request must be JSON"}), 400
+        
+        data = request.get_json()
+        period_start_str = data.get('period_start')
+        period_end_str = data.get('period_end')
+        
+        if not all([period_start_str, period_end_str]):
+            return jsonify({"success": False, "error": "period_start and period_end are required"}), 400
+        
+        from datetime import date
+        period_start = datetime.strptime(period_start_str, '%Y-%m-%d').date()
+        period_end = datetime.strptime(period_end_str, '%Y-%m-%d').date()
+        
+        # Generate PDF
+        from sas_management.services.hr_service import generate_payroll_pdf
+        result = generate_payroll_pdf(period_start, period_end, current_user.id)
+        
+        if result.get('success'):
+            return jsonify({
+                "success": True,
+                "pdf_path": result.get('pdf_path'),
+                "message": "Payroll PDF generated successfully"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "error": result.get('error', 'Failed to generate payroll PDF')
+            }), 500
+    except Exception as e:
+        current_app.logger.exception(f"Error generating payroll PDF via API: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@hr_bp.route("/payroll/download-pdf/<path:filename>")
+@login_required
+@role_required(UserRole.Admin, UserRole.SalesManager)
+def download_payroll_pdf(filename):
+    """Download payroll PDF file."""
+    try:
+        from flask import send_from_directory
+        pdf_folder = os.path.join(current_app.instance_path, 'payroll_pdfs')
+        return send_from_directory(
+            pdf_folder,
+            filename,
+            as_attachment=True,
+            mimetype='application/pdf'
+        )
+    except Exception as e:
+        current_app.logger.exception(f"Error downloading payroll PDF: {e}")
+        flash(f"Error downloading PDF: {str(e)}", "danger")
+        return redirect(url_for('hr.payroll_export'))
 

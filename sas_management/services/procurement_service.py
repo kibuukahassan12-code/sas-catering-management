@@ -4,7 +4,7 @@ from flask import current_app
 def create_rfq(items, supplier_ids=None):
     """Create Request for Quotation."""
     try:
-        from models import Supplier, SupplierQuote, db
+        from sas_management.models import Supplier, SupplierQuote, db
         quotes = []
         
         suppliers = Supplier.query.filter_by(is_active=True).all()

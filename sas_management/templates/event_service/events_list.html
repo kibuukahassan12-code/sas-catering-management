@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header">
+        <h1>All Events</h1>
+        <a href="{{ url_for('event_service.event_create') }}" class="btn-primary">+ New Event</a>
+    </div>
+
+    <div class="panel">
+        {% if events %}
+            <table style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Date</th>
+                        <th>Venue</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                    <tr>
+                        <td>{{ event.title }}</td>
+                        <td>{{ event.event_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ event.venue or 'N/A' }}</td>
+                        <td>{{ event.status }}</td>
+                        <td>
+                            <a href="{{ url_for('event_service.event_view', event_id=event.id) }}">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No events found.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

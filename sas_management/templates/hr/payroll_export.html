@@ -1,14 +1,233 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+.salary-container {
+    background: var(--surface, #111111);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.salary-header {
+    background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%);
+    padding: 1.5rem;
+    border-radius: 12px 12px 0 0;
+    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.btn-manage-salary {
+    background: rgba(0, 0, 0, 0.3);
+    color: #000;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-manage-salary:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--surface, #111111);
+    margin: 5% auto;
+    padding: 0;
+    border: 2px solid var(--brand, #F26822);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%);
+    padding: 1.5rem;
+    border-radius: 12px 12px 0 0;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface, #111111);
+}
+
+table thead {
+    background: rgba(242, 104, 34, 0.1);
+}
+
+table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text, #f5f5f5);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+table td {
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text, #f5f5f5);
+}
+
+table tbody tr:hover {
+    background: rgba(242, 104, 34, 0.05);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge.success {
+    background: #2ecc71;
+    color: white;
+}
+
+.badge.danger {
+    background: #e74c3c;
+    color: white;
+}
+
+.badge.warning {
+    background: #f39c12;
+    color: white;
+}
+
+.muted {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+}
+
+.btn-edit-salary {
+    background: rgba(242, 104, 34, 0.2);
+    color: var(--brand, #F26822);
+    border: 1px solid rgba(242, 104, 34, 0.4);
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+}
+
+.btn-edit-salary:hover {
+    background: rgba(242, 104, 34, 0.3);
+}
+</style>
+
 <section class="page-header">
     <div>
         <p class="eyebrow">HR Department</p>
         <h1>Payroll Export</h1>
-        <p class="muted">Generate payroll CSV exports for payroll processing.</p>
+        <p class="muted">Manage employee salaries and generate payroll reports.</p>
     </div>
     <div class="quick-links">
         <a class="btn-secondary" href="{{ url_for('hr.dashboard') }}">← Back to Dashboard</a>
     </div>
+</section>
+
+<!-- Salary Management Header -->
+<section class="panel salary-container">
+    <div class="salary-header">
+        <div>
+            <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Salary Management</h3>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">{{ employees|length }} active employees</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button onclick="openSalaryModal()" class="btn-manage-salary">💰 Manage Salaries</button>
+        </div>
+    </div>
+</section>
+
+<!-- Employee Salaries Table -->
+<section class="panel">
+    <div class="panel-header">
+        <h3>Employee Salaries</h3>
+        <span class="badge">{{ employees|length }} employees</span>
+    </div>
+    
+    {% if employees %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Position</th>
+                    <th>Monthly Salary</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employee in employees %}
+                <tr>
+                    <td>
+                        <strong>{{ employee.full_name }}</strong>
+                        {% if employee.employee_number %}
+                        <br><small class="muted">#{{ employee.employee_number }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ employee.department.name if employee.department else 'N/A' }}</td>
+                    <td>{{ employee.position or 'N/A' }}</td>
+                    <td>
+                        {% if employee.monthly_salary %}
+                        <strong style="color: var(--brand, #F26822);">UGX {{ "{:,.2f}".format(employee.monthly_salary) }}</strong>
+                        {% else %}
+                        <span class="muted">Not set</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button onclick="editSalary({{ employee.id }}, '{{ employee.full_name }}', {{ employee.monthly_salary or 0 }})" class="btn-edit-salary">Edit</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center;">
+        <p class="muted" style="font-size: 1.1rem; margin-bottom: 0.5rem;">No employees found</p>
+    </div>
+    {% endif %}
 </section>
 
 <!-- Export Generator -->
@@ -25,8 +244,9 @@
             <span>Period End *</span>
             <input type="date" name="end" id="period-end" required>
         </label>
-        <div class="form-actions">
-            <button type="submit" class="btn-primary">Generate Export</button>
+        <div class="form-actions" style="display: flex; gap: 1rem;">
+            <button type="button" onclick="generatePDF()" class="btn-primary" style="background: linear-gradient(120deg, var(--brand, #F26822), var(--accent, #F6BC38)); color: #000; border: none; font-weight: 600;">Generate PDF</button>
+            <button type="submit" class="btn-secondary">Generate CSV</button>
         </div>
     </form>
 </section>
@@ -45,7 +265,6 @@
                     <th>Period End</th>
                     <th>Employees</th>
                     <th>Total Amount</th>
-                    <th>Status</th>
                     <th>Created</th>
                     <th>Actions</th>
                 </tr>
@@ -56,20 +275,15 @@
                     <td>{{ export.period_start.strftime('%Y-%m-%d') if export.period_start else 'N/A' }}</td>
                     <td>{{ export.period_end.strftime('%Y-%m-%d') if export.period_end else 'N/A' }}</td>
                     <td>{{ export.employee_count or 0 }}</td>
-                    <td>{{ CURRENCY }}{{ "{:,.0f}".format(export.total_amount or 0) }}</td>
-                    <td>
-                        {% if export.status == 'completed' %}
-                        <span class="badge success">Completed</span>
-                        {% elif export.status == 'failed' %}
-                        <span class="badge danger">Failed</span>
-                        {% else %}
-                        <span class="badge warning">Pending</span>
-                        {% endif %}
-                    </td>
+                    <td><strong style="color: var(--brand, #F26822);">UGX {{ "{:,.2f}".format(export.total_amount or 0) }}</strong></td>
                     <td>{{ export.created_at.strftime('%Y-%m-%d %H:%M') if export.created_at else 'N/A' }}</td>
                     <td>
                         {% if export.file_path %}
-                        <a href="{{ url_for('static', filename=export.file_path) }}" class="btn-ghost btn-sm" download>Download CSV</a>
+                            {% if export.file_path.endswith('.pdf') %}
+                            <a href="{{ url_for('hr.download_payroll_pdf', filename=export.file_path.split('/')[-1]) }}" class="btn-ghost btn-sm" download>Download PDF</a>
+                            {% else %}
+                            <a href="{{ url_for('static', filename=export.file_path) }}" class="btn-ghost btn-sm" download>Download CSV</a>
+                            {% endif %}
                         {% endif %}
                     </td>
                 </tr>
@@ -80,7 +294,105 @@
 </section>
 {% endif %}
 
+<!-- Salary Management Modal -->
+<div id="salary-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin: 0; font-weight: 700;">Manage Employee Salary</h3>
+            <button onclick="closeSalaryModal()" style="background: rgba(0, 0, 0, 0.2); border: none; color: #000; font-size: 1.5rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="salary-form">
+                <input type="hidden" id="salary-employee-id">
+                
+                <label class="form-control">
+                    <span>Employee *</span>
+                    <select id="salary-employee" required style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+                        <option value="">-- Select Employee --</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}" data-salary="{{ employee.monthly_salary or 0 }}">{{ employee.full_name }}{% if employee.department %} - {{ employee.department.name }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                
+                <label class="form-control">
+                    <span>Monthly Salary (UGX) *</span>
+                    <input type="number" id="salary-amount" required min="0" step="0.01" placeholder="Enter monthly salary" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+                </label>
+                
+                <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.5rem;">
+                    <button type="button" onclick="closeSalaryModal()" class="btn-ghost" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4);">Cancel</button>
+                    <button type="submit" class="btn-primary" style="background: linear-gradient(120deg, var(--brand, #F26822), var(--accent, #F6BC38)); color: #000; border: none; font-weight: 600; min-width: 120px;">Save Salary</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+function openSalaryModal() {
+    document.getElementById('salary-modal').style.display = 'block';
+    document.getElementById('salary-employee').value = '';
+    document.getElementById('salary-amount').value = '';
+    document.getElementById('salary-employee-id').value = '';
+}
+
+function closeSalaryModal() {
+    document.getElementById('salary-modal').style.display = 'none';
+}
+
+function editSalary(employeeId, employeeName, currentSalary) {
+    document.getElementById('salary-modal').style.display = 'block';
+    document.getElementById('salary-employee').value = employeeId;
+    document.getElementById('salary-employee-id').value = employeeId;
+    document.getElementById('salary-amount').value = currentSalary;
+    // Disable employee selection when editing
+    document.getElementById('salary-employee').disabled = true;
+}
+
+// Enable employee selection when opening new modal
+document.getElementById('salary-employee').addEventListener('change', function() {
+    const selectedOption = this.options[this.selectedIndex];
+    const currentSalary = selectedOption.getAttribute('data-salary');
+    if (currentSalary && parseFloat(currentSalary) > 0) {
+        document.getElementById('salary-amount').value = currentSalary;
+    }
+});
+
+document.getElementById('salary-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const employeeId = document.getElementById('salary-employee-id').value || document.getElementById('salary-employee').value;
+    const salary = parseFloat(document.getElementById('salary-amount').value);
+    
+    if (!employeeId || !salary || salary < 0) {
+        alert('Please fill in all required fields with valid values');
+        return;
+    }
+    
+    try {
+        const response = await fetch("{{ url_for('hr.api_update_salary', employee_id=0) }}".replace('/0/', '/' + employeeId + '/'), {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                monthly_salary: salary
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Salary updated successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to update salary'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+
+// CSV Export
 document.getElementById('payroll-export-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const start = document.getElementById('period-start').value;
@@ -91,7 +403,7 @@ document.getElementById('payroll-export-form').addEventListener('submit', async 
         const result = await response.json();
         
         if (result.success) {
-            alert('Payroll export generated successfully!');
+            alert('Payroll CSV export generated successfully!');
             window.location.reload();
         } else {
             alert('Error: ' + (result.error || 'Failed to generate export'));
@@ -100,7 +412,49 @@ document.getElementById('payroll-export-form').addEventListener('submit', async 
         alert('Error: ' + error.message);
     }
 });
+
+// PDF Export
+async function generatePDF() {
+    const start = document.getElementById('period-start').value;
+    const end = document.getElementById('period-end').value;
+    
+    if (!start || !end) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    try {
+        const response = await fetch("{{ url_for('hr.api_payroll_export_pdf') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                period_start: start,
+                period_end: end
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Download the PDF
+            const pdfUrl = "{{ url_for('hr.download_payroll_pdf', filename='') }}" + result.filename;
+            window.open(pdfUrl, '_blank');
+            alert('Payroll PDF generated successfully!');
+            setTimeout(() => window.location.reload(), 1000);
+        } else {
+            alert('Error: ' + (result.error || 'Failed to generate PDF'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const salaryModal = document.getElementById('salary-modal');
+    if (event.target == salaryModal) {
+        closeSalaryModal();
+    }
+}
 </script>
 {% endblock %}
-
-

@@ -23,7 +23,7 @@ except ImportError:
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from models import (
+from sas_management.models import (
     Account,
     AccountingPayment,
     AccountingReceipt,
@@ -93,7 +93,7 @@ def record_payment(invoice_id=None, amount=None, method="cash", account_id=None,
 
         invoice = None
         if invoice_id:
-            invoice = Invoice.query.get(invoice_id)
+            invoice = db.session.get(Invoice, invoice_id)
             if not invoice:
                 raise ValueError(f"Invoice {invoice_id} not found.")
 
@@ -162,7 +162,7 @@ def generate_receipt(payment_id=None, issued_by=None, amount=None, client_id=Non
     try:
         # If payment_id is provided, use existing payment
         if payment_id:
-            payment = AccountingPayment.query.get(payment_id)
+            payment = db.session.get(AccountingPayment, payment_id)
             if not payment:
                 raise ValueError(f"Payment {payment_id} not found")
         
@@ -179,10 +179,10 @@ def generate_receipt(payment_id=None, issued_by=None, amount=None, client_id=Non
             
             # Get client from invoice if available
             if payment.invoice_id:
-                invoice = Invoice.query.get(payment.invoice_id)
+                invoice = db.session.get(Invoice, payment.invoice_id)
                 if invoice and invoice.event_id:
-                    from models import Event
-                    event = Event.query.get(invoice.event_id)
+                    from sas_management.models import Event
+                    event = db.session.get(Event, invoice.event_id)
                     if event and event.client_id:
                         issued_to = event.client_id
             
@@ -277,7 +277,7 @@ def generate_receipt(payment_id=None, issued_by=None, amount=None, client_id=Non
 
 def _generate_pdf_receipt_for_payment(receipt_id):
     """Generate PDF for a receipt (internal helper)."""
-    receipt = AccountingReceipt.query.get(receipt_id)
+    receipt = db.session.get(AccountingReceipt, receipt_id)
     if not receipt:
         raise ValueError(f"Receipt {receipt_id} not found")
     
@@ -286,16 +286,16 @@ def _generate_pdf_receipt_for_payment(receipt_id):
     
     client = None
     if receipt.issued_to:
-        client = Client.query.get(receipt.issued_to)
+        client = db.session.get(Client, receipt.issued_to)
     elif invoice and invoice.event_id:
-        from models import Event
-        event = Event.query.get(invoice.event_id)
+        from sas_management.models import Event
+        event = db.session.get(Event, invoice.event_id)
         if event and event.client_id:
-            client = Client.query.get(event.client_id)
+            client = db.session.get(Client, event.client_id)
     
     issuer = None
     if receipt.issued_by:
-        issuer = User.query.get(receipt.issued_by)
+        issuer = db.session.get(User, receipt.issued_by)
     
     # Generate PDF path
     receipts_folder = os.path.join(current_app.instance_path, "receipts")

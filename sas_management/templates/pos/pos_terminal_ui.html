@@ -643,6 +643,7 @@ function renderProducts(productsToRender) {
         
         return `<div class="product-card" onclick="addToCart('${product.id}', '${escapedName}', ${product.price}, '${product.type}')">
             ${isPosProduct ? `<div class="product-card-actions" onclick="event.stopPropagation();">
+                <button onclick="event.stopPropagation(); openEditProductModal(${productId})" title="Edit Product">✎</button>
                 <button onclick="event.stopPropagation(); removeProduct(${productId}, '${escapedName}')" title="Remove Product">×</button>
             </div>` : ''}
             <div class="product-card-image">
@@ -1419,38 +1420,294 @@ function closePrinterSettings() {
      }
  }
 
- function removeProduct(productId, productName) {
-     if (!confirm(`Are you sure you want to remove "${productName}" from POS?\n\nNote: This will hide the product from POS, but it won't delete sales records.`)) {
-         return;
-     }
-     
-     fetch(`/api/pos/products/${productId}`, {
-         method: 'DELETE',
-         headers: {
-             'Content-Type': 'application/json',
-             'X-Requested-With': 'XMLHttpRequest'
-         }
-     })
-     .then(async response => {
-         const contentType = response.headers.get('content-type');
-         if (contentType && contentType.includes('application/json')) {
-             return response.json();
-         } else {
-             throw new Error(`Server error: ${response.status}`);
-         }
-     })
-     .then(data => {
-         if (data.status === 'success') {
-             alert('Product removed successfully!');
-             loadProducts(); // Reload products list
-         } else {
-             throw new Error(data.message || 'Failed to remove product');
-         }
-     })
-     .catch(error => {
-         console.error('Error removing product:', error);
-         alert('Error removing product: ' + error.message);
-     });
- }
+function removeProduct(productId, productName) {
+    if (!confirm(`Are you sure you want to remove "${productName}" from POS?\n\nNote: This will hide the product from POS, but it won't delete sales records.`)) {
+        return;
+    }
+    
+    fetch(`/api/pos/products/${productId}`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(async response => {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            return response.json();
+        } else {
+            throw new Error(`Server error: ${response.status}`);
+        }
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            alert('Product removed successfully!');
+            loadProducts(); // Reload products list
+        } else {
+            throw new Error(data.message || 'Failed to remove product');
+        }
+    })
+    .catch(error => {
+        console.error('Error removing product:', error);
+        alert('Error removing product: ' + error.message);
+    });
+}
+
+// Edit Product Modal Functions
+function openEditProductModal(productId) {
+    // Show loading state
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.id = 'edit-product-modal';
+    modal.style.display = 'flex';
+    
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 500px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header" style="flex-shrink: 0;">
+                <h2>Edit Product</h2>
+                <button class="modal-close" onclick="closeEditProductModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="flex: 1; overflow-y: auto; padding: 1.5rem; min-height: 0;">
+                <div class="loading">Loading product data...</div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Fetch product data from API
+    // First, get all products and find the one we need
+    fetch('/api/pos/products')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success' && data.products) {
+                // Find the product with matching ID
+                const product = data.products.find(p => {
+                    if (typeof p.id === 'string' && p.id.startsWith('POS-')) {
+                        return parseInt(p.id.replace('POS-', '')) === productId;
+                    }
+                    return false;
+                });
+                
+                if (!product) {
+                    throw new Error('Product not found');
+                }
+                
+                // Now fetch full product details (we need barcode, sku, etc.)
+                // For now, use what we have from the products list
+                populateEditModal(productId, product);
+            } else {
+                throw new Error('Failed to load product data');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading product:', error);
+            alert('Error loading product: ' + error.message);
+            closeEditProductModal();
+        });
+}
+
+function populateEditModal(productId, product) {
+    const modal = document.getElementById('edit-product-modal');
+    if (!modal) return;
+    
+    // Escape values for HTML
+    const escapedName = (product.name || '').replace(/"/g, '&quot;').replace(/'/g, "&#39;");
+    const escapedCategory = (product.category || '').replace(/"/g, '&quot;').replace(/'/g, "&#39;");
+    const escapedDescription = (product.description || '').replace(/"/g, '&quot;').replace(/'/g, "&#39;").replace(/\n/g, '&#10;');
+    const escapedImageUrl = (product.image_url || '').replace(/"/g, '&quot;').replace(/'/g, "&#39;");
+    const escapedBarcode = (product.barcode || '').replace(/"/g, '&quot;').replace(/'/g, "&#39;");
+    const escapedSku = (product.sku || '').replace(/"/g, '&quot;').replace(/'/g, "&#39;");
+    
+    const modalBody = modal.querySelector('.modal-body');
+    modalBody.innerHTML = `
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Product Name *</label>
+            <input type="text" id="edit-product-name" placeholder="Enter product name" 
+                   value="${escapedName}"
+                   style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;" required>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Description</label>
+            <textarea id="edit-product-description" placeholder="Product description (optional)" 
+                      style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; min-height: 60px; box-sizing: border-box; resize: vertical;">${escapedDescription}</textarea>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Category</label>
+            <input type="text" id="edit-product-category" placeholder="e.g., Custom, Beverage, Snack" 
+                   value="${escapedCategory}"
+                   style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Price (UGX) *</label>
+            <input type="number" id="edit-product-price" placeholder="0.00" step="0.01" min="0" 
+                   value="${product.price || 0}"
+                   style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;" required>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Product Image</label>
+            <div style="border: 2px dashed rgba(255, 255, 255, 0.3); border-radius: 0.5rem; padding: 1rem; margin-top: 0.5rem; text-align: center;">
+                <div id="edit-image-preview-container" style="margin-bottom: 0.5rem;">
+                    <img id="edit-image-preview" src="${escapedImageUrl || '/static/images/product-placeholder.svg'}" 
+                         alt="Product Image Preview" 
+                         style="max-width: 200px; max-height: 200px; border-radius: 0.25rem; ${escapedImageUrl ? '' : 'display: none;'}">
+                </div>
+                <input type="file" id="edit-product-image-upload" accept="image/*" 
+                       style="display: none;" onchange="previewEditProductImage(this)">
+                <button type="button" class="btn-secondary btn-sm" onclick="document.getElementById('edit-product-image-upload').click()">
+                    ${escapedImageUrl ? 'Change Image' : 'Choose Image'}
+                </button>
+                <p style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.6); margin-top: 0.5rem;">
+                    Click to upload product image (JPG, PNG, max 5MB)
+                </p>
+            </div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Barcode (optional)</label>
+            <input type="text" id="edit-product-barcode" placeholder="Barcode" 
+                   value="${escapedBarcode}"
+                   style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;">
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <label style="display: block; margin-bottom: 0.5rem; font-weight: 500;">SKU (optional)</label>
+            <input type="text" id="edit-product-sku" placeholder="SKU" 
+                   value="${escapedSku}"
+                   style="width: 100%; padding: 0.5rem; margin-top: 0.5rem; box-sizing: border-box;">
+        </div>
+    `;
+    
+    // Add footer if it doesn't exist
+    if (!modal.querySelector('.modal-footer')) {
+        const footer = document.createElement('div');
+        footer.className = 'modal-footer';
+        footer.style.cssText = 'flex-shrink: 0; padding: 1rem 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 1rem; justify-content: center; background: rgba(17, 17, 17, 0.95);';
+        footer.innerHTML = `
+            <button class="btn-primary" onclick="updateProduct(${productId})" style="min-width: 120px;">Update</button>
+            <button class="btn-secondary" onclick="closeEditProductModal()" style="min-width: 120px;">Cancel</button>
+        `;
+        modal.querySelector('.modal-content').appendChild(footer);
+    }
+}
+
+function closeEditProductModal() {
+    const modal = document.getElementById('edit-product-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function previewEditProductImage(input) {
+    const preview = document.getElementById('edit-image-preview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function updateProduct(productId) {
+    const name = document.getElementById('edit-product-name').value.trim();
+    const price = parseFloat(document.getElementById('edit-product-price').value);
+    const description = document.getElementById('edit-product-description').value.trim();
+    const category = document.getElementById('edit-product-category').value.trim() || 'Custom';
+    const barcode = document.getElementById('edit-product-barcode').value.trim() || null;
+    const sku = document.getElementById('edit-product-sku').value.trim() || null;
+    const imageFile = document.getElementById('edit-product-image-upload').files[0];
+    
+    // Validation
+    if (!name) {
+        alert('Product name is required');
+        return;
+    }
+    
+    if (!price || price < 0) {
+        alert('Please enter a valid price');
+        return;
+    }
+    
+    // First, upload image if provided
+    const updateProductData = (imageUrl) => {
+        const productData = {
+            name: name,
+            price: price,
+            description: description || null,
+            category: category,
+            barcode: barcode,
+            sku: sku,
+        };
+        
+        // Only include image_url if we have a new image or want to keep existing
+        if (imageUrl !== undefined) {
+            productData.image_url = imageUrl;
+        }
+        
+        fetch(`/api/pos/products/${productId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(productData)
+        })
+        .then(async response => {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                throw new Error(`Server error: ${response.status}`);
+            }
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Product updated successfully!');
+                closeEditProductModal();
+                loadProducts(); // Reload products list
+            } else {
+                throw new Error(data.message || 'Failed to update product');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating product:', error);
+            alert('Error updating product: ' + error.message);
+        });
+    };
+    
+    // Upload image first if provided
+    if (imageFile) {
+        const formData = new FormData();
+        formData.append('image', imageFile);
+        
+        fetch('/api/pos/products/upload-image', {
+            method: 'POST',
+            body: formData
+        })
+        .then(async response => {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                return response.json();
+            } else {
+                throw new Error(`Failed to upload image: ${response.status}`);
+            }
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                updateProductData(data.image_url);
+            } else {
+                throw new Error(data.message || 'Failed to upload image');
+            }
+        })
+        .catch(error => {
+            console.error('Error uploading image:', error);
+            // Continue without image if upload fails
+            alert('Image upload failed, but continuing without image. Error: ' + error.message);
+            updateProductData(undefined);
+        });
+    } else {
+        updateProductData(undefined);
+    }
+}
  </script>
  {% endblock %}

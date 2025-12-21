@@ -8,8 +8,8 @@ from flask import (
 )
 from flask_login import login_required
 
-from models import Ingredient, UserRole, db
-from utils import get_decimal, paginate_query, role_required, permission_required
+from sas_management.models import Ingredient, UserRole, db
+from sas_management.utils import get_decimal, paginate_query, role_required, permission_required
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 

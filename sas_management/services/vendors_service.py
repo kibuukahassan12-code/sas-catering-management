@@ -7,7 +7,7 @@ from typing import List, Dict, Optional
 from sqlalchemy.exc import SQLAlchemyError
 import secrets
 
-from models import PurchaseOrder, PurchaseOrderItem, Supplier, db
+from sas_management.models import PurchaseOrder, PurchaseOrderItem, Supplier, db
 
 
 def generate_po_number() -> str:
@@ -109,7 +109,7 @@ def create_purchase_order(
 def get_purchase_order(po_id: int) -> Optional[PurchaseOrder]:
     """Get purchase order by ID."""
     try:
-        return PurchaseOrder.query.get(po_id)
+        return db.session.get(PurchaseOrder, po_id)
     except SQLAlchemyError as e:
         raise Exception(f"Database error getting purchase order: {str(e)}")
 

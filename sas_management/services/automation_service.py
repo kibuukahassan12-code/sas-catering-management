@@ -6,8 +6,8 @@ import json
 def execute_workflow(workflow_id, payload):
     """Execute workflow actions."""
     try:
-        from models import Workflow, ActionLog, db
-        workflow = Workflow.query.get(workflow_id)
+        from sas_management.models import Workflow, ActionLog, db
+        workflow = db.session.get(Workflow, workflow_id)
         if not workflow or not workflow.is_active:
             return {'success': False, 'error': 'Workflow not found or inactive'}
         

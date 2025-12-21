@@ -1,13 +1,181 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+.attendance-container {
+    background: var(--surface, #111111);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.attendance-header {
+    background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%);
+    padding: 1.5rem;
+    border-radius: 12px 12px 0 0;
+    margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.btn-mark-attendance {
+    background: rgba(0, 0, 0, 0.3);
+    color: #000;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-mark-attendance:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.btn-review {
+    background: rgba(0, 0, 0, 0.3);
+    color: #000;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    font-weight: 600;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-review:hover {
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.modal-content {
+    background: var(--surface, #111111);
+    margin: 5% auto;
+    padding: 0;
+    border: 2px solid var(--brand, #F26822);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+    background: linear-gradient(135deg, var(--brand, #F26822) 0%, var(--accent, #F6BC38) 100%);
+    padding: 1.5rem;
+    border-radius: 12px 12px 0 0;
+    color: #000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface, #111111);
+}
+
+table thead {
+    background: rgba(242, 104, 34, 0.1);
+}
+
+table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--text, #f5f5f5);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+table td {
+    padding: 1rem 0.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text, #f5f5f5);
+}
+
+table tbody tr:hover {
+    background: rgba(242, 104, 34, 0.05);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge.present {
+    background: #2ecc71;
+    color: white;
+}
+
+.badge.late {
+    background: #f39c12;
+    color: white;
+}
+
+.badge.absent {
+    background: #e74c3c;
+    color: white;
+}
+
+.muted {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.875rem;
+}
+</style>
+
 <section class="page-header">
     <div>
         <p class="eyebrow">HR Department</p>
         <h1>Attendance Review</h1>
-        <p class="muted">Review and approve attendance records.</p>
+        <p class="muted">Mark and review employee attendance records.</p>
     </div>
     <div class="quick-links">
         <a class="btn-secondary" href="{{ url_for('hr.dashboard') }}">← Back to Dashboard</a>
+    </div>
+</section>
+
+<!-- Attendance Header with Actions -->
+<section class="panel attendance-container">
+    <div class="attendance-header">
+        <div>
+            <h3 style="margin: 0; font-size: 1.5rem; font-weight: 700;">Attendance Management</h3>
+            <p style="margin: 0.5rem 0 0 0; opacity: 0.8;">{{ employees|length }} active employees</p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button onclick="openMarkAttendanceModal()" class="btn-mark-attendance">📝 Mark Attendance</button>
+            <button onclick="openReviewModal()" class="btn-review">👁️ Review Attendance</button>
+        </div>
     </div>
 </section>
 
@@ -28,6 +196,58 @@
     </form>
 </section>
 
+<!-- Review Attendance Results -->
+{% if review_date and day_attendances is not none %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Attendance for {{ review_date.strftime('%B %d, %Y') }}</h3>
+        <span class="badge">{{ day_attendances|length }} attended</span>
+    </div>
+    
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee</th>
+                    <th>Status</th>
+                    <th>Clock In</th>
+                    <th>Clock Out</th>
+                    <th>Hours Worked</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attendance in day_attendances %}
+                <tr>
+                    <td>
+                        <strong>{{ attendance.employee.full_name }}</strong>
+                        {% if attendance.employee.department %}
+                        <br><small class="muted">{{ attendance.employee.department.name }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if attendance.status == 'Present' %}
+                        <span class="badge present">Present</span>
+                        {% elif attendance.status == 'Late' %}
+                        <span class="badge late">Late</span>
+                        {% elif attendance.status == 'Absent' %}
+                        <span class="badge absent">Absent</span>
+                        {% else %}
+                        <span class="badge">{{ attendance.status or 'Pending' }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ attendance.clock_in.strftime('%H:%M') if attendance.clock_in else '—' }}</td>
+                    <td>{{ attendance.clock_out.strftime('%H:%M') if attendance.clock_out else '—' }}</td>
+                    <td>{{ "%.2f"|format(attendance.hours_worked) if attendance.hours_worked else '—' }} hrs</td>
+                    <td>{{ attendance.notes or '—' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
 <!-- Attendance Table -->
 <section class="panel">
     <div class="panel-header">
@@ -45,9 +265,8 @@
                     <th>Clock In</th>
                     <th>Clock Out</th>
                     <th>Hours Worked</th>
-                    <th>Notes</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>Notes</th>
                 </tr>
             </thead>
             <tbody>
@@ -85,25 +304,22 @@
                         {% endif %}
                     </td>
                     <td>
+                        {% if attendance.status == 'Present' %}
+                        <span class="badge present">Present</span>
+                        {% elif attendance.status == 'Late' %}
+                        <span class="badge late">Late</span>
+                        {% elif attendance.status == 'Absent' %}
+                        <span class="badge absent">Absent</span>
+                        {% else %}
+                        <span class="badge">{{ attendance.status or 'Pending' }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
                         {% if attendance.notes %}
                         <span title="{{ attendance.notes }}">📝</span>
                         {% else %}
                         <span class="muted">—</span>
                         {% endif %}
-                    </td>
-                    <td>
-                        {% if attendance.status == 'Present' %}
-                        <span class="badge" style="background: #2ecc71; color: white;">Present</span>
-                        {% elif attendance.status == 'Late' %}
-                        <span class="badge" style="background: #f39c12; color: white;">Late</span>
-                        {% elif attendance.status == 'Absent' %}
-                        <span class="badge" style="background: #e74c3c; color: white;">Absent</span>
-                        {% else %}
-                        <span class="badge" style="background: #95a5a6; color: white;">{{ attendance.status or 'Pending' }}</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="#" class="btn-ghost btn-sm" title="View Details">View</a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -113,7 +329,7 @@
     {% else %}
     <div style="padding: 3rem; text-align: center;">
         <p class="muted" style="font-size: 1.1rem; margin-bottom: 0.5rem;">No attendance records found</p>
-        <p class="muted">Try adjusting the date range or create attendance records.</p>
+        <p class="muted">Try adjusting the date range or mark attendance for employees.</p>
     </div>
     {% endif %}
 </section>
@@ -125,73 +341,195 @@
         <h3>Summary Statistics</h3>
     </div>
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem;">
-        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-            <p style="margin: 0; font-size: 0.875rem; color: #6c757d;">Total Records</p>
-            <h2 style="margin: 0.5rem 0 0 0; color: #212529;">{{ total_records }}</h2>
+        <div style="text-align: center; padding: 1rem; background: rgba(242, 104, 34, 0.1); border-radius: 8px; border: 1px solid rgba(242, 104, 34, 0.2);">
+            <p style="margin: 0; font-size: 0.875rem; color: rgba(255, 255, 255, 0.7);">Total Records</p>
+            <h2 style="margin: 0.5rem 0 0 0; color: var(--text, #f5f5f5);">{{ total_records }}</h2>
         </div>
-        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-            <p style="margin: 0; font-size: 0.875rem; color: #6c757d;">Present</p>
+        <div style="text-align: center; padding: 1rem; background: rgba(46, 204, 113, 0.1); border-radius: 8px; border: 1px solid rgba(46, 204, 113, 0.2);">
+            <p style="margin: 0; font-size: 0.875rem; color: rgba(255, 255, 255, 0.7);">Present</p>
             <h2 style="margin: 0.5rem 0 0 0; color: #2ecc71;">{{ present_count }}</h2>
         </div>
-        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-            <p style="margin: 0; font-size: 0.875rem; color: #6c757d;">Late</p>
+        <div style="text-align: center; padding: 1rem; background: rgba(243, 156, 18, 0.1); border-radius: 8px; border: 1px solid rgba(243, 156, 18, 0.2);">
+            <p style="margin: 0; font-size: 0.875rem; color: rgba(255, 255, 255, 0.7);">Late</p>
             <h2 style="margin: 0.5rem 0 0 0; color: #f39c12;">{{ late_count }}</h2>
         </div>
-        <div style="text-align: center; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
-            <p style="margin: 0; font-size: 0.875rem; color: #6c757d;">Total Hours</p>
-            <h2 style="margin: 0.5rem 0 0 0; color: #212529;">{{ "%.1f"|format(total_hours or 0) }}</h2>
+        <div style="text-align: center; padding: 1rem; background: rgba(231, 76, 60, 0.1); border-radius: 8px; border: 1px solid rgba(231, 76, 60, 0.2);">
+            <p style="margin: 0; font-size: 0.875rem; color: rgba(255, 255, 255, 0.7);">Absent</p>
+            <h2 style="margin: 0.5rem 0 0 0; color: #e74c3c;">{{ absent_count }}</h2>
+        </div>
+        <div style="text-align: center; padding: 1rem; background: rgba(242, 104, 34, 0.1); border-radius: 8px; border: 1px solid rgba(242, 104, 34, 0.2);">
+            <p style="margin: 0; font-size: 0.875rem; color: rgba(255, 255, 255, 0.7);">Total Hours</p>
+            <h2 style="margin: 0.5rem 0 0 0; color: var(--text, #f5f5f5);">{{ "%.1f"|format(total_hours or 0) }}</h2>
         </div>
     </div>
 </section>
 {% endif %}
 
-<style>
-.table-wrapper {
-    overflow-x: auto;
+<!-- Mark Attendance Modal -->
+<div id="mark-attendance-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin: 0; font-weight: 700;">Mark Attendance</h3>
+            <button onclick="closeMarkAttendanceModal()" style="background: rgba(0, 0, 0, 0.2); border: none; color: #000; font-size: 1.5rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="mark-attendance-form">
+                <label class="form-control">
+                    <span>Employee *</span>
+                    <select id="attendance-employee" required style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+                        <option value="">-- Select Employee --</option>
+                        {% for employee in employees %}
+                        <option value="{{ employee.id }}">{{ employee.full_name }}{% if employee.department %} - {{ employee.department.name }}{% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+                
+                <label class="form-control">
+                    <span>Date *</span>
+                    <input type="date" id="attendance-date" required value="{{ start_date.isoformat() if start_date else '' }}" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+                </label>
+                
+                <label class="form-control">
+                    <span>Status *</span>
+                    <select id="attendance-status" required style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+                        <option value="">-- Select Status --</option>
+                        <option value="Present">Present</option>
+                        <option value="Late">Late</option>
+                        <option value="Absent">Absent</option>
+                    </select>
+                </label>
+                
+                <label class="form-control">
+                    <span>Clock In (optional)</span>
+                    <input type="datetime-local" id="attendance-clock-in" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+                </label>
+                
+                <label class="form-control">
+                    <span>Clock Out (optional)</span>
+                    <input type="datetime-local" id="attendance-clock-out" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+                </label>
+                
+                <label class="form-control">
+                    <span>Notes</span>
+                    <textarea id="attendance-notes" rows="3" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);"></textarea>
+                </label>
+                
+                <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.5rem;">
+                    <button type="button" onclick="closeMarkAttendanceModal()" class="btn-ghost" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4);">Cancel</button>
+                    <button type="submit" class="btn-primary" style="background: linear-gradient(120deg, var(--brand, #F26822), var(--accent, #F6BC38)); color: #000; border: none; font-weight: 600; min-width: 120px;">Save Attendance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Review Attendance Modal -->
+<div id="review-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin: 0; font-weight: 700;">Review Attendance</h3>
+            <button onclick="closeReviewModal()" style="background: rgba(0, 0, 0, 0.2); border: none; color: #000; font-size: 1.5rem; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label class="form-control">
+                <span>Select Date *</span>
+                <input type="date" id="review-date" required value="{{ start_date.isoformat() if start_date else '' }}" style="width: 100%; padding: 0.75rem; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; background: rgba(0, 0, 0, 0.3); color: var(--text, #f5f5f5);">
+            </label>
+            
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 1.5rem;">
+                <button type="button" onclick="closeReviewModal()" class="btn-ghost" style="color: var(--accent, #F6BC38); border: 1px dashed rgba(246, 188, 56, 0.4);">Cancel</button>
+                <button onclick="reviewAttendance()" class="btn-primary" style="background: linear-gradient(120deg, var(--brand, #F26822), var(--accent, #F6BC38)); color: #000; border: none; font-weight: 600; min-width: 120px;">Review</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function openMarkAttendanceModal() {
+    document.getElementById('mark-attendance-modal').style.display = 'block';
 }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
+function closeMarkAttendanceModal() {
+    document.getElementById('mark-attendance-modal').style.display = 'none';
 }
 
-table thead {
-    background: #f8f9fa;
+function openReviewModal() {
+    document.getElementById('review-modal').style.display = 'block';
 }
 
-table th {
-    padding: 0.75rem;
-    text-align: left;
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #495057;
-    border-bottom: 2px solid #dee2e6;
+function closeReviewModal() {
+    document.getElementById('review-modal').style.display = 'none';
 }
 
-table td {
-    padding: 1rem 0.75rem;
-    border-bottom: 1px solid #e9ecef;
+document.getElementById('mark-attendance-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const employeeId = document.getElementById('attendance-employee').value;
+    const date = document.getElementById('attendance-date').value;
+    const status = document.getElementById('attendance-status').value;
+    const clockIn = document.getElementById('attendance-clock-in').value;
+    const clockOut = document.getElementById('attendance-clock-out').value;
+    const notes = document.getElementById('attendance-notes').value;
+    
+    if (!employeeId || !date || !status) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    const data = {
+        employee_id: parseInt(employeeId),
+        date: date,
+        status: status,
+        notes: notes
+    };
+    
+    if (clockIn) {
+        data.clock_in = clockIn.replace('T', ' ');
+    }
+    if (clockOut) {
+        data.clock_out = clockOut.replace('T', ' ');
+    }
+    
+    try {
+        const response = await fetch("{{ url_for('hr.api_mark_attendance') }}", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert('Attendance marked successfully!');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (result.error || 'Failed to mark attendance'));
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+});
+
+function reviewAttendance() {
+    const date = document.getElementById('review-date').value;
+    if (!date) {
+        alert('Please select a date');
+        return;
+    }
+    
+    window.location.href = "{{ url_for('hr.attendance_review') }}?review_date=" + date + "&start_date={{ start_date.isoformat() if start_date else '' }}&end_date={{ end_date.isoformat() if end_date else '' }}";
 }
 
-table tbody tr:hover {
-    background: #f8f9fa;
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const markModal = document.getElementById('mark-attendance-modal');
+    const reviewModal = document.getElementById('review-modal');
+    if (event.target == markModal) {
+        closeMarkAttendanceModal();
+    }
+    if (event.target == reviewModal) {
+        closeReviewModal();
+    }
 }
-
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.muted {
-    color: #6c757d;
-    font-size: 0.875rem;
-}
-</style>
+</script>
 {% endblock %}
-
-

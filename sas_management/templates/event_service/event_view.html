@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header">
+        <h1>{{ event.title }}</h1>
+        <p class="muted">{{ event.event_date.strftime('%Y-%m-%d %H:%M') }} - {{ event.status }}</p>
+    </div>
+
+    <div class="panel">
+        <h2>Event Details</h2>
+        <p><strong>Description:</strong> {{ event.description or 'No description' }}</p>
+        <p><strong>Venue:</strong> {{ event.venue or 'N/A' }}</p>
+        <p><strong>Guest Count:</strong> {{ event.guest_count }}</p>
+        <p><strong>Status:</strong> {{ event.status }}</p>
+    </div>
+
+    <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <a href="{{ url_for('event_service.service_orders', event_id=event.id) }}" class="btn-primary">Service Orders</a>
+        <a href="{{ url_for('event_service.costing', event_id=event.id) }}" class="btn-primary">Costing</a>
+        <a href="{{ url_for('event_service.staff_assignments', event_id=event.id) }}" class="btn-primary">Staff</a>
+        <a href="{{ url_for('event_service.vendors', event_id=event.id) }}" class="btn-primary">Vendors</a>
+        <a href="{{ url_for('event_service.service_timeline', event_id=event.id) }}" class="btn-primary">Timeline</a>
+        <a href="{{ url_for('event_service.documents', event_id=event.id) }}" class="btn-primary">Documents</a>
+        <a href="{{ url_for('event_service.checklists', event_id=event.id) }}" class="btn-primary">Checklists</a>
+        <a href="{{ url_for('event_service.messages', event_id=event.id) }}" class="btn-primary">Messages</a>
+        <a href="{{ url_for('event_service.reports', event_id=event.id) }}" class="btn-primary">Reports</a>
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+        <a href="{{ url_for('event_service.event_edit', event_id=event.id) }}" class="btn-secondary">Edit Event</a>
+        <a href="{{ url_for('event_service.events_list') }}" class="btn-secondary">Back to Events</a>
+    </div>
+</div>
+{% endblock %}
+

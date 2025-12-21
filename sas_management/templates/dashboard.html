@@ -11,42 +11,21 @@
         <h2>Navigation</h2>
         <ul class="nav-menu">
             {% for module in modules %}
-            {% if module.get('permission_module') %}
-                {# ALL PERMISSIONS GRANTED - No restrictions #}
-                {% if True %}
-                    <li class="nav-item">
-                        {% if module.children is defined %}
-                        <div class="nav-parent">
-                            <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
-                            <button class="nav-toggle" aria-label="Toggle submenu">▼</button>
-                        </div>
-                        <ul class="nav-submenu">
-                            {% for child in module.children %}
-                            <li><a href="{{ child.url }}" class="nav-sublink">{{ child.name }}</a></li>
-                            {% endfor %}
-                        </ul>
-                        {% else %}
-                        <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
-                        {% endif %}
-                    </li>
-                {% endif %}
-            {% else %}
-            <li class="nav-item">
+            <li class='app-nav-item'>
                 {% if module.children is defined %}
-                <div class="nav-parent">
-                    <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
-                    <button class="nav-toggle" aria-label="Toggle submenu">▼</button>
+                <div class='app-nav-parent'>
+                    <a href='{{ module.url }}' class='app-nav-link'>{{ module.name }}</a>
+                    <button class='app-nav-toggle' onclick='toggleAppSubmenu(this)'>▼</button>
                 </div>
-                <ul class="nav-submenu">
+                <ul class='app-nav-submenu'>
                     {% for child in module.children %}
-                    <li><a href="{{ child.url }}" class="nav-sublink">{{ child.name }}</a></li>
+                    <li><a href='{{ child.url }}'>{{ child.name }}</a></li>
                     {% endfor %}
                 </ul>
                 {% else %}
-                <a href="{{ module.url }}" class="nav-link">{{ module.name }}</a>
+                <a href='{{ module.url }}' class='app-nav-link'>{{ module.name }}</a>
                 {% endif %}
             </li>
-            {% endif %}
             {% endfor %}
         </ul>
     </aside>
@@ -135,7 +114,7 @@
                         </div>
                         <div class="event-field">
                             <span class="event-label">Date:</span>
-                            <span class="event-value">{{ event.event_date.strftime('%b %d, %Y') }}</span>
+                            <span class="event-value">{{ event.event_date.strftime('%b %d, %Y') if event.event_date else 'No Date' }}</span>
                         </div>
                         <div class="event-field">
                             <span class="event-label">Guests:</span>
@@ -203,7 +182,7 @@
                                 <span class="badge badge-{{ task.status.value.lower().replace(' ', '-') }}">{{ task.status.value }}</span>
                             </div>
                             {% if task.due_date %}
-                            <p class="task-meta">Due: {{ task.due_date.strftime('%b %d, %Y') }}</p>
+                            <p class="task-meta">Due: {{ task.due_date.strftime('%b %d, %Y') if task.due_date else 'No Date' }}</p>
                             {% endif %}
                         </li>
                         {% endfor %}
@@ -288,6 +267,25 @@
             </div>
         </div>
         {% endif %}
+
+        <!-- MODULE CARDS SECTION -->
+        <div class="panel">
+            <div class="panel-header">
+                <h3>Quick Access</h3>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; padding: 1rem;">
+                <!-- Event Service Department Card -->
+                <div class="dashboard-card">
+                  <a href="{{ url_for('service.dashboard') }}" class="card-link">
+                    <div class="card-icon">📋</div>
+                    <div class="card-body">
+                      <h4>Event Service</h4>
+                      <p>Manage service events, staff assignments, and checklists</p>
+                    </div>
+                  </a>
+                </div>
+            </div>
+        </div>
 
         <!-- SUMMARY PANEL -->
         <div class="panel summary-panel">

@@ -3,7 +3,7 @@ import os
 from datetime import datetime
 from flask import current_app
 from werkzeug.utils import secure_filename
-from models import db, MenuCategory, MenuItem, MenuPackage
+from sas_management.models import db, MenuCategory, MenuItem, MenuPackage
 # MenuPackageItem removed - using JSON items field in MenuPackage instead
 from decimal import Decimal
 
@@ -113,7 +113,7 @@ def create_menu_item(data, image_file=None):
 def update_menu_item(item_id, data, image_file=None):
     """Update a menu item."""
     try:
-        menu_item = MenuItem.query.get(item_id)
+        menu_item = db.session.get(MenuItem, item_id)
         if not menu_item:
             return {"success": False, "error": "Menu item not found"}
         
@@ -155,7 +155,7 @@ def update_menu_item(item_id, data, image_file=None):
 def get_menu_item(item_id):
     """Get a specific menu item."""
     try:
-        menu_item = MenuItem.query.get(item_id)
+        menu_item = db.session.get(MenuItem, item_id)
         if not menu_item:
             return {"success": False, "error": "Menu item not found"}
         return {"success": True, "menu_item": menu_item}
@@ -208,8 +208,8 @@ def create_menu_package(data):
 def attach_item_to_package(package_id, item_id, quantity=1, notes=None):
     """Add an item to a package - UPDATED to use JSON items field."""
     try:
-        package = MenuPackage.query.get(package_id)
-        menu_item = MenuItem.query.get(item_id)
+        package = db.session.get(MenuPackage, package_id)
+        menu_item = db.session.get(MenuItem, item_id)
         
         if not package or not menu_item:
             return {"success": False, "error": "Package or item not found"}
@@ -248,7 +248,7 @@ def attach_item_to_package(package_id, item_id, quantity=1, notes=None):
 def recalculate_package_totals(package_id):
     """Recalculate package total cost and margin - UPDATED to use JSON items."""
     try:
-        package = MenuPackage.query.get(package_id)
+        package = db.session.get(MenuPackage, package_id)
         if not package:
             return
         
@@ -259,7 +259,7 @@ def recalculate_package_totals(package_id):
         for item_data in items:
             item_id = item_data.get("id")
             quantity = item_data.get("quantity", 1)
-            menu_item = MenuItem.query.get(item_id)
+            menu_item = db.session.get(MenuItem, item_id)
             if menu_item and hasattr(menu_item, 'cost_per_portion'):
                 item_cost = menu_item.cost_per_portion * quantity
                 total_cost += item_cost
@@ -276,7 +276,7 @@ def recalculate_package_totals(package_id):
 def get_menu_package(package_id):
     """Get a specific menu package with items."""
     try:
-        package = MenuPackage.query.get(package_id)
+        package = db.session.get(MenuPackage, package_id)
         if not package:
             return {"success": False, "error": "Package not found"}
         return {"success": True, "package": package}
@@ -301,7 +301,7 @@ def list_menu_packages(category=None):
 def remove_item_from_package(package_id, item_id):
     """Remove an item from a package - UPDATED to use JSON items field."""
     try:
-        package = MenuPackage.query.get(package_id)
+        package = db.session.get(MenuPackage, package_id)
         if not package:
             return {"success": False, "error": "Package not found"}
         

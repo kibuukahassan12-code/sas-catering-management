@@ -1,0 +1,639 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.timeline-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+}
+
+.timeline-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.phase-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.phase-card:hover {
+    border-color: rgba(242,104,34,0.4);
+    background: rgba(242,104,34,0.1);
+}
+
+.phase-card.active {
+    border-color: rgba(59,130,246,0.6);
+    background: rgba(59,130,246,0.15);
+    box-shadow: 0 0 0 2px rgba(59,130,246,0.2);
+}
+
+.phase-card.delayed {
+    border-color: rgba(239,68,68,0.6);
+    background: rgba(239,68,68,0.1);
+}
+
+.phase-card.completed {
+    border-color: rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.05);
+}
+
+.phase-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.phase-title {
+    font-weight: 600;
+    color: var(--accent, #F6BC38);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.phase-title .phase-number {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.875rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.pending {
+    background: rgba(107,114,128,0.3);
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(107,114,128,0.5);
+}
+
+.status-badge.active {
+    background: rgba(59,130,246,0.3);
+    color: #60a5fa;
+    border: 1px solid rgba(59,130,246,0.5);
+}
+
+.status-badge.completed {
+    background: rgba(16,185,129,0.3);
+    color: #34d399;
+    border: 1px solid rgba(16,185,129,0.5);
+}
+
+.status-badge.delayed {
+    background: rgba(239,68,68,0.3);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.5);
+}
+
+.phase-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+    font-size: 0.9375rem;
+}
+
+.detail-value.early {
+    color: #34d399;
+}
+
+.detail-value.delayed {
+    color: #f87171;
+}
+
+.delay-indicator {
+    padding: 0.75rem;
+    background: rgba(239,68,68,0.1);
+    border-left: 3px solid #ef4444;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    color: #f87171;
+}
+
+.phase-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-phase {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid;
+}
+
+.btn-phase-primary {
+    background: rgba(242,104,34,0.2);
+    border-color: rgba(242,104,34,0.4);
+    color: var(--accent, #F6BC38);
+}
+
+.btn-phase-primary:hover {
+    background: rgba(242,104,34,0.3);
+    border-color: var(--brand, #F26822);
+}
+
+.btn-phase-secondary {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.8);
+}
+
+.btn-phase-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+}
+
+.execution-summary {
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(242,104,34,0.3);
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+}
+
+.summary-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+}
+
+.summary-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+}
+
+.summary-value.warning {
+    color: #f59e0b;
+}
+
+.summary-value.danger {
+    color: #f87171;
+}
+
+.summary-value.success {
+    color: #34d399;
+}
+
+.progress-bar-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(242,104,34,0.8), rgba(246,188,56,0.8));
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.event-info-card {
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.event-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.event-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.event-info-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.event-info-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+@media (max-width: 1200px) {
+    .timeline-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .execution-summary {
+        position: relative;
+        top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .phase-details {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-1">Operational Timeline</h1>
+            <p class="text-muted mb-0">Service execution tracking and phase management</p>
+        </div>
+        <a href="{{ url_for('event_service.event_view', event_id=event.id) }}" class="btn btn-outline-secondary">← Back to Event</a>
+    </div>
+
+    <!-- Event Info Card -->
+    <div class="event-info-card">
+        <div class="event-info-grid">
+            <div class="event-info-item">
+                <span class="event-info-label">Event Date</span>
+                <span class="event-info-value">
+                    {% if event.date %}
+                        {{ event.date.strftime('%Y-%m-%d') }}{% if event.start_time %} {{ event.start_time }}{% endif %}
+                    {% elif event.event_date %}
+                        {{ event.event_date.strftime('%Y-%m-%d') }}{% if event.start_time %} {{ event.start_time }}{% endif %}
+                    {% else %}
+                        TBD
+                    {% endif %}
+                </span>
+            </div>
+            <div class="event-info-item">
+                <span class="event-info-label">Venue</span>
+                <span class="event-info-value">
+                    {% if event.venue_obj %}
+                        {{ event.venue_obj.name }}
+                    {% else %}
+                        TBD
+                    {% endif %}
+                </span>
+            </div>
+            <div class="event-info-item">
+                <span class="event-info-label">Status</span>
+                <span class="event-info-value">{{ event.status or 'Not Started' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Two-Column Layout -->
+    <div class="timeline-container">
+        <!-- LEFT COLUMN: Timeline Phases -->
+        <div class="timeline-main">
+            {% if timeline_phases %}
+                {% for phase in timeline_phases %}
+                <div class="phase-card {% if phase.is_active %}active{% elif phase.phase_status == 'Delayed' %}delayed{% elif phase.phase_status == 'Completed' %}completed{% endif %}">
+                    <!-- Phase Header -->
+                    <div class="phase-header">
+                        <div class="phase-title">
+                            <span class="phase-number">Phase #{{ loop.index }}</span>
+                            <span>{{ phase.item.phase }}</span>
+                            {% if phase.is_active %}
+                                <span style="color: #60a5fa; font-size: 0.75rem; margin-left: 0.5rem;">● ACTIVE</span>
+                            {% endif %}
+                        </div>
+                        <span class="status-badge {{ phase.phase_status.lower().replace(' ', '-') }}">
+                            {% if phase.phase_status == "Pending" %}
+                                Planned
+                            {% elif phase.phase_status == "Active" %}
+                                ● Active
+                            {% elif phase.phase_status == "Completed" %}
+                                ✓ Completed
+                            {% elif phase.phase_status == "Delayed" %}
+                                ⚠ Delayed
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Phase Details -->
+                    <div class="phase-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Planned Date</span>
+                            <span class="detail-value">
+                                {% if phase.planned_time %}
+                                    {{ phase.planned_time.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    <span style="color: rgba(255,255,255,0.5);">Not scheduled</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Actual Date</span>
+                            <span class="detail-value">
+                                {% if phase.actual_time %}
+                                    {{ phase.actual_time.strftime('%Y-%m-%d') }}
+                                {% else %}
+                                    <span style="color: rgba(255,255,255,0.5);">Not completed</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if phase.time_variance is not none %}
+                        <div class="detail-item">
+                            <span class="detail-label">Time Variance</span>
+                            <span class="detail-value {% if phase.time_variance > 0 %}delayed{% elif phase.time_variance < 0 %}early{% endif %}">
+                                {% if phase.time_variance > 0 %}
+                                    +{{ phase.time_variance }} day{{ 's' if phase.time_variance != 1 else '' }} delay
+                                {% elif phase.time_variance < 0 %}
+                                    {{ phase.time_variance }} day{{ 's' if phase.time_variance != -1 else '' }} early
+                                {% else %}
+                                    On time
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Delay Indicator -->
+                    {% if phase.delay_reason or phase.is_overdue or phase.cascade_delay %}
+                    <div class="delay-indicator">
+                        {% if phase.delay_reason %}
+                            <div style="margin-bottom: 0.5rem;">
+                                <strong>Delay Reason:</strong> {{ phase.delay_reason }}
+                            </div>
+                        {% endif %}
+                        {% if phase.is_overdue %}
+                            <div>⚠ This phase is overdue</div>
+                        {% endif %}
+                        {% if phase.cascade_delay %}
+                            <div>⚠ Delay cascaded from previous phase</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- Phase Notes -->
+                    {% if phase.item.description and 'DELAY:' not in phase.item.description %}
+                    <div style="padding: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 4px; margin-bottom: 1rem; font-size: 0.875rem; color: rgba(255,255,255,0.7);">
+                        {{ phase.item.description }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Phase Actions -->
+                    <div class="phase-actions">
+                        {% if phase.phase_status == "Pending" %}
+                            <form method="POST" action="{{ url_for('event_service.timeline_phase_start', event_id=event.id, phase_id=phase.item.id) }}" style="display: inline;">
+                                <button type="submit" class="btn-phase btn-phase-primary">Start Phase</button>
+                            </form>
+                        {% elif phase.phase_status == "Active" %}
+                            <form method="POST" action="{{ url_for('event_service.timeline_phase_complete', event_id=event.id, phase_id=phase.item.id) }}" style="display: inline;">
+                                <button type="submit" class="btn-phase btn-phase-primary">Mark Complete</button>
+                            </form>
+                            <button 
+                                type="button" 
+                                class="btn-phase btn-phase-secondary"
+                                onclick="showDelayModal({{ phase.item.id }}, '{{ phase.item.phase|replace("'", "\\'") }}')"
+                            >
+                                Log Delay
+                            </button>
+                        {% elif phase.phase_status == "Delayed" %}
+                            {% if phase.is_active %}
+                                <span style="color: #60a5fa; font-size: 0.875rem; padding: 0.5rem; margin-right: 0.5rem;">
+                                    ● Currently Active
+                                </span>
+                            {% endif %}
+                            <button 
+                                type="button" 
+                                class="btn-phase btn-phase-secondary"
+                                onclick="showDelayModal({{ phase.item.id }}, '{{ phase.item.phase|replace("'", "\\'") }}', '{{ phase.delay_reason|replace("'", "\\'") if phase.delay_reason else "" }}')"
+                            >
+                                {% if phase.delay_reason %}Update Delay Reason{% else %}Log Delay Reason{% endif %}
+                            </button>
+                            {% if not phase.item.completed %}
+                            <form method="POST" action="{{ url_for('event_service.timeline_phase_complete', event_id=event.id, phase_id=phase.item.id) }}" style="display: inline;">
+                                <button type="submit" class="btn-phase btn-phase-primary">Mark Complete</button>
+                            </form>
+                            {% endif %}
+                        {% elif phase.phase_status == "Completed" %}
+                            <span style="color: #34d399; font-size: 0.875rem; padding: 0.5rem;">
+                                ✓ Completed on {{ phase.actual_time.strftime('%Y-%m-%d') }}
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📅</div>
+                    <h2 style="color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">No timeline phases defined</h2>
+                    <p style="color: rgba(255,255,255,0.5);">Timeline phases need to be created in the planning module before execution tracking can begin.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT COLUMN: Execution Summary -->
+        <div class="execution-summary">
+            <div class="summary-header">
+                <span>📊</span>
+                <h3>Execution Summary</h3>
+            </div>
+            
+            {% if timeline_phases %}
+                {% set total_phases = timeline_phases|length %}
+                {% set completed_phases = timeline_phases|selectattr('phase_status', 'equalto', 'Completed')|list|length %}
+                {% set active_phases = timeline_phases|selectattr('phase_status', 'equalto', 'Active')|list|length %}
+                {% set delayed_phases = timeline_phases|selectattr('phase_status', 'equalto', 'Delayed')|list|length %}
+                {% set overall_progress = (completed_phases / total_phases * 100) if total_phases > 0 else 0 %}
+                
+                <div class="summary-row">
+                    <span class="summary-label">Total Phases</span>
+                    <span class="summary-value">{{ total_phases }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Completed Phases</span>
+                    <span class="summary-value success">{{ completed_phases }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Active Phase</span>
+                    <span class="summary-value {% if active_phases > 0 %}warning{% else %}summary-value{% endif %}">
+                        {% if active_phases > 0 %}
+                            {{ active_phases }} Active
+                        {% else %}
+                            None
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Delayed Phases</span>
+                    <span class="summary-value {% if delayed_phases > 0 %}danger{% endif %}">{{ delayed_phases }}</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="summary-row" style="border-bottom: none; padding-bottom: 0.5rem;">
+                        <span class="summary-label">Overall Progress</span>
+                        <span class="summary-value">{{ "%.0f"|format(overall_progress) }}%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {{ overall_progress }}%;">
+                            {{ "%.0f"|format(overall_progress) }}%
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="summary-row">
+                    <span class="summary-label">Total Phases</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div style="padding: 1rem; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                    No phases available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Delay Reason Modal -->
+<div id="delayModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #1f2937; border-radius: 8px; padding: 2rem; max-width: 500px; width: 90%; border: 1px solid #374151;">
+        <h3 style="margin: 0 0 1rem 0; color: #f3f4f6;">Log Delay Reason</h3>
+        <p class="muted" style="margin-bottom: 1rem;" id="delayPhaseName"></p>
+        <form method="POST" id="delayForm" style="margin-bottom: 1rem;">
+            <div style="margin-bottom: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af; font-size: 0.9rem;">Delay Reason *</label>
+                <textarea 
+                    name="delay_reason" 
+                    id="delayReasonInput"
+                    rows="4" 
+                    required
+                    style="width: 100%; padding: 0.75rem; background: #111827; border: 1px solid #374151; border-radius: 4px; color: #f3f4f6; font-family: inherit;"
+                    placeholder="Enter reason for delay..."
+                ></textarea>
+            </div>
+            <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                <button type="button" class="btn-phase btn-phase-secondary" onclick="hideDelayModal()">Cancel</button>
+                <button type="submit" class="btn-phase btn-phase-primary">Save Delay Reason</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showDelayModal(phaseId, phaseName, existingReason) {
+    const modal = document.getElementById('delayModal');
+    const form = document.getElementById('delayForm');
+    const phaseNameEl = document.getElementById('delayPhaseName');
+    const reasonInput = document.getElementById('delayReasonInput');
+    
+    phaseNameEl.textContent = `Phase: ${phaseName}`;
+    form.action = `/event-service/events/{{ event.id }}/timeline/${phaseId}/delay`;
+    reasonInput.value = existingReason || '';
+    modal.style.display = 'flex';
+}
+
+function hideDelayModal() {
+    document.getElementById('delayModal').style.display = 'none';
+    document.getElementById('delayReasonInput').value = '';
+}
+
+// Close modal on outside click
+document.getElementById('delayModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideDelayModal();
+    }
+});
+</script>
+{% endblock %}

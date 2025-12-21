@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Items{% endblock %}
+{% block content %}
+<div class="container my-4">
+  <h3>Items for Event {{ event_id }}</h3>
+  <a href="{{ url_for('service.event_view', event_id=event_id) }}" class="btn btn-sm btn-secondary mb-3">Back</a>
+  {% if items %}
+    <ul class="list-group">
+      {% for it in items %}
+        <li class="list-group-item">{{ it.item_name }} — {{ it.quantity_needed }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">No items.</p>
+  {% endif %}
+</div>
+{% endblock %}
+

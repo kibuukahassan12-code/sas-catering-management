@@ -17,7 +17,7 @@ except ImportError:
     REPORTLAB_AVAILABLE = False
     pass
 
-from models import Invoice, Event, Client, db
+from sas_management.models import Invoice, Event, Client, db
 
 
 def generate_invoice_pdf(invoice_id):

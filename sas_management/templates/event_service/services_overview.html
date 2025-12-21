@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header">
+        <h1>Services Overview</h1>
+        <p class="muted">Execution Control Center - Monitor service execution, readiness, and risks</p>
+    </div>
+
+    <!-- KPI Summary Cards -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+        <div class="panel" style="background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%); color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Total Active Service Events</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem;">{{ total_active }}</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">Events in service pipeline</div>
+        </div>
+        
+        <div class="panel" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Events In Progress</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem;">{{ events_in_progress }}</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">Currently executing</div>
+        </div>
+        
+        <div class="panel" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Events At Risk</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem;">{{ events_at_risk }}</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">Require attention</div>
+        </div>
+        
+        <div class="panel" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+            <div style="font-size: 0.9rem; opacity: 0.9; margin-bottom: 0.5rem;">Events Completed</div>
+            <div style="font-size: 2.5rem; font-weight: 700; margin-bottom: 0.25rem;">{{ events_completed }}</div>
+            <div style="font-size: 0.85rem; opacity: 0.8;">Service phase finished</div>
+        </div>
+    </div>
+
+    <!-- Service Events Table -->
+    {% if service_events %}
+    <div class="panel">
+        <h2>Service Events</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #374151;">
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Event</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Status</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Checklist</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Timeline</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Documents</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Last Activity</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Readiness</th>
+                        <th style="text-align: left; padding: 0.75rem; color: #9ca3af; font-weight: 600;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for se in service_events %}
+                    <tr style="border-bottom: 1px solid #374151; {% if se.timeline_delay_flag or se.overdue_checklist_items_count > 0 or se.service_readiness_score < 60 %}background-color: rgba(245, 158, 11, 0.1);{% endif %}">
+                        <td style="padding: 1rem;">
+                            <div>
+                                <strong style="font-size: 1.05rem; color: #f3f4f6;">{{ se.event.title }}</strong>
+                                <div class="muted" style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                    {{ se.event_date.strftime('%Y-%m-%d') }} • {{ se.venue_name or 'Venue TBD' }}
+                                </div>
+                                {% if se.overdue_checklist_items_count > 0 %}
+                                <div style="color: #f59e0b; font-size: 0.8rem; margin-top: 0.25rem;">
+                                    ⚠ {{ se.overdue_checklist_items_count }} overdue item{{ 's' if se.overdue_checklist_items_count != 1 else '' }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if se.service_status == "Not Started" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #374151; color: #9ca3af; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    Not Started
+                                </span>
+                            {% elif se.service_status == "Setup" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #3b82f6; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    Setup
+                                </span>
+                            {% elif se.service_status == "In Progress" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #10b981; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    In Progress
+                                </span>
+                            {% elif se.service_status == "Completed" %}
+                                <span style="display: inline-block; padding: 0.25rem 0.75rem; background: #6b7280; color: white; border-radius: 4px; font-size: 0.85rem; font-weight: 500;">
+                                    Completed
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="min-width: 120px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                    <div style="background: #1f2937; border-radius: 4px; height: 8px; flex: 1; overflow: hidden;">
+                                        <div style="background: {% if se.checklist_completion_percent >= 80 %}#10b981{% elif se.checklist_completion_percent >= 50 %}#f59e0b{% else %}#ef4444{% endif %}; height: 100%; width: {{ se.checklist_completion_percent }}%; transition: width 0.3s;"></div>
+                                    </div>
+                                    <span style="font-size: 0.85rem; font-weight: 600; color: #f3f4f6; min-width: 40px;">{{ se.checklist_completion_percent }}%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if se.timeline_delay_flag %}
+                                <span style="color: #ef4444; font-size: 0.9rem;">⚠ Delayed</span>
+                            {% else %}
+                                <span style="color: #10b981; font-size: 0.9rem;">✓ On Track</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if se.missing_required_documents_count > 0 %}
+                                <span style="color: #f59e0b; font-size: 0.9rem;">⚠ Missing</span>
+                            {% else %}
+                                <span style="color: #10b981; font-size: 0.9rem;">✓ Complete</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if se.last_activity_timestamp %}
+                                <span class="muted" style="font-size: 0.85rem;">
+                                    {{ se.last_activity_timestamp.strftime('%Y-%m-%d %H:%M') }}
+                                </span>
+                            {% else %}
+                                <span class="muted" style="font-size: 0.85rem;">No activity</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <div style="background: #1f2937; border-radius: 4px; height: 24px; width: 60px; overflow: hidden; position: relative;">
+                                    <div style="background: {% if se.service_readiness_score >= 80 %}#10b981{% elif se.service_readiness_score >= 60 %}#f59e0b{% else %}#ef4444{% endif %}; height: 100%; width: {{ se.service_readiness_score }}%; transition: width 0.3s;"></div>
+                                </div>
+                                <span style="font-size: 0.9rem; font-weight: 600; color: {% if se.service_readiness_score >= 80 %}#10b981{% elif se.service_readiness_score >= 60 %}#f59e0b{% else %}#ef4444{% endif %}; min-width: 35px;">
+                                    {{ se.service_readiness_score }}
+                                </span>
+                            </div>
+                        </td>
+                        <td style="padding: 1rem;">
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                <a href="{{ url_for('event_service.timeline', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Timeline</a>
+                                <a href="{{ url_for('event_service.checklists', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Checklists</a>
+                                <a href="{{ url_for('event_service.documents', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Docs</a>
+                                <a href="{{ url_for('event_service.messages', event_id=se.event.id) }}" class="btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">Messages</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="panel">
+        <div style="text-align: center; padding: 3rem 1rem;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+            <h2 style="color: #9ca3af; margin-bottom: 0.5rem;">No service events today</h2>
+            <p class="muted">There are no active or upcoming service events in the pipeline.</p>
+            <div style="margin-top: 1.5rem;">
+                <a href="{{ url_for('event_service.events_list') }}" class="btn-primary">View All Events</a>
+                <a href="{{ url_for('event_service.event_create') }}" class="btn-secondary">Create New Event</a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div style="margin-top: 1.5rem;">
+        <a href="{{ url_for('event_service.dashboard') }}" class="btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}
+

@@ -8,7 +8,7 @@ from decimal import Decimal
 from flask import current_app, request
 from flask_sqlalchemy import SQLAlchemy
 
-from models import db
+from sas_management.models import db
 
 
 def get_decimal(value, fallback="0"):
@@ -56,6 +56,29 @@ def _paginate_query(query, per_page=None):
 def parse_date(raw_value, fallback=None):
     """Alias for _parse_date."""
     return _parse_date(raw_value, fallback)
+
+
+def get_or_404(model, id_value):
+    """
+    SQLAlchemy 2.x compatible replacement for Model.query.get_or_404().
+    
+    Args:
+        model: SQLAlchemy model class
+        id_value: Primary key value
+        
+    Returns:
+        Model instance
+        
+    Raises:
+        404 if not found
+    """
+    from flask import abort
+    from sas_management.models import db
+    
+    obj = db.session.get(model, id_value)
+    if obj is None:
+        abort(404, description=f"{model.__name__} with id {id_value} not found")
+    return obj
 
 def _parse_date(raw_value, fallback=None):
     """

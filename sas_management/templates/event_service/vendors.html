@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header">
+        <h1>Vendors - {{ event.title }}</h1>
+    </div>
+
+    <div class="panel">
+        <h2>Add Vendor</h2>
+        <form method="POST" action="{{ url_for('event_service.vendor_add', event_id=event.id) }}">
+            <div class="form-grid">
+                <div>
+                    <label>Vendor Name *</label>
+                    <input type="text" name="vendor_name" required>
+                </div>
+                <div>
+                    <label>Vendor Contact</label>
+                    <input type="text" name="vendor_contact">
+                </div>
+                <div>
+                    <label>Service Provided</label>
+                    <input type="text" name="service_provided">
+                </div>
+                <div>
+                    <label>Cost</label>
+                    <input type="number" name="cost" step="0.01" min="0" value="0">
+                </div>
+            </div>
+            <button type="submit" class="btn-primary">Add Vendor</button>
+        </form>
+    </div>
+
+    <div class="panel" style="margin-top: 1.5rem;">
+        <h2>Vendors</h2>
+        {% if vendors %}
+            <table style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Vendor Name</th>
+                        <th>Contact</th>
+                        <th>Service</th>
+                        <th>Cost</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vendor in vendors %}
+                    <tr>
+                        <td>{{ vendor.vendor_name }}</td>
+                        <td>{{ vendor.vendor_contact or 'N/A' }}</td>
+                        <td>{{ vendor.service_provided or 'N/A' }}</td>
+                        <td>{{ vendor.cost }}</td>
+                        <td>{{ vendor.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No vendors yet.</p>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+        <a href="{{ url_for('event_service.event_view', event_id=event.id) }}" class="btn-secondary">Back to Event</a>
+    </div>
+</div>
+{% endblock %}
+

@@ -2,7 +2,7 @@
 from datetime import datetime, date
 from flask import current_app
 
-from models import (
+from sas_management.models import (
     db, EventChecklist, ChecklistItem, Event, User
 )
 
@@ -22,7 +22,7 @@ def get_or_create_checklist(event_id, checklist_type):
         
         if not checklist:
             # Create new checklist with default items
-            event = Event.query.get(event_id)
+            event = db.session.get(Event, event_id)
             if not event:
                 raise ValueError("Event not found")
             
@@ -107,7 +107,7 @@ def add_checklist_item(checklist_id, description, category=None, order_index=Non
     try:
         db.session.begin()
         
-        checklist = EventChecklist.query.get(checklist_id)
+        checklist = db.session.get(EventChecklist, checklist_id)
         if not checklist:
             raise ValueError("Checklist not found")
         
@@ -139,7 +139,7 @@ def toggle_checklist_item(item_id, completed_by=None, notes=None):
     try:
         db.session.begin()
         
-        item = ChecklistItem.query.get(item_id)
+        item = db.session.get(ChecklistItem, item_id)
         if not item:
             raise ValueError("Checklist item not found")
         
@@ -172,7 +172,7 @@ def update_checklist_item(item_id, description=None, category=None, order_index=
     try:
         db.session.begin()
         
-        item = ChecklistItem.query.get(item_id)
+        item = db.session.get(ChecklistItem, item_id)
         if not item:
             raise ValueError("Checklist item not found")
         
@@ -204,7 +204,7 @@ def delete_checklist_item(item_id):
     try:
         db.session.begin()
         
-        item = ChecklistItem.query.get(item_id)
+        item = db.session.get(ChecklistItem, item_id)
         if not item:
             raise ValueError("Checklist item not found")
         
@@ -212,7 +212,7 @@ def delete_checklist_item(item_id):
         db.session.delete(item)
         
         # Update checklist updated_at
-        checklist = EventChecklist.query.get(checklist_id)
+        checklist = db.session.get(EventChecklist, checklist_id)
         if checklist:
             checklist.updated_at = datetime.utcnow()
         

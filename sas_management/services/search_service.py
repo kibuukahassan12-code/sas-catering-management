@@ -6,7 +6,7 @@ from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
-from models import (
+from sas_management.models import (
     db, Client, Event, InventoryItem, BakeryItem, CateringItem, Ingredient,
     RecipeAdvanced, Recipe, Employee, Task, Quotation, Invoice, Receipt,
     Course, User, Transaction, AccountingReceipt, AccountingPayment,
@@ -495,7 +495,7 @@ def global_search(query, limit_per_type=20):
                 'scheduled_date': m.scheduled_date.strftime('%Y-%m-%d') if m.scheduled_date else None,
                 'technician': m.technician_name,
                 'type_label': 'Maintenance',
-                'url': url_for('maintenance.dashboard'),
+                'url': url_for('hire.maintenance_list'),
                 'icon': '🔧'
             } for m in maintenance]
         except Exception as e:

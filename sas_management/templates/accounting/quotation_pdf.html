@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quotation #{{ quotation.id }} - SAS Best Foods</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #212529;
+            background: white;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 3px solid #F26822;
+        }
+        .logo-section {
+            flex: 0 0 auto;
+        }
+        .logo-section img {
+            max-width: 120px;
+            height: auto;
+            margin-bottom: 0.5rem;
+        }
+        .company-info {
+            text-align: right;
+            flex: 1;
+        }
+        .company-name {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #F26822;
+            margin-bottom: 0.25rem;
+        }
+        .company-tagline {
+            font-size: 11pt;
+            color: #2d5016;
+            margin-bottom: 0.5rem;
+        }
+        .company-address {
+            font-size: 9pt;
+            color: #6c757d;
+            line-height: 1.5;
+        }
+        .quotation-title {
+            text-align: center;
+            font-size: 20pt;
+            font-weight: bold;
+            color: #F26822;
+            margin: 1.5rem 0;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #F26822;
+        }
+        .details-section {
+            display: flex;
+            justify-content: space-between;
+            margin: 2rem 0;
+            padding: 1.5rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .details-left, .details-right {
+            flex: 1;
+            padding: 0 1rem;
+        }
+        .details-left {
+            border-right: 1px solid #e0e0e0;
+        }
+        .section-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #2d5016;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+        .detail-row {
+            margin-bottom: 0.75rem;
+        }
+        .detail-label {
+            font-weight: bold;
+            font-size: 9pt;
+            color: #6c757d;
+            display: inline-block;
+            min-width: 100px;
+        }
+        .detail-value {
+            font-size: 10pt;
+            color: #212529;
+        }
+        .amount-box {
+            background: #f8f9fa;
+            border: 2px solid #F26822;
+            border-radius: 4px;
+            padding: 1rem;
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .amount-value {
+            font-size: 18pt;
+            font-weight: bold;
+            color: #F26822;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+        }
+        .items-table thead {
+            background: #2d5016;
+            color: white;
+        }
+        .items-table th {
+            padding: 0.75rem;
+            text-align: left;
+            font-weight: bold;
+            font-size: 10pt;
+            border: 1px solid #1a3a0e;
+        }
+        .items-table th:nth-child(3),
+        .items-table th:nth-child(4),
+        .items-table th:nth-child(5) {
+            text-align: center;
+        }
+        .items-table td {
+            padding: 0.75rem;
+            border: 1px solid #e0e0e0;
+            font-size: 9pt;
+        }
+        .items-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .items-table td:nth-child(3),
+        .items-table td:nth-child(4),
+        .items-table td:nth-child(5) {
+            text-align: right;
+        }
+        .item-name {
+            font-weight: bold;
+        }
+        .item-description {
+            font-size: 8pt;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+        .totals-section {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 2px solid #F26822;
+        }
+        .totals-table {
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+        }
+        .totals-table td {
+            padding: 0.5rem;
+            font-size: 10pt;
+        }
+        .totals-table td:first-child {
+            text-align: right;
+            font-weight: bold;
+            color: #6c757d;
+        }
+        .totals-table td:last-child {
+            text-align: right;
+            font-weight: bold;
+            color: #212529;
+        }
+        .total-row {
+            font-size: 14pt;
+            font-weight: bold;
+            color: #F26822;
+            border-top: 2px solid #F26822;
+            padding-top: 0.75rem;
+        }
+        .footer {
+            margin-top: 3rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+            font-size: 9pt;
+            color: #6c757d;
+            line-height: 1.6;
+        }
+        .footer-message {
+            margin-bottom: 1rem;
+        }
+        @media print {
+            body {
+                background: white;
+            }
+            .header, .details-section, .items-table, .totals-section, .footer {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-section">
+            <img src="{{ url_for('static', filename='images/ssas_logo.png', _external=True) }}" alt="SAS Best Foods Logo" onerror="this.style.display='none';">
+        </div>
+        <div class="company-info">
+            <div class="company-name">SAS BEST FOODS</div>
+            <div class="company-tagline">Specialists in luxury catering & bakery experiences</div>
+            <div class="company-address">
+                Near Akamwesi Mall, Gayaza Rd, Opp Electoral Commission<br>
+                Kawempe, Kampala, Uganda<br>
+                Tel: +256 700 000 001 | sales@sasbestfoods.com | www.sasbestfoods.com
+            </div>
+        </div>
+    </div>
+
+    <div class="quotation-title">QUOTATION</div>
+
+    <div class="details-section">
+        <div class="details-left">
+            <div class="section-title">Quotation Details</div>
+            <div class="detail-row">
+                <span class="detail-label">Quote Number:</span>
+                <span class="detail-value">#{{ quotation.id }}</span>
+            </div>
+            {% if quotation.title %}
+            <div class="detail-row">
+                <span class="detail-label">Title:</span>
+                <span class="detail-value">{{ quotation.title }}</span>
+            </div>
+            {% endif %}
+            <div class="detail-row">
+                <span class="detail-label">Quote Date:</span>
+                <span class="detail-value">{{ quotation.quote_date.strftime('%B %d, %Y') if quotation.quote_date else 'N/A' }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Valid Until:</span>
+                <span class="detail-value">{{ quotation.expiry_date.strftime('%B %d, %Y') if quotation.expiry_date else 'N/A' }}</span>
+            </div>
+            {% if quotation.event_type %}
+            <div class="detail-row">
+                <span class="detail-label">Event Type:</span>
+                <span class="detail-value">{{ quotation.event_type }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.event_date %}
+            <div class="detail-row">
+                <span class="detail-label">Event Date:</span>
+                <span class="detail-value">{{ quotation.event_date.strftime('%B %d, %Y') }}</span>
+            </div>
+            {% endif %}
+            <div class="amount-box">
+                <div class="amount-value">{{ CURRENCY }}{{ "{:,.2f}".format(quotation.subtotal or 0) }}</div>
+            </div>
+        </div>
+        <div class="details-right">
+            <div class="section-title">Prepared For</div>
+            {% if quotation.client %}
+            <div class="detail-row">
+                <span class="detail-label">Name:</span>
+                <span class="detail-value">{{ quotation.client.name or 'N/A' }}</span>
+            </div>
+            {% if quotation.client.contact_person %}
+            <div class="detail-row">
+                <span class="detail-label">Contact:</span>
+                <span class="detail-value">{{ quotation.client.contact_person }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.client.email %}
+            <div class="detail-row">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value">{{ quotation.client.email }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.client.phone %}
+            <div class="detail-row">
+                <span class="detail-label">Phone:</span>
+                <span class="detail-value">{{ quotation.client.phone }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.client.company %}
+            <div class="detail-row">
+                <span class="detail-label">Company:</span>
+                <span class="detail-value">{{ quotation.client.company }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.client.address %}
+            <div class="detail-row">
+                <span class="detail-label">Address:</span>
+                <span class="detail-value">{{ quotation.client.address }}</span>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% if quotation.event %}
+            <div class="section-title" style="margin-top: 1.5rem;">Event Details</div>
+            <div class="detail-row">
+                <span class="detail-label">Event Name:</span>
+                <span class="detail-value">{{ quotation.event.event_name or 'N/A' }}</span>
+            </div>
+            {% if quotation.event.event_date %}
+            <div class="detail-row">
+                <span class="detail-label">Event Date:</span>
+                <span class="detail-value">{{ quotation.event.event_date.strftime('%B %d, %Y') }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.event.guest_count %}
+            <div class="detail-row">
+                <span class="detail-label">Guests:</span>
+                <span class="detail-value">{{ quotation.event.guest_count }}</span>
+            </div>
+            {% endif %}
+            {% if quotation.event.venue %}
+            <div class="detail-row">
+                <span class="detail-label">Venue:</span>
+                <span class="detail-value">{{ quotation.event.venue }}</span>
+            </div>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Line Item</th>
+                <th>Category</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Line Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for line in quotation.lines %}
+            <tr>
+                <td>
+                    <div class="item-name">{{ line.item_name or 'N/A' }}</div>
+                    {% if line.description %}
+                    <div class="item-description">{{ line.description }}</div>
+                    {% endif %}
+                </td>
+                <td>{{ line.source_type.value if line.source_type and hasattr(line.source_type, 'value') else 'Custom' }}</td>
+                <td>{{ line.quantity or 0 }}</td>
+                <td>{{ CURRENCY }}{{ "{:,.2f}".format(line.unit_price or 0) }}</td>
+                <td>{{ CURRENCY }}{{ "{:,.2f}".format(line.line_total or 0) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: #6c757d;">No line items found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals-section">
+        <table class="totals-table">
+            <tr>
+                <td>Subtotal:</td>
+                <td>{{ CURRENCY }}{{ "{:,.2f}".format(quotation.subtotal or 0) }}</td>
+            </tr>
+            {% if quotation.tax and quotation.tax > 0 %}
+            <tr>
+                <td>Tax ({{ "%.2f"|format((quotation.tax / quotation.subtotal * 100) if quotation.subtotal > 0 else 0) }}%):</td>
+                <td>{{ CURRENCY }}{{ "{:,.2f}".format(quotation.tax) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td>Tax:</td>
+                <td>{{ CURRENCY }}0.00</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td>Total Amount:</td>
+                <td>{{ CURRENCY }}{{ "{:,.2f}".format(quotation.total or (quotation.subtotal + (quotation.tax or 0))) }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <div class="footer-message">
+            We appreciate the opportunity to create unforgettable moments with SAS Best Foods. Please confirm acceptance before the expiry date so production can begin.
+        </div>
+        <div style="margin-top: 1rem;">
+            <strong>Thank you for considering SAS Best Foods!</strong><br>
+            SAS Best Foods - Specialists in luxury catering & bakery experiences<br>
+            <small>Generated by SAS Management System</small>
+        </div>
+    </div>
+</body>
+</html>
+

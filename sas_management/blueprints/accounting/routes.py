@@ -4,9 +4,9 @@ from flask import send_file, abort, render_template, request, redirect, url_for,
 from flask_login import login_required, current_user
 import os
 
-from models import AccountingReceipt, UserRole, db
+from sas_management.models import AccountingReceipt, UserRole, db
 from sqlalchemy.orm import joinedload
-from utils import role_required
+from sas_management.utils import role_required
 
 # Import the existing blueprint
 from blueprints.accounting import accounting_bp
@@ -17,7 +17,7 @@ from blueprints.accounting import accounting_bp
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def receipts_list():
     """List all receipts."""
-    from models import AccountingPayment, Invoice, Client, Event
+    from sas_management.models import AccountingPayment, Invoice, Client, Event
     
     page = request.args.get("page", 1, type=int)
     per_page = current_app.config.get("DEFAULT_PAGE_SIZE", 20)
@@ -50,7 +50,7 @@ def view_receipt(receipt_id):
     Opens PDF ready for download.
     If PDF doesn't exist, generates it on-the-fly.
     """
-    from models import AccountingPayment, Invoice, Client, User, Event, db
+    from sas_management.models import AccountingPayment, Invoice, Client, User, Event, db
     
     # Import PDF generation function - handle gracefully if ReportLab not available
     try:
@@ -65,7 +65,7 @@ def view_receipt(receipt_id):
         except:
             pass
     
-    receipt = AccountingReceipt.query.get(receipt_id)
+    receipt = db.session.get(AccountingReceipt, receipt_id)
     
     if not receipt:
         abort(404, description="Receipt not found")
@@ -86,26 +86,26 @@ def view_receipt(receipt_id):
             if hasattr(receipt, 'payment') and receipt.payment:
                 payment = receipt.payment
             elif receipt.payment_id:
-                payment = AccountingPayment.query.get(receipt.payment_id)
+                payment = db.session.get(AccountingPayment, receipt.payment_id)
             
             if not payment:
                 abort(404, description="Payment not found for this receipt")
             
             invoice = None
             if payment.invoice_id:
-                invoice = Invoice.query.get(payment.invoice_id)
+                invoice = db.session.get(Invoice, payment.invoice_id)
             
             client = None
             if receipt.issued_to:
-                client = Client.query.get(receipt.issued_to)
+                client = db.session.get(Client, receipt.issued_to)
             elif invoice and invoice.event_id:
-                event = Event.query.get(invoice.event_id)
+                event = db.session.get(Event, invoice.event_id)
                 if event and event.client_id:
-                    client = Client.query.get(event.client_id)
+                    client = db.session.get(Client, event.client_id)
             
             issuer = None
             if receipt.issued_by:
-                issuer = User.query.get(receipt.issued_by)
+                issuer = db.session.get(User, receipt.issued_by)
             
             # Ensure receipts folder exists
             receipts_folder = os.path.join(current_app.instance_path, "receipts")
@@ -148,7 +148,7 @@ def view_receipt(receipt_id):
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def receipt_new():
     """Create a new receipt manually."""
-    from models import AccountingPayment, Invoice, Client, User, Event
+    from sas_management.models import AccountingPayment, Invoice, Client, User, Event
     from services.accounting_service import generate_receipt, record_payment
     
     if request.method == "POST":
@@ -251,7 +251,7 @@ def receipt_new():
             return redirect(url_for("accounting.receipt_new"))
     
     # GET request - show form
-    from models import InvoiceStatus
+    from sas_management.models import InvoiceStatus
     clients = Client.query.order_by(Client.name.asc()).all()
     invoices = Invoice.query.filter(Invoice.status != InvoiceStatus.Paid).order_by(Invoice.issue_date.desc()).limit(50).all()
     
@@ -269,7 +269,7 @@ def receipt_new():
 @role_required(UserRole.Admin, UserRole.SalesManager)
 def print_receipt(receipt_id):
     """Print-friendly receipt view."""
-    from models import AccountingPayment, Invoice, Client, User, Event
+    from sas_management.models import AccountingPayment, Invoice, Client, User, Event
     
     receipt = AccountingReceipt.query.get_or_404(receipt_id)
     
@@ -278,23 +278,23 @@ def print_receipt(receipt_id):
     if hasattr(receipt, 'payment') and receipt.payment:
         payment = receipt.payment
     elif receipt.payment_id:
-        payment = AccountingPayment.query.get(receipt.payment_id)
+        payment = db.session.get(AccountingPayment, receipt.payment_id)
     
     invoice = None
     if payment and payment.invoice_id:
-        invoice = Invoice.query.get(payment.invoice_id)
+        invoice = db.session.get(Invoice, payment.invoice_id)
     
     client = None
     if receipt.issued_to:
-        client = Client.query.get(receipt.issued_to)
+        client = db.session.get(Client, receipt.issued_to)
     elif invoice and invoice.event_id:
-        event = Event.query.get(invoice.event_id)
+        event = db.session.get(Event, invoice.event_id)
         if event and event.client_id:
-            client = Client.query.get(event.client_id)
+            client = db.session.get(Client, event.client_id)
     
     issuer = None
     if receipt.issued_by:
-        issuer = User.query.get(receipt.issued_by)
+        issuer = db.session.get(User, receipt.issued_by)
     
     return render_template(
         "accounting/receipt_print.html",

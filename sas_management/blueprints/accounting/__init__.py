@@ -6,7 +6,7 @@ from decimal import Decimal
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, send_from_directory, url_for
 from flask_login import current_user, login_required
 
-from models import (
+from sas_management.models import (
     Account,
     AccountingPayment,
     AccountingReceipt,
@@ -20,10 +20,10 @@ from models import (
     UserRole,
     db,
 )
-from utils import paginate_query, role_required, permission_required
+from sas_management.utils import paginate_query, role_required, permission_required
 # Import all functions from accounting_service to avoid ImportError
 # This ensures no import errors even if some functions are temporarily missing
-from services.accounting_service import *
+from sas_management.services.accounting_service import *
 
 accounting_bp = Blueprint("accounting", __name__, url_prefix="/accounting")
 
@@ -89,8 +89,8 @@ def dashboard():
             "pending_amount": float(pending_amount) if pending_amount else 0.0,
         }
         
-        # Get account balances for key accounts (Admin only)
-        if current_user.is_super_admin() or current_user.role == UserRole.Admin:
+        # Get account balances for key accounts (Admin only) - Admin bypass
+        if (hasattr(current_user, 'is_admin') and current_user.is_admin) or current_user.is_super_admin() or current_user.role == UserRole.Admin:
             try:
                 trial_balance = compute_trial_balance()
                 # Filter to key accounts (Cash, Bank, AR, Revenue, etc.)

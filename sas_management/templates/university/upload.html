@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Employee University · Upload</p>
+        <h1>Upload Course Material</h1>
+        <p class="muted">Upload training materials, documents, videos, or any course resources.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('university.dashboard') }}">← Back to Dashboard</a>
+</section>
+
+<section class="panel">
+    <form method="POST" enctype="multipart/form-data" class="form-grid">
+        <label class="form-control form-control--full">
+            <span>Select File</span>
+            <input type="file" name="file" required style="
+                padding: 0.75rem;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.05);
+                color: rgba(255, 255, 255, 0.9);
+                font-size: 1rem;
+                width: 100%;
+                cursor: pointer;
+            ">
+            <small class="muted" style="display: block; margin-top: 0.5rem;">
+                Supported formats: PDF, DOCX, MP4, MP3, ZIP, images, and more
+            </small>
+        </label>
+
+        <div class="form-actions" style="margin-top: 1.5rem;">
+            <button type="submit" class="btn-primary" style="
+                padding: 0.75rem 2rem;
+                font-size: 1rem;
+                font-weight: 600;
+            ">📤 Upload File</button>
+            <a class="btn-ghost" href="{{ url_for('university.dashboard') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+
+<!-- Upload Instructions -->
+<section class="panel" style="margin-top: 2rem;">
+    <div class="panel-header">
+        <h3>Upload Guidelines</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 1rem;">
+            <li style="display: flex; align-items: start; gap: 0.75rem;">
+                <span style="font-size: 1.25rem;">✅</span>
+                <div>
+                    <strong>File Size:</strong> Maximum file size is 1GB
+                </div>
+            </li>
+            <li style="display: flex; align-items: start; gap: 0.75rem;">
+                <span style="font-size: 1.25rem;">✅</span>
+                <div>
+                    <strong>Formats:</strong> All file formats are supported (PDF, DOCX, videos, images, etc.)
+                </div>
+            </li>
+            <li style="display: flex; align-items: start; gap: 0.75rem;">
+                <span style="font-size: 1.25rem;">✅</span>
+                <div>
+                    <strong>Security:</strong> Files are securely stored and accessible only to authorized users
+                </div>
+            </li>
+        </ul>
+    </div>
+</section>
+{% endblock %}

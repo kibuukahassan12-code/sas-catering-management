@@ -6,7 +6,7 @@
         <h1>{{ action }} Course</h1>
         <p class="muted">Define training courses and assign them to specific employee roles.</p>
     </div>
-    <a class="btn-secondary" href="{{ url_for('university.admin_courses_list') }}">← Back to Courses</a>
+    <a class="btn-secondary" href="{{ url_for('university.admin_course_list') }}">← Back to Courses</a>
 </section>
 
 <section class="panel">
@@ -17,23 +17,21 @@
         </label>
 
         <label class="form-control">
-            <span>Target Role</span>
-            <select name="target_role" required>
-                <option value="">Select Role</option>
-                {% for role in roles %}
-                <option value="{{ role.value }}" {% if course and course.target_role == role %}selected{% endif %}>{{ role.value }}</option>
-                {% endfor %}
-            </select>
+            <span>Published</span>
+            <label class="checkbox">
+                <input type="checkbox" name="published" {% if course and course.published %}checked{% endif %}>
+                <span>Make this course visible to employees</span>
+            </label>
         </label>
 
         <label class="form-control form-control--full">
             <span>Description</span>
-            <textarea name="description" rows="4" required>{{ course.description if course else '' }}</textarea>
+            <textarea name="description" rows="4">{{ course.description if course else '' }}</textarea>
         </label>
 
         <div class="form-actions">
             <button type="submit" class="btn-primary">{{ action }} Course</button>
-            <a class="btn-ghost" href="{{ url_for('university.admin_courses_list') }}">Cancel</a>
+            <a class="btn-ghost" href="{{ url_for('university.admin_course_list') }}">Cancel</a>
         </div>
     </form>
 </section>

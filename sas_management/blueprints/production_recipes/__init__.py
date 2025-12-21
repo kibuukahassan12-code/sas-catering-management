@@ -3,12 +3,12 @@ from datetime import datetime
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for, jsonify, send_file
 from flask_login import current_user, login_required
 
-from models import (
+from sas_management.models import (
     db, RecipeAdvanced, RecipeIngredient, BatchProduction, WasteLog,
     Ingredient, Employee, User, UserRole
 )
-from utils import role_required
-from services.recipe_service import (
+from sas_management.utils import role_required
+from sas_management.services.recipe_service import (
     create_recipe, update_recipe, add_ingredient, calculate_recipe_cost,
     record_batch_production, log_waste, get_recipe, list_recipes
 )

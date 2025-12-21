@@ -1,0 +1,600 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.reports-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 1.5rem;
+}
+
+.reports-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.report-card {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1.25rem;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.report-card:hover {
+    border-color: rgba(242,104,34,0.4);
+    background: rgba(242,104,34,0.1);
+}
+
+.report-card.completed {
+    border-color: rgba(16,185,129,0.4);
+    background: rgba(16,185,129,0.05);
+}
+
+.report-card.delayed {
+    border-color: rgba(239,68,68,0.6);
+    background: rgba(239,68,68,0.1);
+}
+
+.report-card.in-progress {
+    border-color: rgba(245,158,11,0.6);
+    background: rgba(245,158,11,0.1);
+}
+
+.report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.report-title {
+    font-weight: 600;
+    color: var(--accent, #F6BC38);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.report-title .report-number {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.875rem;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.35rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-badge.success {
+    background: rgba(16,185,129,0.3);
+    color: #34d399;
+    border: 1px solid rgba(16,185,129,0.5);
+}
+
+.status-badge.warning {
+    background: rgba(245,158,11,0.3);
+    color: #fbbf24;
+    border: 1px solid rgba(245,158,11,0.5);
+}
+
+.status-badge.danger {
+    background: rgba(239,68,68,0.3);
+    color: #f87171;
+    border: 1px solid rgba(239,68,68,0.5);
+}
+
+.report-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.3);
+    border-radius: 6px;
+}
+
+.report-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.metric-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.metric-value.success {
+    color: #34d399;
+}
+
+.metric-value.warning {
+    color: #fbbf24;
+}
+
+.metric-value.danger {
+    color: #f87171;
+}
+
+.report-summary {
+    position: sticky;
+    top: 1rem;
+    height: fit-content;
+    background: rgba(17, 17, 17, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid rgba(242,104,34,0.3);
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(242,104,34,0.3);
+    font-weight: 600;
+    font-size: 1.125rem;
+    color: var(--accent, #F6BC38);
+}
+
+.summary-label {
+    color: rgba(255,255,255,0.7);
+    font-size: 0.875rem;
+}
+
+.summary-value {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+}
+
+.summary-value.warning {
+    color: #f59e0b;
+}
+
+.summary-value.danger {
+    color: #f87171;
+}
+
+.summary-value.success {
+    color: #34d399;
+}
+
+.progress-bar-container {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.progress-bar {
+    width: 100%;
+    height: 20px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, rgba(242,104,34,0.8), rgba(246,188,56,0.8));
+    transition: width 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.progress-fill.success {
+    background: linear-gradient(90deg, rgba(16,185,129,0.8), rgba(34,211,153,0.8));
+}
+
+.progress-fill.danger {
+    background: linear-gradient(90deg, rgba(239,68,68,0.8), rgba(248,113,113,0.8));
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.events-list {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.event-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid rgba(255,255,255,0.1);
+}
+
+.event-item.completed {
+    border-left-color: rgba(16,185,129,0.6);
+}
+
+.event-item.delayed {
+    border-left-color: rgba(239,68,68,0.6);
+}
+
+.event-item.in-progress {
+    border-left-color: rgba(245,158,11,0.6);
+}
+
+.event-name {
+    color: rgba(255,255,255,0.9);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    flex: 1;
+}
+
+.event-date {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.875rem;
+    margin-left: 1rem;
+}
+
+.event-status {
+    margin-left: 1rem;
+}
+
+@media (max-width: 1200px) {
+    .reports-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .report-summary {
+        position: relative;
+        top: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .report-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .event-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<div class="container-fluid px-4 py-3">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="fw-bold mb-1">Event Service Reports</h1>
+            <p class="text-muted mb-0">Operational service delivery reports</p>
+        </div>
+        <a href="{{ url_for('core.dashboard') }}" class="btn btn-outline-secondary">← Dashboard</a>
+    </div>
+
+    <!-- Two-Column Layout -->
+    <div class="reports-container">
+        <!-- LEFT COLUMN: Report Cards -->
+        <div class="reports-main">
+            {% if events %}
+                <!-- Completed Events Report Card -->
+                <div class="report-card completed">
+                    <!-- Report Header -->
+                    <div class="report-header">
+                        <div class="report-title">
+                            <span class="report-number">Report #1</span>
+                            <span>Completed Events</span>
+                        </div>
+                        <span class="status-badge success">✓ Complete</span>
+                    </div>
+
+                    <!-- Report Content -->
+                    <div class="report-content">
+                        <div class="report-metric">
+                            <span class="metric-label">Total Completed</span>
+                            <span class="metric-value success">{{ completed_events }}</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Status</span>
+                            <span class="metric-value success" style="font-size: 1rem;">Delivered</span>
+                        </div>
+                    </div>
+
+                    <!-- Events List -->
+                    {% set completed_events_list = events | selectattr('status', 'equalto', 'Completed') | list %}
+                    {% if completed_events_list %}
+                    <div class="events-list">
+                        <div style="color: rgba(255,255,255,0.7); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">
+                            Recent Completed Events:
+                        </div>
+                        {% for event in completed_events_list[:5] %}
+                        <div class="event-item completed">
+                            <span class="event-name">{{ event.title }}</span>
+                            <span class="event-date">
+                                {% if event.date %}
+                                    {{ event.date.strftime("%d %b %Y") }}
+                                {% elif event.event_date %}
+                                    {{ event.event_date.strftime("%d %b %Y") }}
+                                {% else %}
+                                    Date not set
+                                {% endif %}
+                            </span>
+                            <span class="event-status">
+                                <span class="status-badge success">Completed</span>
+                            </span>
+                        </div>
+                        {% endfor %}
+                        {% if completed_events_list|length > 5 %}
+                        <div style="text-align: center; padding: 0.5rem; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                            +{{ completed_events_list|length - 5 }} more completed events
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- In Progress Events Report Card -->
+                <div class="report-card in-progress">
+                    <!-- Report Header -->
+                    <div class="report-header">
+                        <div class="report-title">
+                            <span class="report-number">Report #2</span>
+                            <span>In Progress Events</span>
+                        </div>
+                        <span class="status-badge warning">⏳ Active</span>
+                    </div>
+
+                    <!-- Report Content -->
+                    <div class="report-content">
+                        <div class="report-metric">
+                            <span class="metric-label">Total Active</span>
+                            <span class="metric-value warning">{{ in_progress_events }}</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Status</span>
+                            <span class="metric-value warning" style="font-size: 1rem;">In Progress</span>
+                        </div>
+                    </div>
+
+                    <!-- Events List -->
+                    {% set in_progress_events_list = events | selectattr('status', 'equalto', 'In Progress') | list %}
+                    {% if in_progress_events_list %}
+                    <div class="events-list">
+                        <div style="color: rgba(255,255,255,0.7); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">
+                            Active Events:
+                        </div>
+                        {% for event in in_progress_events_list[:5] %}
+                        <div class="event-item in-progress">
+                            <span class="event-name">{{ event.title }}</span>
+                            <span class="event-date">
+                                {% if event.date %}
+                                    {{ event.date.strftime("%d %b %Y") }}
+                                {% elif event.event_date %}
+                                    {{ event.event_date.strftime("%d %b %Y") }}
+                                {% else %}
+                                    Date not set
+                                {% endif %}
+                            </span>
+                            <span class="event-status">
+                                <span class="status-badge warning">In Progress</span>
+                            </span>
+                        </div>
+                        {% endfor %}
+                        {% if in_progress_events_list|length > 5 %}
+                        <div style="text-align: center; padding: 0.5rem; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                            +{{ in_progress_events_list|length - 5 }} more active events
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Delayed Events Report Card -->
+                <div class="report-card delayed">
+                    <!-- Report Header -->
+                    <div class="report-header">
+                        <div class="report-title">
+                            <span class="report-number">Report #3</span>
+                            <span>Delayed Events</span>
+                        </div>
+                        <span class="status-badge danger">⚠ Delayed</span>
+                    </div>
+
+                    <!-- Report Content -->
+                    <div class="report-content">
+                        <div class="report-metric">
+                            <span class="metric-label">Total Delayed</span>
+                            <span class="metric-value danger">{{ delayed_events }}</span>
+                        </div>
+                        <div class="report-metric">
+                            <span class="metric-label">Status</span>
+                            <span class="metric-value danger" style="font-size: 1rem;">Overdue</span>
+                        </div>
+                    </div>
+
+                    <!-- Events List -->
+                    {% set delayed_events_list = [] %}
+                    {% for event in events %}
+                        {% if event.date and today %}
+                            {% if event.date < today and event.status != "Completed" %}
+                                {% set _ = delayed_events_list.append(event) %}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if delayed_events_list %}
+                    <div class="events-list">
+                        <div style="color: rgba(255,255,255,0.7); font-size: 0.875rem; margin-bottom: 0.5rem; font-weight: 500;">
+                            Overdue Events:
+                        </div>
+                        {% for event in delayed_events_list[:5] %}
+                        <div class="event-item delayed">
+                            <span class="event-name">{{ event.title }}</span>
+                            <span class="event-date">
+                                {% if event.date %}
+                                    {{ event.date.strftime("%d %b %Y") }}
+                                {% elif event.event_date %}
+                                    {{ event.event_date.strftime("%d %b %Y") }}
+                                {% else %}
+                                    Date not set
+                                {% endif %}
+                            </span>
+                            <span class="event-status">
+                                <span class="status-badge danger">Delayed</span>
+                            </span>
+                        </div>
+                        {% endfor %}
+                        {% if delayed_events_list|length > 5 %}
+                        <div style="text-align: center; padding: 0.5rem; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                            +{{ delayed_events_list|length - 5 }} more delayed events
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+                    <h2 style="color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">No report data available</h2>
+                    <p style="color: rgba(255,255,255,0.5);">No report data available yet.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- RIGHT COLUMN: Report Summary -->
+        <div class="report-summary">
+            <div class="summary-header">
+                <span>📊</span>
+                <h3>Report Summary</h3>
+            </div>
+            
+            {% if events %}
+                {% set total_events = events|length %}
+                {% set completion_rate = (completed_events / total_events * 100) if total_events > 0 else 0 %}
+                {% set delayed_percentage = (delayed_events / total_events * 100) if total_events > 0 else 0 %}
+                
+                <div class="summary-row">
+                    <span class="summary-label">Total Events</span>
+                    <span class="summary-value">{{ total_events }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Completed Events</span>
+                    <span class="summary-value success">{{ completed_events }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">In Progress</span>
+                    <span class="summary-value warning">{{ in_progress_events }}</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Delayed Events</span>
+                    <span class="summary-value {% if delayed_events > 0 %}danger{% endif %}">{{ delayed_events }}</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="summary-row" style="border-bottom: none; padding-bottom: 0.5rem;">
+                        <span class="summary-label">Completion Rate</span>
+                        <span class="summary-value {% if completion_rate >= 80 %}success{% elif completion_rate >= 50 %}warning{% else %}danger{% endif %}">
+                            {{ "%.1f"|format(completion_rate) }}%
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill {% if completion_rate >= 80 %}success{% elif completion_rate < 50 %}danger{% endif %}" style="width: {{ completion_rate }}%;">
+                            {{ "%.0f"|format(completion_rate) }}%
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div class="summary-row" style="border-bottom: none; padding-bottom: 0.5rem;">
+                        <span class="summary-label">Delayed Percentage</span>
+                        <span class="summary-value {% if delayed_percentage > 0 %}danger{% endif %}">
+                            {{ "%.1f"|format(delayed_percentage) }}%
+                        </span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill danger" style="width: {{ delayed_percentage }}%;">
+                            {{ "%.0f"|format(delayed_percentage) }}%
+                        </div>
+                    </div>
+                    {% if delayed_events > 0 %}
+                    <div style="padding-top: 0.5rem; color: #f87171; font-size: 0.875rem; text-align: center;">
+                        ⚠ {{ delayed_events }} event{{ 's' if delayed_events != 1 else '' }} require attention
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="summary-row" style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 0.5rem; padding-top: 1rem;">
+                    <span class="summary-label">Reporting Period</span>
+                    <span class="summary-value" style="font-size: 0.875rem;">
+                        {{ today.strftime("%d %b %Y") if today else "Current" }}
+                    </span>
+                </div>
+            {% else %}
+                <div class="summary-row">
+                    <span class="summary-label">Total Events</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Completed Events</span>
+                    <span class="summary-value">0</span>
+                </div>
+                <div style="padding: 1rem; text-align: center; color: rgba(255,255,255,0.5); font-size: 0.875rem;">
+                    No report data available
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

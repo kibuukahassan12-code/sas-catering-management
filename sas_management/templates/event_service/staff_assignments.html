@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <div class="page-header">
+        <h1>Staff Assignments - {{ event.title }}</h1>
+    </div>
+
+    <div class="panel">
+        <h2>Assign Staff</h2>
+        <form method="POST" action="{{ url_for('event_service.staff_assignment_add', event_id=event.id) }}">
+            <div class="form-grid">
+                <div>
+                    <label>Staff ID *</label>
+                    <input type="number" name="staff_id" required>
+                </div>
+                <div>
+                    <label>Role</label>
+                    <input type="text" name="role">
+                </div>
+                <div>
+                    <label>Start Time</label>
+                    <input type="datetime-local" name="start_time">
+                </div>
+                <div>
+                    <label>End Time</label>
+                    <input type="datetime-local" name="end_time">
+                </div>
+                <div>
+                    <label>Hourly Rate</label>
+                    <input type="number" name="hourly_rate" step="0.01" min="0">
+                </div>
+            </div>
+            <button type="submit" class="btn-primary">Assign Staff</button>
+        </form>
+    </div>
+
+    <div class="panel" style="margin-top: 1.5rem;">
+        <h2>Staff Assignments</h2>
+        {% if assignments %}
+            <table style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th>Staff ID</th>
+                        <th>Role</th>
+                        <th>Start Time</th>
+                        <th>End Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for assignment in assignments %}
+                    <tr>
+                        <td>{{ assignment.staff_id }}</td>
+                        <td>{{ assignment.role or 'N/A' }}</td>
+                        <td>{{ assignment.start_time.strftime('%Y-%m-%d %H:%M') if assignment.start_time else 'N/A' }}</td>
+                        <td>{{ assignment.end_time.strftime('%Y-%m-%d %H:%M') if assignment.end_time else 'N/A' }}</td>
+                        <td>{{ assignment.status }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <p>No staff assignments yet.</p>
+        {% endif %}
+    </div>
+
+    <div style="margin-top: 1.5rem;">
+        <a href="{{ url_for('event_service.event_view', event_id=event.id) }}" class="btn-secondary">Back to Event</a>
+    </div>
+</div>
+{% endblock %}
+

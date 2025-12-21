@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">University Admin · Materials</p>
+        <h1>{{ course.title }}</h1>
+        <p class="muted">Manage materials for this course.</p>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+        <a class="btn-primary" href="{{ url_for('university.admin_material_upload') }}?course_id={{ course.id }}">+ Upload Material</a>
+        <a class="btn-secondary" href="{{ url_for('university.admin_course_list') }}">← Back to Courses</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Course Materials</h3>
+    </div>
+    
+    {% if materials %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 1px solid #374151;">
+                    <th style="padding: 0.75rem; text-align: left;">Title</th>
+                    <th style="padding: 0.75rem; text-align: left;">Type</th>
+                    <th style="padding: 0.75rem; text-align: left;">File</th>
+                    <th style="padding: 0.75rem; text-align: right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for material in materials %}
+                <tr style="border-bottom: 1px solid #1f2937;">
+                    <td style="padding: 0.75rem;">
+                        <strong>{{ material.title }}</strong>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        <small class="muted">{{ material.material_type or 'N/A' }}</small>
+                    </td>
+                    <td style="padding: 0.75rem;">
+                        {% if material.file_path %}
+                        <small class="muted">{{ material.file_path }}</small>
+                        {% else %}
+                        <small class="muted">No file</small>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 0.75rem; text-align: right;">
+                        <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                            <a href="{{ url_for('university.admin_materials_edit', material_id=material.id) }}" 
+                               class="btn-secondary" style="font-size: 0.875rem;">Edit</a>
+                            <form method="POST" action="{{ url_for('university.admin_materials_delete', material_id=material.id) }}" 
+                                  style="display: inline;" 
+                                  onsubmit="return confirm('Are you sure you want to delete this material?');">
+                                <button type="submit" class="btn-ghost" style="font-size: 0.875rem; color: #ef4444;">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="muted">No materials yet. Upload materials to get started.</p>
+    {% endif %}
+</section>
+{% endblock %}
+

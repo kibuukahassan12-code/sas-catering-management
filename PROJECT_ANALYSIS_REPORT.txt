@@ -1,0 +1,642 @@
+================================================================================
+SAS MANAGEMENT SYSTEM - COMPREHENSIVE PROJECT ANALYSIS
+================================================================================
+
+1. BLUEPRINT ANALYSIS
+--------------------------------------------------------------------------------
+
+Blueprint: accounting
+  URL Prefix: /accounting
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\accounting\__init__.py
+  Endpoints (4):
+    - print_receipt -> /receipts/<int:receipt_id>/print
+    - receipt_new -> /receipts/new
+    - receipts_list -> /receipts
+    - view_receipt -> /receipts/<int:receipt_id>/view
+
+Blueprint: admin
+  URL Prefix: /admin
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\admin\__init__.py
+  Endpoints (6):
+    - activity_logs -> /logs
+    - edit_role_permissions -> /roles/<int:role_id>/permissions
+    - permissions_list -> /permissions
+    - roles_list -> /roles
+    - users_assign -> /users/assign
+    - users_roles -> /users/roles
+
+Blueprint: ai
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\ai\__init__.py
+  Endpoints (13):
+    - api_cost_optimize -> /api/cost/optimize
+    - api_forecast_result -> /api/forecast/result/<int:result_id>
+    - api_forecast_run -> /api/forecast/run
+    - api_menu_recommend -> /api/menu/recommend
+    - api_shortages_run -> /api/shortages/run
+    - api_staffing_run -> /api/staffing/run
+    - cost_optimizations -> /cost-optimizations
+    - dashboard -> /dashboard
+    - forecast_view -> /forecast/<source>
+    - kitchen_assistant -> /kitchen-assistant/<int:event_id>
+    - menu_recommendations -> /menu-recommendations
+    - shortages -> /shortages
+    - staffing_recommendations -> /staffing/<int:event_id>
+
+Blueprint: analytics
+  URL Prefix: /analytics
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\analytics\__init__.py
+  Endpoints (0):
+
+Blueprint: audit
+  URL Prefix: /admin
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\audit\__init__.py
+  Endpoints (0):
+
+Blueprint: auth
+  URL Prefix: /auth
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\auth\__init__.py
+  Endpoints (0):
+
+Blueprint: automation
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\automation\__init__.py
+  Endpoints (2):
+    - dashboard -> /
+    - trigger_test -> /trigger-test
+
+Blueprint: bakery
+  URL Prefix: /bakery
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\bakery\__init__.py
+  Endpoints (0):
+
+Blueprint: bi
+  URL Prefix: /bi
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\bi\__init__.py
+  Endpoints (0):
+
+Blueprint: branches
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\branches\__init__.py
+  Endpoints (2):
+    - branches_list -> /
+    - create -> /create
+
+Blueprint: cashbook
+  URL Prefix: /cashbook
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\cashbook\__init__.py
+  Endpoints (0):
+
+Blueprint: catering
+  URL Prefix: /catering
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\catering\__init__.py
+  Endpoints (0):
+
+Blueprint: chat
+  URL Prefix: /chat
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\chat\__init__.py
+  Endpoints (0):
+
+Blueprint: client_portal
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\client_portal\__init__.py
+  Endpoints (7):
+    - approve_quote -> /quote/<int:quote_id>/approve
+    - contracts -> /contracts
+    - dashboard -> /dashboard
+    - login -> /login
+    - logout -> /logout
+    - quotes -> /quotes
+    - view_quote -> /quote/<int:quote_id>/view
+
+Blueprint: communication
+  URL Prefix: /communication
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\communication\__init__.py
+  Endpoints (0):
+
+Blueprint: contracts
+  URL Prefix: /contracts
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\contracts\__init__.py
+  Endpoints (0):
+
+Blueprint: crm
+  URL Prefix: /crm
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\crm\__init__.py
+  Endpoints (0):
+
+Blueprint: dispatch
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\dispatch\__init__.py
+  Endpoints (4):
+    - dashboard -> /dashboard
+    - loadsheet -> /loadsheet/<int:run_id>
+    - optimize -> /optimize
+    - vehicle_list -> /vehicles
+
+Blueprint: events
+  URL Prefix: /events
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\events\__init__.py
+  Endpoints (0):
+
+Blueprint: floor_plans
+  URL Prefix: /
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\floor_plans\__init__.py
+  Endpoints (0):
+
+Blueprint: floorplanner
+  URL Prefix: /floorplanner
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\floorplanner\__init__.py
+  Endpoints (0):
+
+Blueprint: food_safety
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\food_safety\__init__.py
+  Endpoints (3):
+    - dashboard -> /dashboard
+    - log_temperature -> /temperature/log
+    - reports -> /reports
+
+Blueprint: hire
+  URL Prefix: /hire
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\hire\__init__.py
+  Endpoints (9):
+    - condition_report -> /condition-report
+    - dashboard -> /
+    - depreciation -> /depreciation/<int:item_id>
+    - index -> /
+    - maintenance_list -> /list
+    - orders_list -> /orders
+    - schedule -> /schedule
+    - update_status -> /update-status/<int:maintenance_id>
+    - view_maintenance -> /view/<int:maintenance_id>
+
+Blueprint: hr
+  URL Prefix: /hr
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\hr\__init__.py
+  Endpoints (0):
+
+Blueprint: incidents
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\incidents\__init__.py
+  Endpoints (2):
+    - dashboard -> /dashboard
+    - incident_report -> /report
+
+Blueprint: integrations
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\integrations\__init__.py
+  Endpoints (9):
+    - dashboard -> /dashboard
+    - flutterwave_settings -> /flutterwave
+    - route_optimize -> /delivery/route-optimize
+    - stripe_webhook -> /webhooks/stripe
+    - test_accounting -> /accounting/test
+    - test_communication -> /comms/test
+    - test_payment -> /payments/test
+    - test_storage_upload -> /storage/upload-test
+    - twilio_webhook -> /webhooks/twilio
+
+Blueprint: inventory
+  URL Prefix: /inventory
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\inventory\__init__.py
+  Endpoints (0):
+
+Blueprint: invoices
+  URL Prefix: /invoices
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\invoices\__init__.py
+  Endpoints (0):
+
+Blueprint: kds
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\kds\__init__.py
+  Endpoints (5):
+    - api_orders -> /api/orders
+    - complete_order -> /orders/<int:order_id>/complete
+    - screen -> /screen
+    - start_order -> /orders/<int:order_id>/start
+    - update_order_status -> /orders/<int:order_id>/status
+
+Blueprint: leads
+  URL Prefix: /leads
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\leads\__init__.py
+  Endpoints (0):
+
+Blueprint: menu_builder
+  URL Prefix: /menu-builder
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\menu_builder\__init__.py
+  Endpoints (0):
+
+Blueprint: mobile_staff
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\mobile_staff\__init__.py
+  Endpoints (3):
+    - clock_attendance -> /attendance/clock
+    - dashboard -> /dashboard
+    - tasks -> /tasks
+
+Blueprint: payroll
+  URL Prefix: /admin/payroll
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\payroll\__init__.py
+  Endpoints (0):
+
+Blueprint: pos
+  URL Prefix: /pos
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\pos\__init__.py
+  Endpoints (0):
+
+Blueprint: production
+  URL Prefix: /production
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\production\__init__.py
+  Endpoints (12):
+    - delivery_qc_list -> /delivery-qc
+    - delivery_qc_new -> /delivery-qc/new
+    - delivery_qc_view -> /delivery-qc/<int:checklist_id>
+    - food_safety_list -> /food-safety
+    - food_safety_new -> /food-safety/new
+    - food_safety_view -> /food-safety/<int:log_id>
+    - hygiene_reports_list -> /hygiene-reports
+    - hygiene_reports_new -> /hygiene-reports/new
+    - hygiene_reports_view -> /hygiene-reports/<int:report_id>
+    - kitchen_checklist_list -> /kitchen-checklist
+    - kitchen_checklist_new -> /kitchen-checklist/new
+    - kitchen_checklist_view -> /kitchen-checklist/<int:checklist_id>
+
+Blueprint: production_recipes
+  URL Prefix: /production/recipes
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\production_recipes\__init__.py
+  Endpoints (0):
+
+Blueprint: profitability
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\profitability\__init__.py
+  Endpoints (2):
+    - event_report -> /event/<int:event_id>/report
+    - event_report_pdf -> /event/<int:event_id>/report/pdf
+
+Blueprint: proposals
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\proposals\__init__.py
+  Endpoints (5):
+    - builder -> /builder/<int:proposal_id>
+    - generate_pdf -> /generate-pdf/<int:proposal_id>
+    - new_proposal -> /new
+    - proposal_list -> 
+    - save -> /save
+
+Blueprint: quotes
+  URL Prefix: /quotes
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\quotes\__init__.py
+  Endpoints (0):
+
+Blueprint: reports
+  URL Prefix: /reports
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\reports\__init__.py
+  Endpoints (0):
+
+Blueprint: search
+  URL Prefix: /search
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\search\__init__.py
+  Endpoints (0):
+
+Blueprint: tasks
+  URL Prefix: /tasks
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\tasks\__init__.py
+  Endpoints (0):
+
+Blueprint: timeline
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\timeline\__init__.py
+  Endpoints (6):
+    - api_data -> /api/data
+    - edit -> /edit/<int:event_id>
+    - export -> /export/<int:event_id>
+    - planner -> /planner
+    - save -> /save/<int:event_id>
+    - view -> /view/<int:event_id>
+
+Blueprint: university
+  URL Prefix: /university
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\university\__init__.py
+  Endpoints (0):
+
+Blueprint: vendors
+  URL Prefix: None
+  File: C:\Users\DELL\Desktop\sas management system\sas_management\blueprints\vendors\__init__.py
+  Endpoints (3):
+    - create_po -> /create-po
+    - purchase_orders_list -> /purchase-orders-list
+    - vendors_list -> /
+
+2. MISSING ENDPOINTS
+--------------------------------------------------------------------------------
+
+NAVIGATION References:
+  - accounting.dashboard
+  - admin_users.users_assign
+  - bakery.dashboard
+  - bakery.items_list
+  - bakery.orders_list
+  - bakery.production_sheet
+  - bakery.reports
+  - cashbook.index
+  - catering.menu_list
+  - core.access_denied
+  - core.clients_add
+  - core.clients_list
+  - core.dashboard
+  - core.events_list
+  - core.force_change_password
+  - core.login
+  - events.event_create
+  - events.events_list
+  - events.menu_packages_list
+  - events.vendors_manage
+  - events.venues_list
+  - floorplanner.dashboard
+  - hire.inventory_list
+  - hr.attendance_review
+  - hr.dashboard
+  - hr.employee_list
+  - hr.leave_queue
+  - hr.payroll_export
+  - hr.roster_builder
+  - inventory.ingredients_list
+  - invoices.invoice_list
+  - maintenance.dashboard
+  - menu_builder.dashboard
+  - payroll.payroll_list
+  - pos.index
+  - production.index
+  - quotes.dashboard
+  - reports.reports_index
+  - tasks.task_list
+
+TEMPLATE References:
+  - accounting.api_trial_balance
+  - accounting.dashboard
+  - accounting.journal_view
+  - accounting.receipt_pdf
+  - admin.assign_user_role
+  - admin.dashboard
+  - admin.group_create
+  - admin.group_delete
+  - admin.group_edit
+  - admin.group_view
+  - admin.groups_list
+  - admin.role_create
+  - admin.role_delete
+  - admin.role_edit
+  - admin.user_roles
+  - admin.users_add
+  - admin.users_delete
+  - admin.users_edit
+  - admin.users_list
+  - admin.users_reset_password
+  - admin_users.users_assign
+  - audit.audit_log_list
+  - auth.change_password
+  - bakery.dashboard
+  - bakery.items_edit
+  - bakery.items_list
+  - bakery.items_new
+  - bakery.menu_add
+  - bakery.menu_delete
+  - bakery.menu_edit
+  - bakery.menu_list
+  - bakery.orders_assign
+  - bakery.orders_list
+  - bakery.orders_new
+  - bakery.orders_update_status
+  - bakery.orders_view
+  - bakery.production_task_complete
+  - bakery.production_task_start
+  - bakery.serve_upload
+  - bi.bakery_demand
+  - bi.customer_behavior
+  - bi.dashboard
+  - bi.event_profitability
+  - bi.event_profitability_pdf
+  - bi.ingredient_trends
+  - bi.pos_heatmap
+  - bi.sales_forecast
+  - bi.seed_profitability_data
+  - bi.staff_performance
+  - cashbook.add_transaction
+  - cashbook.delete_transaction
+  - cashbook.edit_transaction
+  - cashbook.index
+  - catering.menu_add
+  - catering.menu_delete
+  - catering.menu_edit
+  - catering.menu_list
+  - catering.recipe_builder
+  - chat.index
+  - communication.announcement_new
+  - communication.announcement_view
+  - communication.announcements_list
+  - communication.bulletin
+  - communication.bulletin_post
+  - communication.dashboard
+  - communication.department_send
+  - communication.event_send
+  - communication.message_threads
+  - communication.serve_upload
+  - communication.staff_tasks
+  - communication.task_new
+  - communication.task_update
+  - communication.thread_view
+  - contracts.contract_edit
+  - contracts.contract_list
+  - contracts.contract_new
+  - contracts.contract_view
+  - contracts.dashboard
+  - contracts.download_pdf
+  - contracts.generate_pdf
+  - contracts.mark_signed
+  - core.clients_add
+  - core.clients_delete
+  - core.clients_edit
+  - core.clients_list
+  - core.dashboard
+  - core.events_delete
+  - core.events_edit
+  - core.events_list
+  - core.login
+  - core.logout
+  - crm.add_client_communication
+  - crm.add_client_note
+  - crm.api_assign_lead
+  - crm.api_update_pipeline_stage
+  - crm.archive_client
+  - crm.client_profile
+  - crm.convert_lead
+  - crm.delete_client_document
+  - crm.delete_client_note
+  - crm.download_client_document
+  - crm.pipeline
+  - crm.seed_pipeline_data
+  - crm.update_client_tags
+  - crm.upload_client_document
+  - events.approval_submit
+  - events.checklist_add
+  - events.checklist_delete
+  - events.checklist_toggle
+  - events.costing_update
+  - events.event_approval
+  - events.event_brief_pdf
+  - events.event_checklist
+  - events.event_costing
+  - events.event_create
+  - events.event_edit
+  - events.event_logistics
+  - events.event_staffing
+  - events.event_timeline
+  - events.event_update_status
+  - events.event_vendors
+  - events.event_view
+  - events.events_list
+  - events.menu_package_create
+  - events.menu_package_edit
+  - events.menu_packages_list
+  - events.staffing_add
+  - events.staffing_delete
+  - events.timeline_add
+  - events.timeline_delete
+  - events.timeline_toggle
+  - events.vendor_assign
+  - events.vendor_create
+  - events.vendor_edit
+  - events.vendor_unassign
+  - events.vendors_manage
+  - events.venue_create
+  - events.venue_edit
+  - events.venues_list
+  - floor_plans.edit_floor_plan
+  - floor_plans.list
+  - floor_plans.new
+  - floor_plans_bp.edit_floor_plan
+  - floorplanner.create
+  - floorplanner.dashboard
+  - floorplanner.delete
+  - floorplanner.editor
+  - floorplanner.new_floorplan
+  - hire.inventory_add
+  - hire.inventory_delete
+  - hire.inventory_edit
+  - hire.inventory_list
+  - hr.api_assign_shift
+  - hr.api_create_employee
+  - hr.api_payroll_export
+  - hr.attendance_review
+  - hr.dashboard
+  - hr.employee_list
+  - hr.employee_profile
+  - hr.leave_queue
+  - hr.payroll_export
+  - hr.roster_builder
+  - inventory.ingredients_add
+  - inventory.ingredients_delete
+  - inventory.ingredients_edit
+  - inventory.ingredients_list
+  - invoices.invoice_list
+  - invoices.invoice_new
+  - invoices.invoice_pdf
+  - invoices.invoice_view
+  - invoices.receipt_new
+  - invoices.receipt_view
+  - leads.convert_lead
+  - leads.index
+  - maintenance.condition_report
+  - maintenance.dashboard
+  - maintenance.depreciation
+  - maintenance.maintenance_list
+  - maintenance.schedule
+  - maintenance.update_status
+  - maintenance.view_maintenance
+  - menu_builder.dashboard
+  - menu_builder.menu_edit
+  - menu_builder.menu_list
+  - menu_builder.menu_new
+  - menu_builder.menu_view
+  - menu_builder.package_add_item
+  - menu_builder.package_new
+  - menu_builder.package_remove_item
+  - menu_builder.package_view
+  - menu_builder.serve_upload
+  - payroll.payroll_add
+  - payroll.payroll_delete
+  - payroll.payroll_edit
+  - payroll.payroll_list
+  - pos.index
+  - pos.launcher
+  - pos.terminal
+  - production.api_orders_list
+  - production.index
+  - production.order_create
+  - production.order_view
+  - quotes.convert_to_invoice
+  - quotes.dashboard
+  - quotes.new_quote
+  - quotes.view_quote
+  - rbac.activity_logs
+  - rbac.edit_role_permissions
+  - rbac.permissions_list
+  - rbac.roles_list
+  - rbac.users_roles
+  - recipes.recipe_list
+  - recipes.recipe_new
+  - recipes.recipe_view
+  - reports.export_csv
+  - reports.reports_index
+  - search.search
+  - tasks.task_add
+  - tasks.task_delete
+  - tasks.task_edit
+  - tasks.task_list
+  - university.admin_courses_add
+  - university.admin_courses_delete
+  - university.admin_courses_edit
+  - university.admin_courses_list
+  - university.admin_materials_add
+  - university.admin_materials_delete
+  - university.admin_materials_edit
+  - university.admin_materials_list
+  - university.api_certificate_download
+  - university.api_submit_quiz
+  - university.certificate_view
+  - university.course_view_enhanced
+  - university.courses_list
+  - university.download_material
+  - university.enroll_in_course
+  - university.index
+  - university.lesson_view
+  - university.mark_lesson_complete
+  - university.quiz_view
+  - university.view_course
+  - university.view_material
+
+3. TEMPLATE URL REFERENCES
+--------------------------------------------------------------------------------
+Total unique url_for references: 292
+
+4. NAVIGATION URL REFERENCES (from routes.py)
+--------------------------------------------------------------------------------
+Total unique url_for references: 47
+
+5. HIRE MODULE SPECIFIC ANALYSIS
+--------------------------------------------------------------------------------
+Blueprint: hire
+  URL Prefix: /hire
+  Defined Endpoints: ['condition_report', 'dashboard', 'depreciation', 'index', 'maintenance_list', 'orders_list', 'schedule', 'update_status', 'view_maintenance']
+  ⚠️  MISSING: hire.inventory_list
+  ⚠️  MISSING: hire.inventory_add
+  ⚠️  MISSING: hire.inventory_edit
+  ⚠️  MISSING: hire.inventory_delete
+
+6. SUMMARY STATISTICS
+--------------------------------------------------------------------------------
+Total Blueprints: 45
+Total Endpoints: 97
+Total Template URLs: 292
+Total Navigation URLs: 47
+Missing Endpoints: 281

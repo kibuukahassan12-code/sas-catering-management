@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+{% block title %}New Hire Order{% endblock %}
+
+{% block content %}
+<style>
+.order-form-section {
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.order-form-section h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    color: var(--accent);
+}
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+.form-control {
+    margin-bottom: 0;
+}
+.form-control input,
+.form-control select,
+.form-control textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    font-size: 1rem;
+}
+.form-control input:focus,
+.form-control select:focus,
+.form-control textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: rgba(255,255,255,0.08);
+}
+.search-results {
+    position: absolute;
+    z-index: 1000;
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    margin-top: 4px;
+    border-radius: 4px;
+    min-width: 100%;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.search-result-item {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+}
+.search-result-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+.search-result-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+}
+.items-table th {
+    text-align: left;
+    padding: 12px;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.02);
+}
+.items-table td {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.items-table input[type="number"] {
+    width: 80px;
+    padding: 6px 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 4px;
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+}
+.total-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 2px solid rgba(255,255,255,0.1);
+}
+.total-summary strong {
+    font-size: 1.25rem;
+    color: var(--accent);
+}
+</style>
+
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Hire · Orders</p>
+        <h1>New Hire Order</h1>
+        <p class="muted">Create a new equipment hire order for an event.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('hire.orders_list') }}" style="text-decoration: none;">← Back to Orders</a>
+    </div>
+</section>
+
+<section class="order-form-section">
+    <form id="newOrderForm" method="post" action="{{ url_for('hire.new_order') }}">
+        <h3 style="margin-bottom: 1.5rem;">Client Information</h3>
+        <div class="form-grid">
+            <label class="form-control">
+                <span>Client Name *</span>
+                <input id="client_name" name="client_name" type="text" required placeholder="Enter client full name">
+            </label>
+
+            <label class="form-control">
+                <span>Select Existing Client (Optional)</span>
+                <select id="client_id" name="client_id" onchange="fillClientInfo()">
+                    <option value="">-- Select Client --</option>
+                    {% for client in clients %}
+                    <option value="{{ client.id }}" data-name="{{ client.name }}" data-phone="{{ client.telephone or '' }}" data-email="{{ client.email or '' }}">{{ client.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="form-control">
+                <span>Telephone</span>
+                <input id="telephone" name="telephone" type="tel" placeholder="Enter phone number">
+            </label>
+
+            <label class="form-control">
+                <span>Email</span>
+                <input id="email" name="email" type="email" placeholder="Enter email address">
+            </label>
+        </div>
+
+        <hr style="margin: 2rem 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);">
+
+        <h3 style="margin-bottom: 1.5rem;">Event & Rental Period</h3>
+        <div class="form-grid">
+            <label class="form-control">
+                <span>Select Event (Optional)</span>
+                <select id="event_id" name="event_id" onchange="fillEventInfo()">
+                    <option value="">-- Select Event --</option>
+                    {% for event in events %}
+                    <option value="{{ event.id }}" data-date="{{ event.event_date.isoformat() if event.event_date else '' }}">{{ event.event_name }} - {{ event.event_date.strftime('%Y-%m-%d') if event.event_date else 'No date' }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <label class="form-control">
+                <span>Event Date</span>
+                <input id="event_date" name="event_date" type="date">
+            </label>
+
+            <label class="form-control">
+                <span>Rental Start Date *</span>
+                <input id="start_date" name="start_date" type="date" required>
+            </label>
+
+            <label class="form-control">
+                <span>Rental End Date *</span>
+                <input id="end_date" name="end_date" type="date" required>
+            </label>
+
+            <label class="form-control">
+                <span>Delivery Date</span>
+                <input id="delivery_date" name="delivery_date" type="date">
+            </label>
+
+            <label class="form-control">
+                <span>Pickup Date</span>
+                <input id="pickup_date" name="pickup_date" type="date">
+            </label>
+        </div>
+
+        <div class="form-control" style="margin-top: 1rem;">
+            <label>
+                <span>Delivery Address</span>
+                <textarea id="delivery_address" name="delivery_address" rows="3" placeholder="Enter delivery address"></textarea>
+            </label>
+        </div>
+
+        <hr style="margin: 2rem 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);">
+
+        <div style="margin-top: 2rem;">
+            <h3 style="margin-bottom: 1rem;">Select Items to Hire</h3>
+            
+            <label class="form-control" style="margin-bottom: 1rem; position: relative;">
+                <span>Search Items</span>
+                <input id="itemSearch" type="text" placeholder="Type to search available items">
+                <div id="searchResults" class="search-results" style="display: none;"></div>
+            </label>
+
+            <div class="table-wrapper">
+                <table id="selectedItemsTable" class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Available Stock</th>
+                            <th>Qty</th>
+                            <th>Price (per day)</th>
+                            <th>Days</th>
+                            <th>Subtotal</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- rows added by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="total-summary">
+                <div>
+                    <strong>Order Total: {{ CURRENCY }}<span id="orderTotal">0.00</span></strong>
+                </div>
+            </div>
+        </div>
+
+        <hr style="margin: 2rem 0; border: none; border-top: 1px solid rgba(255,255,255,0.1);">
+
+        <h3 style="margin-bottom: 1.5rem;">Payment & Notes</h3>
+        <div class="form-grid">
+            <label class="form-control">
+                <span>Amount Paid</span>
+                <input id="amount_paid" name="amount_paid" type="number" step="0.01" min="0" value="0" placeholder="0.00">
+                <small class="muted">Enter amount paid now (if any)</small>
+            </label>
+
+            <label class="form-control">
+                <span>Balance Due</span>
+                <input type="text" id="balance_due" readonly style="background: rgba(255,255,255,0.05);" value="{{ CURRENCY }}0.00">
+                <small class="muted">Calculated automatically</small>
+            </label>
+        </div>
+
+        <div class="form-control" style="margin-top: 1rem;">
+            <label>
+                <span>Comments / Notes</span>
+                <textarea id="comments" name="comments" rows="4" placeholder="Add any special instructions, notes, or comments about this order"></textarea>
+            </label>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 2px solid rgba(255,255,255,0.1);">
+            <input type="hidden" name="items_json" id="items_json" value="[]">
+            <a href="{{ url_for('hire.orders_list') }}" class="btn-ghost" style="text-decoration: none;">Cancel</a>
+            <button type="submit" class="btn-primary">Create Order</button>
+        </div>
+    </form>
+</section>
+
+<script>
+  // availableItems is safe because available_items is a list of plain dicts
+  const availableItems = {{ available_items | tojson }};
+  let selected = [];
+
+  const itemSearch = document.getElementById("itemSearch");
+  const searchResults = document.getElementById("searchResults");
+  const tableBody = document.querySelector("#selectedItemsTable tbody");
+  const itemsJsonInput = document.getElementById("items_json");
+  const orderTotalEl = document.getElementById("orderTotal");
+  const amountPaidInput = document.getElementById("amount_paid");
+  const balanceDueInput = document.getElementById("balance_due");
+  const startDateInput = document.getElementById("start_date");
+  const endDateInput = document.getElementById("end_date");
+
+  function calculateDays() {
+    const start = startDateInput.value ? new Date(startDateInput.value) : null;
+    const end = endDateInput.value ? new Date(endDateInput.value) : null;
+    if (start && end && end >= start) {
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+      return diffDays;
+    }
+    return 1;
+  }
+
+  function updateBalance() {
+    const total = parseFloat(orderTotalEl.textContent) || 0;
+    const paid = parseFloat(amountPaidInput.value) || 0;
+    const balance = Math.max(0, total - paid);
+    balanceDueInput.value = "{{ CURRENCY }}" + balance.toFixed(2);
+  }
+
+  function fillClientInfo() {
+    const select = document.getElementById("client_id");
+    const option = select.options[select.selectedIndex];
+    if (option.value) {
+      document.getElementById("client_name").value = option.dataset.name || "";
+      document.getElementById("telephone").value = option.dataset.phone || "";
+      document.getElementById("email").value = option.dataset.email || "";
+    }
+  }
+
+  function fillEventInfo() {
+    const select = document.getElementById("event_id");
+    const option = select.options[select.selectedIndex];
+    if (option.value && option.dataset.date) {
+      document.getElementById("event_date").value = option.dataset.date;
+      if (!startDateInput.value) {
+        startDateInput.value = option.dataset.date;
+      }
+      if (!endDateInput.value) {
+        endDateInput.value = option.dataset.date;
+      }
+    }
+  }
+
+  function renderSelected() {
+    tableBody.innerHTML = "";
+    let total = 0;
+    const days = calculateDays();
+    
+    if (selected.length === 0) {
+      tableBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;" class="muted">No items selected. Search and add items above.</td></tr>';
+      orderTotalEl.textContent = "0.00";
+      itemsJsonInput.value = "[]";
+      updateBalance();
+      return;
+    }
+    
+    selected.forEach((row, idx) => {
+      const item = availableItems.find(it => it.id == row.id);
+      const availableStock = item ? (item.stock_count || 0) : 0;
+      const subtotal = (row.qty * row.price * days);
+      total += subtotal;
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${row.name}</strong></td>
+        <td>${availableStock}</td>
+        <td>
+          <input type="number" min="1" max="${availableStock}" value="${row.qty}" class="qty-input" data-idx="${idx}" style="width: 80px; padding: 0.5rem;">
+          ${row.qty > availableStock ? '<small style="color: #ff6b6b; display: block; margin-top: 0.25rem;">Insufficient stock!</small>' : ''}
+        </td>
+        <td>{{ CURRENCY }}${row.price.toFixed(2)}</td>
+        <td>${days} day${days !== 1 ? 's' : ''}</td>
+        <td class="subtotal">{{ CURRENCY }}${subtotal.toFixed(2)}</td>
+        <td><button type="button" class="btn-danger btn-sm remove-btn" data-idx="${idx}">Remove</button></td>
+      `;
+      tableBody.appendChild(tr);
+    });
+    
+    orderTotalEl.textContent = total.toFixed(2);
+    itemsJsonInput.value = JSON.stringify(selected);
+    updateBalance();
+    attachRowListeners();
+  }
+
+  function attachRowListeners() {
+    document.querySelectorAll(".remove-btn").forEach(btn => {
+      btn.onclick = () => {
+        const idx = parseInt(btn.dataset.idx);
+        selected.splice(idx, 1);
+        renderSelected();
+      };
+    });
+    
+    document.querySelectorAll(".qty-input").forEach(inp => {
+      inp.onchange = () => {
+        const idx = parseInt(inp.dataset.idx);
+        let val = parseInt(inp.value) || 1;
+        if (val < 1) val = 1;
+        const item = availableItems.find(it => it.id == selected[idx].id);
+        const maxStock = item ? (item.stock_count || 0) : 0;
+        if (val > maxStock) {
+          val = maxStock;
+          inp.value = maxStock;
+          alert(`Only ${maxStock} items available in stock.`);
+        }
+        selected[idx].qty = val;
+        renderSelected();
+      };
+    });
+  }
+
+  function addItemById(id) {
+    const item = availableItems.find(it => it.id == id);
+    if (!item) return;
+    
+    const availableStock = item.stock_count || 0;
+    if (availableStock <= 0) {
+      alert("This item is out of stock.");
+      return;
+    }
+    
+    // If already selected, increase qty (if stock allows)
+    const found = selected.find(s => s.id == id);
+    if (found) {
+      if (found.qty < availableStock) {
+        found.qty += 1;
+      } else {
+        alert(`Only ${availableStock} items available in stock.`);
+      }
+    } else {
+      selected.push({
+        id: item.id,
+        name: item.name,
+        price: parseFloat(item.rental_price || item.daily_price || 0),
+        qty: 1
+      });
+    }
+    renderSelected();
+  }
+
+  // Simple search and click-to-add UI
+  itemSearch.addEventListener("input", () => {
+    const q = itemSearch.value.trim().toLowerCase();
+    const matches = availableItems.filter(it => 
+      (it.name || "").toLowerCase().includes(q) || 
+      (it.category || "").toLowerCase().includes(q) ||
+      (it.sku || "").toLowerCase().includes(q)
+    );
+
+    if (q && matches.length > 0) {
+      searchResults.style.display = "block";
+      searchResults.innerHTML = "";
+      
+      matches.slice(0, 10).forEach(m => {
+        const el = document.createElement("div");
+        el.className = "search-result-item";
+        const stockCount = m.stock_count || 0;
+        const stockStatus = stockCount > 0 ? `${stockCount} available` : '<span style="color: #ff6b6b;">Out of stock</span>';
+        el.innerHTML = `
+          <div style="font-weight: 500; margin-bottom: 4px;">${m.name}</div>
+          <div style="font-size: 0.875rem; color: rgba(255,255,255,0.6);">
+            ${m.category || 'Uncategorized'} • ${stockStatus} • {{ CURRENCY }}${parseFloat(m.rental_price || m.daily_price || 0).toFixed(2)}/day
+          </div>
+        `;
+        if (stockCount > 0) {
+          el.onclick = () => {
+            addItemById(m.id);
+            searchResults.style.display = "none";
+            itemSearch.value = "";
+          };
+        } else {
+          el.className += " disabled";
+        }
+        searchResults.appendChild(el);
+      });
+    } else {
+      searchResults.style.display = "none";
+      searchResults.innerHTML = "";
+    }
+  });
+
+  // Click outside to close search
+  document.addEventListener("click", (e) => {
+    if (!itemSearch.contains(e.target) && !searchResults.contains(e.target)) {
+      searchResults.style.display = "none";
+    }
+  });
+
+  // Update totals when dates or amount paid changes
+  startDateInput.addEventListener("change", renderSelected);
+  endDateInput.addEventListener("change", renderSelected);
+  amountPaidInput.addEventListener("input", updateBalance);
+
+  // Validate form before submit
+  document.getElementById("newOrderForm").addEventListener("submit", function(e) {
+    if (selected.length === 0) {
+      e.preventDefault();
+      alert("Please add at least one item to the order.");
+      return false;
+    }
+    
+    const start = startDateInput.value;
+    const end = endDateInput.value;
+    if (!start || !end) {
+      e.preventDefault();
+      alert("Please select both start and end dates.");
+      return false;
+    }
+    
+    if (new Date(end) < new Date(start)) {
+      e.preventDefault();
+      alert("End date must be after start date.");
+      return false;
+    }
+    
+    // Check stock availability
+    for (const item of selected) {
+      const invItem = availableItems.find(it => it.id == item.id);
+      if (invItem && (invItem.stock_count || 0) < item.qty) {
+        e.preventDefault();
+        alert(`Insufficient stock for ${item.name}. Available: ${invItem.stock_count || 0}, Requested: ${item.qty}`);
+        return false;
+      }
+    }
+  });
+
+  // Initial render (if any preselected)
+  renderSelected();
+</script>
+{% endblock %}

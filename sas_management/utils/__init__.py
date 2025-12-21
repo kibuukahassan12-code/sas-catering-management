@@ -14,9 +14,12 @@ from .passwords import generate_secure_password
 __all__ = [
     "paginate_query",
     "get_decimal",
+    "parse_date",
     "role_required",
     "require_permission",
     "require_role",
     "has_permission",
+    "permission_required",
     "no_rbac",
+    "generate_secure_password",
 ]

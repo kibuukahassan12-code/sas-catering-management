@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · RBAC</p>
+        <h1>Assign Roles to Users</h1>
+        <p class="muted">Select a user and assign a role. Admin protection rules apply to your own account.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('admin.roles_list') }}">← Back to Roles</a>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Role Assignment</h3>
+    </div>
+    <div style="padding: 1.5rem;">
+        <div style="margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid rgba(242,104,34,0.4); background: rgba(242,104,34,0.12); font-size: 0.9rem;">
+            <strong>Admin Protection:</strong>
+            <span style="margin-left: 0.25rem;">
+                You cannot remove or downgrade your own ADMIN role from this screen.
+            </span>
+        </div>
+
+        <form method="POST">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+                <div class="form-group">
+                    <label for="user_id">User <span style="color: #dc3545;">*</span></label>
+                    <select name="user_id" id="user_id" required>
+                        <option value="">— Select User —</option>
+                        {% for u in users|default([]) %}
+                        <option value="{{ u.id }}">
+                            {{ u.email }}
+                            {% if u.role_obj %}
+                                ({{ u.role_obj.name }})
+                            {% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="role_id">Role <span style="color: #dc3545;">*</span></label>
+                    <select name="role_id" id="role_id" required>
+                        <option value="">— Select Role —</option>
+                        {% for r in roles|default([]) %}
+                        <option value="{{ r.id }}">
+                            {{ r.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                <button type="submit" class="btn-primary">Assign Role</button>
+                <a href="{{ url_for('admin.roles_list') }}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Current Assignments</h3>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Current Role</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users|default([]) %}
+                <tr>
+                    <td><strong>{{ u.email }}</strong></td>
+                    <td>
+                        {% if u.role_obj %}
+                        <span class="badge">{{ u.role_obj.name }}</span>
+                        {% else %}
+                        <span class="muted">Unassigned</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="2" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No users found.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+
+

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Point of Sale · Terminal Management</p>
+        <h1>{% if terminal %}Edit Terminal{% else %}Create New Terminal{% endif %}</h1>
+        <p class="muted">{% if terminal %}Update terminal settings and configuration.{% else %}Register a new POS terminal for your store.{% endif %}</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('pos.terminals_list') }}">← Back to Terminals</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Terminal Information</h3>
+    </div>
+    
+    <form method="POST" action="{% if terminal %}{{ url_for('pos.terminal_edit', terminal_id=terminal.id) }}{% else %}{{ url_for('pos.terminal_new') }}{% endif %}" class="form-grid">
+        <label class="form-control">
+            <span>Terminal Name *</span>
+            <input type="text" name="name" value="{{ terminal.name if terminal else '' }}" required placeholder="e.g., Main Counter Terminal">
+            <small class="muted">A descriptive name for this terminal</small>
+        </label>
+        
+        <label class="form-control">
+            <span>Terminal Code *</span>
+            <input type="text" name="terminal_code" value="{{ terminal.terminal_code if terminal else '' }}" required placeholder="e.g., TERM-001" pattern="[A-Z0-9\-]+" style="text-transform: uppercase;">
+            <small class="muted">Unique code for this terminal (letters, numbers, and hyphens only)</small>
+        </label>
+        
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Location</span>
+            <input type="text" name="location" value="{{ terminal.location if terminal else '' }}" placeholder="e.g., Main Store, Front Counter">
+            <small class="muted">Physical location of this terminal</small>
+        </label>
+        
+        <div class="form-control" style="grid-column: 1 / -1;">
+            <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                <input type="checkbox" name="is_active" {% if terminal and terminal.is_active or not terminal %}checked{% endif %}>
+                <span>Active</span>
+            </label>
+            <small class="muted">Only active terminals can be used for processing sales</small>
+        </div>
+        
+        <div class="form-actions" style="grid-column: 1 / -1;">
+            <button type="submit" class="btn-primary">
+                {% if terminal %}💾 Update Terminal{% else %}➕ Create Terminal{% endif %}
+            </button>
+            <a href="{{ url_for('pos.terminals_list') }}" class="btn-ghost">Cancel</a>
+        </div>
+    </form>
+</section>
+
+{% if terminal and terminal_stats %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Terminal Statistics</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+        <div style="background: rgba(102, 126, 234, 0.1); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.5rem;">Total Orders</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                {{ terminal_stats.total_orders }}
+            </div>
+        </div>
+        <div style="background: rgba(102, 126, 234, 0.1); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.5rem;">Total Revenue</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                {{ CURRENCY }}{{ "{:,.2f}".format(terminal_stats.total_revenue) }}
+            </div>
+        </div>
+        <div style="background: rgba(102, 126, 234, 0.1); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.5rem;">Open Shifts</div>
+            <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">
+                {{ terminal_stats.open_shifts }}
+            </div>
+        </div>
+        <div style="background: rgba(102, 126, 234, 0.1); padding: 1rem; border-radius: 8px;">
+            <div style="font-size: 0.875rem; color: #6c757d; margin-bottom: 0.5rem;">Created</div>
+            <div style="font-size: 1rem; font-weight: bold; color: #667eea;">
+                {{ terminal.created_at.strftime('%b %d, %Y') if terminal.created_at else 'N/A' }}
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{% if current_user.role in ['Admin'] %}
+<section class="panel" style="border-left: 4px solid #dc3545;">
+    <div class="panel-header">
+        <h3 style="color: #dc3545;">Danger Zone</h3>
+    </div>
+    <form method="POST" action="{{ url_for('pos.terminal_delete', terminal_id=terminal.id) }}" onsubmit="return confirm('Are you sure you want to delete this terminal? This action cannot be undone.');">
+        <p style="margin-bottom: 1rem; color: #6c757d;">
+            Deleting a terminal will deactivate it if it has orders, or permanently remove it if it has no orders.
+            Terminals with open shifts cannot be deleted.
+        </p>
+        <button type="submit" class="btn-secondary" style="background: #dc3545; color: white; border-color: #dc3545;">
+            🗑️ Delete Terminal
+        </button>
+    </form>
+</section>
+{% endif %}
+{% endif %}
+
+<style>
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+}
+
+.form-control {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.form-control span {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+}
+
+.form-control input[type="text"],
+.form-control input[type="number"] {
+    padding: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9375rem;
+    transition: all 0.3s ease;
+}
+
+.form-control input:focus {
+    outline: none;
+    border-color: #667eea;
+    background: rgba(255,255,255,0.08);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-control input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+}
+
+.form-control small {
+    font-size: 0.8125rem;
+    color: rgba(255,255,255,0.6);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid rgba(255,255,255,0.1);
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+

@@ -39,8 +39,8 @@ def check_server_version():
                 'download_url': data.get('download_url', ''),
                 'release_notes': data.get('release_notes', '')
             }
-    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, Exception) as e:
-        print(f"Update check failed: {e}")
+    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, Exception):
+        # Silently fail - don't log network/DNS errors
         return None
 
 
@@ -88,38 +88,28 @@ def run_installer_silently():
 def check_for_updates():
     """Main function to check for updates"""
     try:
-        print("Checking for updates...")
         server_info = check_server_version()
         
         if not server_info:
-            print("Could not check for updates. Continuing with current version.")
             return False
         
         server_version = server_info['version']
         local_version = get_local_version()
         
-        print(f"Local version: {local_version}")
-        print(f"Server version: {server_version}")
-        
         # Compare versions (simple string comparison - can be improved)
         if server_version > local_version:
-            print(f"New version available: {server_version}")
-            
             download_url = server_info['download_url']
             if not download_url:
-                print("No download URL provided in update info.")
                 return False
             
             # Download installer
             if download_installer(download_url):
                 # Run installer and close app
                 return run_installer_silently()
-        else:
-            print("Application is up to date.")
-            return False
+        return False
             
-    except Exception as e:
-        print(f"Update check error: {e}")
+    except Exception:
+        # Silently fail - don't log network/DNS errors
         return False
 
 

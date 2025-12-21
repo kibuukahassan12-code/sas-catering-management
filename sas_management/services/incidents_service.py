@@ -4,8 +4,8 @@ from flask import current_app
 def escalate_incident(incident_id, action):
     """Escalate or resolve incident."""
     try:
-        from models import Incident, db
-        incident = Incident.query.get(incident_id)
+        from sas_management.models import Incident, db
+        incident = db.session.get(Incident, incident_id)
         if not incident:
             return {'success': False, 'error': 'Incident not found'}
         

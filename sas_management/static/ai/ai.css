@@ -1,0 +1,929 @@
+/* ============================================================================
+   SAS AI COMMAND CENTER - PREMIUM CHAT-FIRST LAYOUT
+   ============================================================================ */
+
+.sas-ai-command-center {
+    display: flex;
+    height: calc(100vh - 80px);
+    min-height: 600px;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+/* ============================================================================
+   LEFT SIDEBAR (Fixed 320-360px)
+   ============================================================================ */
+
+.sas-ai-sidebar {
+    width: 340px;
+    min-width: 320px;
+    max-width: 360px;
+    background: #fafafa;
+    border-right: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.sas-ai-sidebar-header {
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, var(--sas-primary, #F26822) 0%, #d85a1a 100%);
+    color: white;
+    flex-shrink: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sas-ai-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.sas-ai-brand-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.sas-ai-brand-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    line-height: 1.2;
+    color: white;
+}
+
+.sas-ai-brand-subtitle {
+    font-size: 0.75rem;
+    margin: 0.125rem 0 0 0;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+.sas-ai-mode-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+}
+
+/* Segmented Control */
+.sas-ai-segmented-control {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.25rem;
+    background: #f3f4f6;
+    padding: 0.25rem;
+    border-radius: 8px;
+    position: relative;
+}
+
+.sas-ai-segment {
+    padding: 0.5rem 0.75rem;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    min-height: 36px;
+    position: relative;
+    z-index: 1;
+}
+
+.sas-ai-segment:hover {
+    color: #374151;
+}
+
+.sas-ai-segment.active {
+    background: #ffffff;
+    color: var(--sas-primary, #F26822);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.sas-ai-prompts-section {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    flex-shrink: 0;
+    overflow-y: auto;
+    max-height: 300px;
+}
+
+.sas-ai-section-title {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9ca3af;
+    margin: 0 0 0.75rem 0;
+}
+
+.sas-ai-prompts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.sas-ai-prompt-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    min-height: 80px;
+}
+
+.sas-ai-prompt-card:hover {
+    background: #f9fafb;
+    border-color: var(--sas-primary, #F26822);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.15);
+}
+
+.sas-ai-prompt-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.sas-ai-prompt-text {
+    line-height: 1.4;
+    font-weight: 500;
+}
+
+.sas-ai-history-section {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 1.5rem;
+}
+
+.sas-ai-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.sas-ai-icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    min-width: 44px;
+}
+
+.sas-ai-icon-btn:hover {
+    background: #f3f4f6;
+    color: var(--sas-primary, #F26822);
+}
+
+.sas-ai-history-list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sas-ai-history-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sas-ai-history-list::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 2px;
+}
+
+.sas-ai-history-empty {
+    color: #9ca3af;
+    font-size: 0.8125rem;
+    text-align: center;
+    padding: 2rem 1rem;
+    margin: 0;
+}
+
+.sas-ai-history-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    min-height: 44px;
+}
+
+.sas-ai-history-item:hover {
+    background: #f9fafb;
+    border-color: var(--sas-primary, #F26822);
+}
+
+.sas-ai-history-title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sas-ai-history-time {
+    font-size: 0.6875rem;
+    color: #9ca3af;
+}
+
+.sas-ai-sidebar-actions {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.sas-ai-action-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px;
+}
+
+.sas-ai-action-btn:hover {
+    background: #f9fafb;
+    border-color: var(--sas-primary, #F26822);
+}
+
+.sas-ai-action-btn.primary {
+    background: linear-gradient(135deg, var(--sas-primary, #F26822) 0%, #d85a1a 100%);
+    color: white;
+    border-color: var(--sas-primary, #F26822);
+}
+
+.sas-ai-action-btn.primary:hover {
+    background: linear-gradient(135deg, #d85a1a 0%, var(--sas-primary, #F26822) 100%);
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.3);
+}
+
+/* ============================================================================
+   RIGHT CHAT AREA (Flex, Dominates Screen)
+   ============================================================================ */
+
+.sas-ai-chat-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    overflow: hidden;
+    min-width: 0;
+}
+
+.sas-ai-chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Messages Thread */
+.sas-ai-messages-thread {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    scroll-behavior: smooth;
+}
+
+.sas-ai-messages-thread::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sas-ai-messages-thread::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sas-ai-messages-thread::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 3px;
+}
+
+.sas-ai-messages-thread::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Empty State (Compact) */
+.sas-ai-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+    min-height: 300px;
+}
+
+.sas-ai-empty-icon {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, rgba(242, 104, 34, 0.1) 0%, rgba(242, 104, 34, 0.15) 100%);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--sas-primary, #F26822);
+    margin-bottom: 1.5rem;
+}
+
+.sas-ai-empty-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 0.5rem 0;
+}
+
+.sas-ai-empty-text {
+    font-size: 0.9375rem;
+    color: #6b7280;
+    margin: 0 0 1.5rem 0;
+}
+
+.sas-ai-empty-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.sas-ai-empty-action-btn {
+    padding: 0.625rem 1.25rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 40px;
+}
+
+.sas-ai-empty-action-btn:hover {
+    background: #f3f4f6;
+    border-color: var(--sas-primary, #F26822);
+    color: var(--sas-primary, #F26822);
+}
+
+/* Chat Messages */
+.sas-ai-message {
+    display: flex;
+    gap: 0.75rem;
+    animation: messageSlideIn 0.3s ease-out;
+    max-width: 85%;
+}
+
+.sas-ai-message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+    margin-left: auto;
+}
+
+.sas-ai-message.ai {
+    align-self: flex-start;
+}
+
+.sas-ai-message-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #f3f4f6;
+    color: var(--sas-primary, #F26822);
+}
+
+.sas-ai-message.user .sas-ai-message-avatar {
+    background: linear-gradient(135deg, var(--sas-primary, #F26822) 0%, #d85a1a 100%);
+    color: white;
+}
+
+.sas-ai-message-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    min-width: 0;
+}
+
+.sas-ai-message-bubble {
+    padding: 0.875rem 1.125rem;
+    border-radius: 1rem;
+    word-wrap: break-word;
+    line-height: 1.6;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.sas-ai-message.user .sas-ai-message-bubble {
+    background: linear-gradient(135deg, var(--sas-primary, #F26822) 0%, #d85a1a 100%);
+    color: white;
+    border-bottom-right-radius: 0.25rem;
+}
+
+.sas-ai-message.ai .sas-ai-message-bubble {
+    background: #f9fafb;
+    color: #1f2937;
+    border: 1px solid #e5e7eb;
+    border-bottom-left-radius: 0.25rem;
+}
+
+.sas-ai-message-bubble.error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #dc2626;
+}
+
+.sas-ai-message-text {
+    margin: 0;
+    white-space: pre-wrap;
+    font-size: 0.9375rem;
+}
+
+.sas-ai-message-meta {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    font-size: 0.75rem;
+    color: #9ca3af;
+    padding: 0 0.25rem;
+}
+
+.sas-ai-message.user .sas-ai-message-meta {
+    justify-content: flex-end;
+}
+
+.sas-ai-message-time {
+    font-size: 0.6875rem;
+}
+
+.sas-ai-message-source {
+    font-size: 0.6875rem;
+    padding: 0.125rem 0.5rem;
+    background: rgba(242, 104, 34, 0.1);
+    border-radius: 4px;
+    color: var(--sas-primary, #F26822);
+    font-weight: 500;
+}
+
+.sas-ai-retry-btn {
+    margin-top: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: var(--sas-primary, #F26822);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 36px;
+}
+
+.sas-ai-retry-btn:hover {
+    background: #d85a1a;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(242, 104, 34, 0.3);
+}
+
+/* Typing Indicator */
+.sas-ai-typing-indicator {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sas-ai-typing-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.sas-ai-typing-dots {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+}
+
+.sas-ai-typing-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--sas-primary, #F26822);
+    border-radius: 50%;
+    animation: typing 1.4s infinite;
+}
+
+.sas-ai-typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.sas-ai-typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+        opacity: 0.5;
+    }
+    30% {
+        transform: translateY(-6px);
+        opacity: 1;
+    }
+}
+
+/* ============================================================================
+   AI FEATURES HUB - FEATURE CARDS & BADGES (SAS BRANDING)
+   ============================================================================ */
+
+.sas-ai-feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.25rem;
+}
+
+.sas-ai-feature-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+.sas-ai-feature-card:hover {
+    border-color: var(--sas-primary, #F26822);
+    box-shadow: 0 8px 24px rgba(242, 104, 34, 0.18);
+    transform: translateY(-2px);
+}
+
+.sas-ai-feature-card.disabled {
+    opacity: 0.7;
+    cursor: default;
+    background: #f9fafb;
+}
+
+.sas-ai-feature-card.disabled:hover {
+    border-color: #e5e7eb;
+    box-shadow: none;
+    transform: none;
+}
+
+.sas-ai-feature-icon {
+    font-size: 1.75rem;
+}
+
+.sas-ai-feature-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 0.35rem 0;
+}
+
+.sas-ai-feature-description {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.sas-ai-toggle-btn {
+    border: 1px solid var(--sas-primary, #F26822);
+    background: rgba(242, 104, 34, 0.06);
+    color: var(--sas-primary, #F26822);
+    border-radius: 999px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.sas-ai-toggle-btn:hover:not(:disabled) {
+    background: var(--sas-primary, #F26822);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(242, 104, 34, 0.25);
+}
+
+.sas-ai-toggle-btn:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.sas-ai-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.sas-ai-badge-enabled {
+    background: linear-gradient(135deg, var(--sas-primary, #F26822) 0%, #d85a1a 100%);
+    color: #ffffff;
+}
+
+.sas-ai-badge-disabled {
+    background: #4b5563;
+    color: #e5e7eb;
+}
+
+.sas-ai-badge-revenue {
+    background: rgba(242, 104, 34, 0.1);
+    color: var(--sas-primary, #F26822);
+    border: 1px solid rgba(242, 104, 34, 0.4);
+}
+
+.sas-ai-badge-cost {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.sas-ai-badge-risk {
+    background: rgba(239, 68, 68, 0.12);
+    color: #b91c1c;
+    border: 1px solid rgba(239, 68, 68, 0.5);
+}
+
+.sas-ai-badge-efficiency {
+    background: rgba(242, 104, 34, 0.08);
+    color: var(--sas-primary, #F26822);
+    border: 1px solid rgba(242, 104, 34, 0.45);
+}
+
+@keyframes messageSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Chat Input (Fixed to Bottom, Full Width) */
+.sas-ai-chat-input-section {
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e5e7eb;
+    background: #ffffff;
+    flex-shrink: 0;
+}
+
+.sas-ai-input-wrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0.75rem;
+    transition: all 0.2s ease;
+}
+
+.sas-ai-input-wrapper:focus-within {
+    border-color: var(--sas-primary, #F26822);
+    box-shadow: 0 0 0 3px rgba(242, 104, 34, 0.1);
+    background: #ffffff;
+}
+
+.sas-ai-chat-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 0;
+    font-size: 0.9375rem;
+    resize: none !important;
+    min-height: 72px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: inherit;
+    line-height: 1.6;
+    background: transparent;
+    color: #1f2937;
+    box-sizing: border-box;
+}
+
+.sas-ai-chat-input:focus {
+    outline: none;
+}
+
+.sas-ai-chat-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.sas-ai-chat-input::placeholder {
+    color: #9ca3af;
+}
+
+.sas-ai-send-button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: var(--sas-primary, #F26822);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    min-height: 40px;
+    min-width: 40px;
+}
+
+.sas-ai-send-button:hover:not(:disabled) {
+    background: #d85a1a;
+    transform: scale(1.05);
+}
+
+.sas-ai-send-button:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.sas-ai-send-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.sas-ai-input-hints {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.6875rem;
+    color: #9ca3af;
+    padding: 0 0.5rem;
+}
+
+.sas-ai-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+    .sas-ai-sidebar {
+        width: 300px;
+        min-width: 280px;
+    }
+    
+    .sas-ai-chat-container {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .sas-ai-command-center {
+        flex-direction: column;
+        height: calc(100vh - 60px);
+    }
+    
+    .sas-ai-sidebar {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        max-height: 40vh;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    
+    .sas-ai-chat-panel {
+        flex: 1;
+        min-height: 0;
+    }
+    
+    .sas-ai-messages-thread {
+        padding: 1.5rem 1rem;
+    }
+    
+    .sas-ai-message {
+        max-width: 95%;
+    }
+    
+    .sas-ai-chat-input-section {
+        padding: 1rem;
+    }
+    
+    .sas-ai-prompts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================================
+   ACCESSIBILITY
+   ============================================================================ */
+
+.sas-ai-segment:focus,
+.sas-ai-prompt-card:focus,
+.sas-ai-action-btn:focus,
+.sas-ai-send-button:focus,
+.sas-ai-chat-input:focus,
+.sas-ai-empty-action-btn:focus {
+    outline: 2px solid var(--sas-primary, #F26822);
+    outline-offset: 2px;
+}
+
+@media (prefers-contrast: high) {
+    .sas-ai-message-bubble {
+        border-width: 2px;
+    }
+    
+    .sas-ai-segment.active {
+        border: 2px solid var(--sas-primary, #F26822);
+    }
+}
+
+/* Legacy compatibility */
+.sas-ai-chat-wrapper {
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+.sas-ai-chat-card {
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    height: 100%;
+}
