@@ -1,6 +1,0 @@
-Error loading menu builder dashboard: type object 'MenuItem' has no attribute 'margin_percent'
-Traceback (most recent call last):
-  File "C:\Users\DELL\Desktop\sas management system\blueprints\menu_builder\__init__.py", line 33, in dashboard
-    items = MenuItem.query.filter(MenuItem.margin_percent.isnot(None)).all()
-                                  ^^^^^^^^^^^^^^^^^^^^^^^
-AttributeError: type object 'MenuItem' has no attribute 'margin_percent'
