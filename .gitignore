@@ -5,5 +5,7 @@ __pycache__/
 instance/db_backups/
 venv/
 .env
+installer/
+*.exe
 
 
