@@ -658,46 +658,6 @@ def load_user(user_id):
 
 
 if __name__ == "__main__":
-    # Canonical entry point - ensures create_app() is called with proper initialization
-    import webbrowser
-    import threading
-    import time
-    import sys
     import os
-    
-    # Add parent directory to path for updater import
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    if parent_dir not in sys.path:
-        sys.path.insert(0, parent_dir)
-    
-    app = create_app()
-    
-    # Check for updates in background (non-blocking) - only in production, NOT during requests
-    # This runs only at startup, never during request handling
-    if not app.debug and not app.config.get('SKIP_UPDATE_CHECK', False):
-        try:
-            import updater
-            updater.check_for_updates_background()
-        except Exception:
-            # Silently fail - don't log network/DNS errors
-            pass
-    
-    # Open browser after a short delay
-    def open_browser():
-        time.sleep(1.5)
-        webbrowser.open('http://127.0.0.1:5000')
-    
-    browser_thread = threading.Thread(target=open_browser)
-    browser_thread.daemon = True
-    browser_thread.start()
-
-    # Force safe error mode for standalone execution
-    app.config["PROPAGATE_EXCEPTIONS"] = False
-    app.config["TRAP_HTTP_EXCEPTIONS"] = True
-
-    app.run(
-        host="127.0.0.1",
-        port=5000,
-        debug=app.config.get('DEBUG', False)
-    )
-
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
