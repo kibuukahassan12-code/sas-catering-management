@@ -3,4 +3,5 @@ services:
     name: sas-catering-management
     env: docker
     plan: free
+    dockerfilePath: ./Dockerfile
     autoDeploy: true
