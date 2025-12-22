@@ -6,6 +6,8 @@ ENV PORT=10000
 
 WORKDIR /app
 
+ENV PYTHONPATH=/app
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -13,4 +15,4 @@ COPY . .
 
 EXPOSE 10000
 
-CMD ["python", "sas_management/app.py"]
+CMD ["python", "-m", "sas_management.app"]
