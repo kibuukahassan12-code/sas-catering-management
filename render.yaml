@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: sas-catering-management
+    env: docker
+    plan: free
+    autoDeploy: true
+
