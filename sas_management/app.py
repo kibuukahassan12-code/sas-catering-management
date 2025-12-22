@@ -657,6 +657,10 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
+# Create app instance for direct execution and gunicorn compatibility
+app = create_app()
+
+
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
