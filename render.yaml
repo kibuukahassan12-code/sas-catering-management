@@ -4,4 +4,3 @@ services:
     env: docker
     plan: free
     autoDeploy: true
-
