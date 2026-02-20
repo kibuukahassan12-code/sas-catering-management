@@ -8,7 +8,35 @@ venv/
 installer/
 *.exe
 
+# Gradle
+.gradle/
+build/
 
+# Android
+android_app/android_webview_app/.gradle/
+android_app/android_webview_app/app/build/
+android_app/android_webview_app/build/
+android_app/native_app/build/
+android_app/native_app/.gradle/
 
+# Logs
+logs/*.log*
+sas_management/logs/*.log*
 
+# Instance files
+sas_management/instance/
+instance/
 
+# Database
+*.db-journal
+sas.db
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+
+# Uploads
+sas_management/static/uploads/
+sas_management/instance/*_uploads/
+sas_management/instance/*_pdfs/
+sas_management/instance/*/
