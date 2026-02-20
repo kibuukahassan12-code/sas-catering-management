@@ -1,242 +1,290 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="page-header">
-    <div>
-        <p class="eyebrow">Point of Sale</p>
-        <h1>POS Dashboard</h1>
-        <p class="muted">Monitor sales, manage terminals, and track performance.</p>
-    </div>
-    <div class="quick-links">
-        <a class="btn-primary" href="{{ url_for('pos.launcher') }}">Open Terminal</a>
-        {% if current_user.role in ['Admin'] %}
-        <a class="btn-secondary" href="{{ url_for('pos.terminals_list') }}">Manage Terminals</a>
-        {% endif %}
-        <a class="btn-secondary" href="{{ url_for('core.dashboard') }}">← Dashboard</a>
-    </div>
+<section class="dashboard">
+    <aside class="sidebar">
+        <div class="sidebar-home">
+            <a href="{{ url_for('core.dashboard') }}" class="home-button" title="Go to Dashboard">
+                <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods" class="home-logo" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline';">
+                <span class="home-logo-text" style="display: none;">SAS</span>
+            </a>
+        </div>
+        <h2>Navigation</h2>
+        <ul class="nav-menu">
+            {% for module in modules %}
+            <li class='app-nav-item'>
+                {% if module.children is defined %}
+                <div class='app-nav-parent'>
+                    <span class='app-nav-link'>{{ module.name }}</span>
+                    <button class='app-nav-toggle' onclick='toggleAppSubmenu(this)'>▼</button>
+                </div>
+                <ul class='app-nav-submenu'>
+                    {% for child in module.children %}
+                    <li><a href='{{ child.url }}'>{{ child.name }}</a></li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <a href='{{ module.url if module.url is defined else "#" }}' class='app-nav-link'>{{ module.name }}</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+            <li class='app-nav-item'>
+                <a href="{{ url_for('pos.index') }}" class='app-nav-link' style="color: var(--primary-color); font-weight: 600;">📊 POS Dashboard</a>
+            </li>
+        </ul>
+    </aside>
+    <section class="content">
+        <!-- Page Header -->
+        <section class="page-header">
+            <div>
+                <p class="eyebrow">Point of Sale</p>
+                <h1>POS Admin Dashboard</h1>
+                <p class="muted">Monitor sales performance and track business metrics.</p>
+            </div>
+            <div class="quick-links">
+                <a class="btn-primary" href="{{ url_for('pos.launcher') }}">Open Terminal</a>
+                {% if current_user.role in ['Admin'] %}
+                <a class="btn-secondary" href="{{ url_for('pos.terminals_list') }}">Manage Terminals</a>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- KPI Cards -->
+        <section class="panel kpi-bar">
+            <div class="kpi-grid">
+                <a href="{{ url_for('pos.index') }}" class="kpi-card-link">
+                    <article class="kpi-card kpi-primary kpi-clickable">
+                        <div class="kpi-icon">📋</div>
+                        <div class="kpi-content">
+                            <p>Orders Today</p>
+                            <h2>{{ today_orders }}</h2>
+                        </div>
+                    </article>
+                </a>
+                <a href="{{ url_for('pos.index') }}" class="kpi-card-link">
+                    <article class="kpi-card kpi-primary kpi-clickable">
+                        <div class="kpi-icon">💰</div>
+                        <div class="kpi-content">
+                            <p>Revenue Today</p>
+                            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(today_revenue or 0) }}</h2>
+                        </div>
+                    </article>
+                </a>
+                <a href="{{ url_for('pos.index') }}" class="kpi-card-link">
+                    <article class="kpi-card kpi-primary kpi-clickable">
+                        <div class="kpi-icon">❌</div>
+                        <div class="kpi-content">
+                            <p>Cancelled Today</p>
+                            <h2>{{ cancelled_today }}</h2>
+                        </div>
+                    </article>
+                </a>
+                <a href="{{ url_for('pos.index') }}" class="kpi-card-link">
+                    <article class="kpi-card kpi-primary kpi-clickable">
+                        <div class="kpi-icon">📅</div>
+                        <div class="kpi-content">
+                            <p>Weekly Revenue</p>
+                            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(week_revenue or 0) }}</h2>
+                        </div>
+                    </article>
+                </a>
+                <a href="{{ url_for('pos.index') }}" class="kpi-card-link">
+                    <article class="kpi-card kpi-primary kpi-clickable">
+                        <div class="kpi-icon">📆</div>
+                        <div class="kpi-content">
+                            <p>Monthly Revenue</p>
+                            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(month_revenue or 0) }}</h2>
+                        </div>
+                    </article>
+                </a>
+                <a href="{{ url_for('pos.index') }}" class="kpi-card-link">
+                    <article class="kpi-card kpi-primary kpi-clickable">
+                        <div class="kpi-icon">🏆</div>
+                        <div class="kpi-content">
+                            <p>Most Sold Item</p>
+                            <h2>{{ most_sold.product_name if most_sold else 'N/A' }}</h2>
+                            <small>{{ most_sold.total_qty if most_sold else 0 }} sold</small>
+                        </div>
+                    </article>
+                </a>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+            <!-- Daily Revenue Chart -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h3>Daily Revenue (Last 7 Days)</h3>
+                </div>
+                <div class="chart-container">
+                    <div class="bar-chart">
+                        {% for day in daily_revenue %}
+                        <div class="bar-wrapper">
+                            <div class="bar" style="height: {% if daily_revenue|length > 0 %}{{ (day.revenue / (daily_revenue|max(attribute='revenue')).revenue * 100) if day.revenue > 0 else 0 }}{% else %}0{% endif %}%;">
+                                <span class="bar-value">{{ CURRENCY }}{{ "{:,.0f}".format(day.revenue) }}</span>
+                            </div>
+                            <span class="bar-label">{{ day.day }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <!-- Payment Method Breakdown -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h3>Payment Methods (This Week)</h3>
+                </div>
+                <div class="chart-container">
+                    {% if payment_breakdown %}
+                    <div class="payment-methods">
+                        {% for payment in payment_breakdown %}
+                        <div class="payment-item">
+                            <div class="payment-info">
+                                <span class="payment-method">{{ payment.method or 'Unknown' }}</span>
+                                <span class="payment-amount">{{ CURRENCY }}{{ "{:,.0f}".format(payment.total or 0) }}</span>
+                            </div>
+                            <div class="payment-bar">
+                                {% set total_payment = payment_breakdown|sum(attribute='total') %}
+                                <div class="payment-fill" style="width: {% if total_payment > 0 %}{{ (payment.total / total_payment * 100) }}{% else %}0{% endif %}%;"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="muted" style="text-align: center; padding: 2rem;">No payment data</p>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+
+        <!-- Product Sales Table -->
+        <section class="panel">
+            <div class="panel-header">
+                <h3>Top Products (Last 30 Days)</h3>
+            </div>
+            {% if product_sales %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Quantity Sold</th>
+                            <th>Revenue</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in product_sales %}
+                        <tr>
+                            <td><strong>{{ product.product_name }}</strong></td>
+                            <td>{{ product.total_qty or 0 }}</td>
+                            <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(product.total_revenue or 0) }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="muted" style="padding: 2rem; text-align: center;">No sales data yet</p>
+            {% endif %}
+        </section>
+
+        <!-- Active Terminals and Shifts -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Active Devices -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h3>Active Terminals</h3>
+                    <span class="badge">{{ devices|length }}</span>
+                </div>
+                {% if devices %}
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Terminal</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for device in devices %}
+                            <tr>
+                                <td><strong>{{ device.name }}</strong><br><small class="muted">{{ device.terminal_code }}</small></td>
+                                <td>{{ device.location or 'N/A' }}</td>
+                                <td>
+                                    <a href="{{ url_for('pos.terminal', device_code=device.terminal_code) }}" class="btn-ghost btn-sm">Open</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted" style="padding: 2rem; text-align: center;">No active terminals</p>
+                {% endif %}
+            </section>
+
+            <!-- Open Shifts -->
+            <section class="panel">
+                <div class="panel-header">
+                    <h3>Active Shifts</h3>
+                    <span class="badge">{{ all_open_shifts|length }}</span>
+                </div>
+                {% if all_open_shifts %}
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Shift</th>
+                                <th>Terminal</th>
+                                <th>Started</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for shift in all_open_shifts %}
+                            <tr>
+                                <td><strong>#{{ shift.id }}</strong></td>
+                                <td>{{ shift.device.name if shift.device else 'N/A' }}</td>
+                                <td>
+                                    {% if shift.started_at %}
+                                    {{ shift.started_at.strftime('%H:%M') }}<br><small class="muted">{{ shift.started_at.strftime('%b %d') }}</small>
+                                    {% else %}
+                                    <span class="muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="muted" style="padding: 2rem; text-align: center;">No active shifts</p>
+                {% endif %}
+            </section>
+        </div>
+    </section>
 </section>
-
-<!-- Statistics Cards -->
-<section class="panel">
-    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-        <article class="kpi-card kpi-primary">
-            <div class="kpi-icon">📊</div>
-            <div class="kpi-content">
-                <p>Today's Orders</p>
-                <h2>{{ today_orders }}</h2>
-            </div>
-        </article>
-        <article class="kpi-card kpi-primary">
-            <div class="kpi-icon">💰</div>
-            <div class="kpi-content">
-                <p>Today's Revenue</p>
-                <h2>{{ CURRENCY }}{{ "{:,.0f}".format(today_revenue or 0) }}</h2>
-            </div>
-        </article>
-        <article class="kpi-card kpi-primary">
-            <div class="kpi-icon">📈</div>
-            <div class="kpi-content">
-                <p>This Week's Orders</p>
-                <h2>{{ week_orders }}</h2>
-            </div>
-        </article>
-        <article class="kpi-card kpi-primary">
-            <div class="kpi-icon">💵</div>
-            <div class="kpi-content">
-                <p>This Week's Revenue</p>
-                <h2>{{ CURRENCY }}{{ "{:,.0f}".format(week_revenue or 0) }}</h2>
-            </div>
-        </article>
-    </div>
-</section>
-
-<!-- Active Terminals and Shifts -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-    <!-- Active Devices -->
-    <section class="panel">
-        <div class="panel-header">
-            <h3>Active Terminals</h3>
-            <span class="badge">{{ devices|length }}</span>
-        </div>
-        {% if devices %}
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Terminal</th>
-                        <th>Location</th>
-                        <th>Last Seen</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for device in devices %}
-                    <tr>
-                        <td><strong>{{ device.name }}</strong><br><small class="muted">{{ device.terminal_code }}</small></td>
-                        <td>{{ device.location or 'N/A' }}</td>
-                        <td>
-                            {% if device.last_seen %}
-                            {{ device.last_seen.strftime('%H:%M') }}<br><small class="muted">{{ device.last_seen.strftime('%b %d') }}</small>
-                            {% else %}
-                            <span class="muted">Never</span>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('pos.terminal', device_code=device.terminal_code) }}" class="btn-ghost btn-sm">Open</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="muted" style="padding: 2rem; text-align: center;">No active terminals</p>
-        {% endif %}
-    </section>
-
-    <!-- Open Shifts -->
-    <section class="panel">
-        <div class="panel-header">
-            <h3>Active Shifts</h3>
-            <span class="badge">{{ all_open_shifts|length }}</span>
-        </div>
-        {% if all_open_shifts %}
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Shift</th>
-                        <th>Terminal</th>
-                        <th>Started</th>
-                        <th>Starting Cash</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for shift in all_open_shifts %}
-                    <tr>
-                        <td><strong>#{{ shift.id }}</strong></td>
-                        <td>{{ shift.device.name if shift.device else 'N/A' }}</td>
-                        <td>
-                            {% if shift.started_at %}
-                            {{ shift.started_at.strftime('%H:%M') }}<br><small class="muted">{{ shift.started_at.strftime('%b %d') }}</small>
-                            {% else %}
-                            <span class="muted">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ CURRENCY }}{{ "{:,.0f}".format(shift.starting_cash or 0) }}</td>
-                        <td><span class="badge" style="background: var(--brand); color: #000;">{{ shift.status }}</span></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="muted" style="padding: 2rem; text-align: center;">No active shifts</p>
-        {% endif %}
-    </section>
-</div>
-
-<!-- Recent Orders and Top Products -->
-<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-    <!-- Recent Orders -->
-    <section class="panel">
-        <div class="panel-header">
-            <h3>Recent Orders</h3>
-            <a class="btn-secondary btn-sm" href="{{ url_for('pos.index') }}">View All</a>
-        </div>
-        {% if recent_orders %}
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Reference</th>
-                        <th>Time</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for order in recent_orders %}
-                    <tr>
-                        <td><strong>{{ order.reference }}</strong></td>
-                        <td>
-                            {% if order.order_time %}
-                            {{ order.order_time.strftime('%H:%M') }}<br><small class="muted">{{ order.order_time.strftime('%b %d') }}</small>
-                            {% else %}
-                            <span class="muted">N/A</span>
-                            {% endif %}
-                        </td>
-                        <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(order.total_amount or 0) }}</strong></td>
-                        <td>
-                            {% if order.status == 'paid' %}
-                            <span class="badge" style="background: var(--brand); color: #000;">Paid</span>
-                            {% elif order.status == 'partially_paid' %}
-                            <span class="badge" style="background: var(--accent); color: #000;">Partial</span>
-                            {% elif order.status == 'cancelled' %}
-                            <span class="badge" style="background: #e74c3c; color: white;">Cancelled</span>
-                            {% else %}
-                            <span class="badge">{{ order.status }}</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="muted" style="padding: 2rem; text-align: center;">No orders yet</p>
-        {% endif %}
-    </section>
-
-    <!-- Top Products -->
-    <section class="panel">
-        <div class="panel-header">
-            <h3>Top Products (This Week)</h3>
-        </div>
-        {% if top_products %}
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Qty Sold</th>
-                        <th>Revenue</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for product in top_products %}
-                    <tr>
-                        <td><strong>{{ product.product_name }}</strong></td>
-                        <td>{{ product.total_qty or 0 }}</td>
-                        <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(product.total_revenue or 0) }}</strong></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="muted" style="padding: 2rem; text-align: center;">No sales data yet</p>
-        {% endif %}
-    </section>
-</div>
 
 <style>
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
 }
 
 .kpi-card {
-    background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1.25rem;
     display: flex;
     align-items: center;
     gap: 1rem;
     color: white;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.kpi-card-link {
+    text-decoration: none;
 }
 
 .kpi-card:hover {
@@ -244,36 +292,127 @@
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.kpi-card:nth-child(2) {
-    background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
-}
-
-.kpi-card:nth-child(3) {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.kpi-card:nth-child(4) {
-    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-}
+.kpi-orange { background: linear-gradient(135deg, #F26822 0%, #f4a261 100%); }
+.kpi-green { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+.kpi-red { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+.kpi-blue { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+.kpi-purple { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); }
+.kpi-teal { background: linear-gradient(135deg, #1abc9c 0%, #16a085 100%); }
 
 .kpi-icon {
-    font-size: 2.5rem;
-    line-height: 1;
-    opacity: 0.9;
+    font-size: 2rem;
 }
 
 .kpi-content p {
     margin: 0;
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     opacity: 0.9;
-    margin-bottom: 0.5rem;
 }
 
 .kpi-content h2 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    color: white;
+}
+
+.kpi-content small {
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.chart-container {
+    padding: 1rem;
+}
+
+.bar-chart {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    height: 200px;
+    gap: 0.5rem;
+}
+
+.bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    height: 100%;
+}
+
+.bar {
+    width: 100%;
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px 4px 0 0;
+    min-height: 20px;
+    position: relative;
+    transition: height 0.3s ease;
+    max-width: 60px;
+}
+
+.bar-value {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+    color: #667eea;
+}
+
+.bar-label {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: #6c757d;
+}
+
+.payment-methods {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.payment-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.payment-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+}
+
+.payment-method {
+    font-weight: 600;
+}
+
+.payment-amount {
+    color: #2ecc71;
+    font-weight: 600;
+}
+
+.payment-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.payment-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+    border-radius: 4px;
+    transition: width 0.3s ease;
 }
 
 .table-wrapper {
@@ -283,10 +422,6 @@
 table {
     width: 100%;
     border-collapse: collapse;
-}
-
-table thead {
-    background: #f8f9fa;
 }
 
 table th {
@@ -307,18 +442,6 @@ table tbody tr:hover {
     background: #f8f9fa;
 }
 
-.badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: #6c757d;
-    color: white;
-}
-
 .quick-links {
     display: flex;
     gap: 0.5rem;
@@ -326,10 +449,14 @@ table tbody tr:hover {
 }
 
 @media (max-width: 768px) {
+    .charts-grid,
     div[style*="grid-template-columns"] {
         grid-template-columns: 1fr !important;
+    }
+    
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 </style>
 {% endblock %}
-

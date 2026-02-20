@@ -48,6 +48,25 @@ class QuotationSource(str, Enum):
     Bakery = "Bakery"
     Hire = "Hire"
 
+# Production budgeting
+class ProductionBudgetStatus(str, Enum):
+    Draft = "Draft"
+    Submitted = "Submitted"
+    Approved = "Approved"
+    Rejected = "Rejected"
+
+class BudgetItemCategory(str, Enum):
+    FoodItems = "Food Items"
+    Sauces = "Sauces"
+    MarketAccessories = "Market Accessories"
+    Spices = "Spices"
+    Fruits = "Fruits"
+    TeaBeverages = "Tea & Beverages"
+    Transport = "Transport"
+    Hire = "Hire"
+    ProductionLabour = "Production Labour"
+    ServiceLabour = "Service Labour"
+
 # ============================================================================
 # CORE MODELS
 # ============================================================================
@@ -378,6 +397,8 @@ class Client(db.Model):
 
 class EventStatus(str, Enum):
     NotStarted = "Not Started"
+    AwaitingPayment = "Awaiting Payment"
+    Confirmed = "Confirmed"
     Planning = "Planning"
     Preparing = "Preparing"
     InProgress = "In Progress"
@@ -518,6 +539,26 @@ class Event(db.Model):
             + (self.ingredients_cost or 0)
         )
         self.profit = (self.quoted_value or 0) - self.total_cost
+
+    # ---------------------------------------------------------------------
+    # Template compatibility aliases (legacy templates use these names)
+    # ---------------------------------------------------------------------
+    @property
+    def event_name(self):
+        """Legacy alias for title (used by older templates/services)."""
+        return self.title
+
+    @event_name.setter
+    def event_name(self, value):
+        self.title = value
+
+    @property
+    def venue(self):
+        """Legacy alias for venue name (string)."""
+        try:
+            return self.venue_obj.name if self.venue_obj else None
+        except Exception:
+            return None
     
     @property
     def floor_plan_id(self):
@@ -558,6 +599,15 @@ class ClientNote(db.Model):
     
     client = db.relationship("Client", back_populates="notes")
     user = db.relationship("User")
+
+    # Template/API compatibility: older code uses `content`
+    @property
+    def content(self):
+        return self.note
+
+    @content.setter
+    def content(self, value):
+        self.note = value
 
     def __repr__(self):
         return f'<ClientNote {self.id}>'
@@ -1090,6 +1140,7 @@ class Quotation(db.Model):
     quote_date = db.Column(db.Date, nullable=False, default=date.today)
     expiry_date = db.Column(db.Date, nullable=False)
     event_date = db.Column(db.Date, nullable=True)  # Event Date
+    venue = db.Column(db.String(200), nullable=True)  # Venue name or address
     subtotal = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     tax = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)  # Tax amount
     total = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)  # Total amount
@@ -1206,8 +1257,11 @@ class BakeryOrder(db.Model):
     status = db.Column(db.String(50), nullable=False, default="Pending")
     order_status = db.Column(db.String(50), default="Pending")
     total_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    amount_paid = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    balance_due = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     client = db.relationship("Client")
     event = db.relationship("Event")
@@ -1215,6 +1269,11 @@ class BakeryOrder(db.Model):
     
     def __repr__(self):
         return f'<BakeryOrder {self.id}>'
+    
+    def calculate_balance(self):
+        """Calculate balance due."""
+        self.balance_due = max(Decimal('0.00'), Decimal(str(self.total_amount or 0)) - Decimal(str(self.amount_paid or 0)))
+        return self.balance_due
 
 
 class BakeryOrderItem(db.Model):
@@ -1276,6 +1335,34 @@ class Ingredient(db.Model):
     
     def __repr__(self):
         return f'<Ingredient {self.name}>'
+
+
+class IngredientStockMovement(db.Model):
+    """Audit log of ingredient stock movements (use/reserve/release/adjustment)."""
+    __tablename__ = "ingredient_stock_movement"
+
+    id = db.Column(db.Integer, primary_key=True)
+    ingredient_id = db.Column(db.Integer, db.ForeignKey("ingredient.id"), nullable=False)
+
+    # Optional linkage to a production order (when stock is reserved/released for an order)
+    production_order_id = db.Column(db.Integer, db.ForeignKey("production_order.id"), nullable=True)
+
+    # Positive adds stock; negative deducts stock
+    quantity_change = db.Column(db.Numeric(12, 3), nullable=False, default=0.0)
+    resulting_stock = db.Column(db.Numeric(12, 3), nullable=True)
+
+    movement_type = db.Column(db.String(50), nullable=False, default="adjustment")  # reserve, release, adjustment
+    note = db.Column(db.Text, nullable=True)
+
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    ingredient = db.relationship("Ingredient")
+    creator = db.relationship("User", foreign_keys=[created_by])
+    production_order = db.relationship("ProductionOrder", foreign_keys=[production_order_id])
+
+    def __repr__(self):
+        return f"<IngredientStockMovement ingredient_id={self.ingredient_id} change={self.quantity_change}>"
 
 
 class RecipeItem(db.Model):
@@ -1343,6 +1430,56 @@ class InventoryItem(db.Model):
         return f'<InventoryItem {self.name}>'
 
 
+# ============================================================================
+# PRODUCTION DAILY-USE INVENTORY MODELS
+# ============================================================================
+
+class ProductionInventoryItem(db.Model):
+    """Production department daily-use inventory items (knives, pans, boards, etc)."""
+    __tablename__ = "production_inventory_item"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(100), nullable=True)  # e.g. Tools, Cookware, Utensils
+    unit = db.Column(db.String(50), nullable=True, default="pcs")  # e.g. pcs, sets
+    quantity = db.Column(db.Integer, nullable=False, default=0)
+    min_quantity = db.Column(db.Integer, nullable=False, default=0)
+    condition = db.Column(db.String(50), nullable=True, default="Good")
+    location = db.Column(db.String(100), nullable=True)  # e.g. Kitchen, Store, Van
+    notes = db.Column(db.Text, nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator = db.relationship("User", foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f"<ProductionInventoryItem {self.id} {self.name}>"
+
+
+class ProductionInventoryMovement(db.Model):
+    """Audit log of production inventory quantity changes."""
+    __tablename__ = "production_inventory_movement"
+
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey("production_inventory_item.id"), nullable=False)
+
+    # Positive adds quantity; negative deducts quantity
+    quantity_change = db.Column(db.Integer, nullable=False, default=0)
+    resulting_quantity = db.Column(db.Integer, nullable=True)
+    movement_type = db.Column(db.String(50), nullable=False, default="adjustment")  # opening, adjustment
+    note = db.Column(db.Text, nullable=True)
+
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    item = db.relationship("ProductionInventoryItem", foreign_keys=[item_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+
+    def __repr__(self):
+        return f"<ProductionInventoryMovement item_id={self.item_id} change={self.quantity_change}>"
+
+
 # Hire Order Models
 class Order(db.Model):
     """Equipment hire orders."""
@@ -1362,6 +1499,7 @@ class Order(db.Model):
     email = db.Column(db.String(120), nullable=True)
     status = db.Column(db.String(50), nullable=False, default="Pending")
     total_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    discount_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     amount_paid = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     balance_due = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
     reference = db.Column(db.String(50), nullable=True, unique=True)
@@ -1379,7 +1517,10 @@ class Order(db.Model):
     
     def calculate_balance(self):
         """Calculate balance due."""
-        self.balance_due = max(Decimal('0.00'), self.total_cost - self.amount_paid)
+        discount = Decimal(str(self.discount_amount or 0))
+        subtotal = Decimal(str(self.total_cost or 0))
+        final_total = max(Decimal('0.00'), subtotal - discount)
+        self.balance_due = max(Decimal('0.00'), final_total - Decimal(str(self.amount_paid or 0)))
         return self.balance_due
 
 
@@ -1935,6 +2076,146 @@ class ProductionLineItem(db.Model):
         return f'<ProductionLineItem {self.recipe_name}>'
 
 
+class ProductionBudget(db.Model):
+    """Production budget proposal for an event (submitted to admin for approval)."""
+    __tablename__ = "production_budget"
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    status = db.Column(db.Enum(ProductionBudgetStatus), nullable=False, default=ProductionBudgetStatus.Draft)
+    submitted_at = db.Column(db.DateTime, nullable=True)
+
+    reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    admin_recommendations = db.Column(db.Text, nullable=True)
+
+    total_cost_ugx = db.Column(db.Numeric(14, 2), nullable=False, default=0.00)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    event = db.relationship("Event", foreign_keys=[event_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    reviewer = db.relationship("User", foreign_keys=[reviewed_by])
+    items = db.relationship("ProductionBudgetItem", back_populates="budget", cascade="all, delete-orphan")
+
+    def recalc_totals(self):
+        try:
+            total = Decimal("0.00")
+            for it in (self.items or []):
+                total += Decimal(str(getattr(it, "total_cost_ugx", 0) or 0))
+            self.total_cost_ugx = total
+        except Exception:
+            # keep previous total if anything weird happens
+            pass
+        return self.total_cost_ugx
+
+    def __repr__(self):
+        return f"<ProductionBudget event_id={self.event_id} status={self.status}>"
+
+
+class ProductionBudgetItem(db.Model):
+    """Line items for a ProductionBudget."""
+    __tablename__ = "production_budget_item"
+
+    id = db.Column(db.Integer, primary_key=True)
+    budget_id = db.Column(db.Integer, db.ForeignKey("production_budget.id"), nullable=False)
+    category = db.Column(db.Enum(BudgetItemCategory), nullable=False, default=BudgetItemCategory.FoodItems)
+    description = db.Column(db.String(255), nullable=False)
+    quantity = db.Column(db.Numeric(12, 2), nullable=False, default=1)
+    unit_cost_ugx = db.Column(db.Numeric(14, 2), nullable=False, default=0.00)
+    total_cost_ugx = db.Column(db.Numeric(14, 2), nullable=False, default=0.00)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    budget = db.relationship("ProductionBudget", back_populates="items")
+
+    def recalc(self):
+        try:
+            q = Decimal(str(self.quantity or 0))
+            u = Decimal(str(self.unit_cost_ugx or 0))
+            self.total_cost_ugx = q * u
+        except Exception:
+            pass
+        return self.total_cost_ugx
+
+    def __repr__(self):
+        return f"<ProductionBudgetItem {self.category} {self.description}>"
+
+
+# Equipment List Status Enum
+class EquipmentListStatus(str, Enum):
+    Draft = "Draft"
+    Submitted = "Submitted"
+    Approved = "Approved"
+    Rejected = "Rejected"
+
+
+class EventEquipmentList(db.Model):
+    """Catering equipment list for an event (prepared by service department)."""
+    __tablename__ = "event_equipment_list"
+
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey("event.id"), nullable=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+
+    status = db.Column(db.Enum(EquipmentListStatus), nullable=False, default=EquipmentListStatus.Draft)
+    title = db.Column(db.String(255), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    
+    submitted_at = db.Column(db.DateTime, nullable=True)
+    reviewed_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    reviewer_notes = db.Column(db.Text, nullable=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    event = db.relationship("Event", foreign_keys=[event_id])
+    creator = db.relationship("User", foreign_keys=[created_by])
+    reviewer = db.relationship("User", foreign_keys=[reviewed_by])
+    items = db.relationship("EventEquipmentItem", back_populates="equipment_list", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<EventEquipmentList event_id={self.event_id} status={self.status}>"
+
+
+class EventEquipmentItem(db.Model):
+    """Line items for an EventEquipmentList."""
+    __tablename__ = "event_equipment_item"
+
+    id = db.Column(db.Integer, primary_key=True)
+    equipment_list_id = db.Column(db.Integer, db.ForeignKey("event_equipment_list.id"), nullable=False)
+    inventory_item_id = db.Column(db.Integer, db.ForeignKey("inventory_item.id"), nullable=True)
+    
+    item_name = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(100), nullable=True)
+    quantity = db.Column(db.Integer, nullable=False, default=1)
+    notes = db.Column(db.Text, nullable=True)
+    
+    # For tracking during event
+    checked_out = db.Column(db.Boolean, nullable=False, default=False)
+    checked_out_at = db.Column(db.DateTime, nullable=True)
+    checked_out_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    
+    checked_in = db.Column(db.Boolean, nullable=False, default=False)
+    checked_in_at = db.Column(db.DateTime, nullable=True)
+    checked_in_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    
+    condition_notes = db.Column(db.Text, nullable=True)  # Notes on condition after return
+    
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    equipment_list = db.relationship("EventEquipmentList", back_populates="items")
+    inventory_item = db.relationship("InventoryItem", foreign_keys=[inventory_item_id])
+    checkout_user = db.relationship("User", foreign_keys=[checked_out_by])
+    checkin_user = db.relationship("User", foreign_keys=[checked_in_by])
+
+    def __repr__(self):
+        return f"<EventEquipmentItem {self.item_name} qty={self.quantity}>"
+
+
 class KitchenChecklist(db.Model):
     """Kitchen checklists."""
     __tablename__ = "kitchen_checklist"
@@ -2299,7 +2580,7 @@ class Announcement(db.Model):
 
 
 class Message(db.Model):
-    """Chat messages."""
+    """Chat messages (channel-based). Supports text and attachments."""
     __tablename__ = "message"
     
     id = db.Column(db.Integer, primary_key=True)
@@ -2307,6 +2588,9 @@ class Message(db.Model):
     channel = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    attachment_path = db.Column(db.String(500), nullable=True)
+    attachment_type = db.Column(db.String(50), nullable=True)  # 'document' | 'voice' | 'image'
+    original_filename = db.Column(db.String(255), nullable=True)
     
     user = db.relationship("User")
     
@@ -2333,7 +2617,7 @@ class DirectMessageThread(db.Model):
 
 
 class DirectMessage(db.Model):
-    """Direct messages."""
+    """Direct messages (1:1). Supports text, documents, voice notes, images."""
     __tablename__ = "direct_message"
     
     id = db.Column(db.Integer, primary_key=True)
@@ -2341,6 +2625,8 @@ class DirectMessage(db.Model):
     sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     message = db.Column(db.Text, nullable=False)
     attachment_path = db.Column(db.String(500), nullable=True)
+    attachment_type = db.Column(db.String(50), nullable=True)  # 'document' | 'voice' | 'image'
+    original_filename = db.Column(db.String(255), nullable=True)
     read = db.Column(db.Boolean, nullable=False, default=False)
     timestamp = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     
@@ -2422,6 +2708,52 @@ class BulletinPost(db.Model):
 
 
 # ============================================================================
+# SAS OFFICE - FILE MANAGEMENT MODELS
+# ============================================================================
+
+class OfficeFolder(db.Model):
+    """Folders in SAS Office file management system."""
+    __tablename__ = "office_folder"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("office_folder.id"), nullable=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    parent = db.relationship("OfficeFolder", remote_side=[id], backref="subfolders")
+    creator = db.relationship("User")
+    files = db.relationship("OfficeFile", back_populates="folder", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f'<OfficeFolder {self.name}>'
+
+
+class OfficeFile(db.Model):
+    """Files in SAS Office file management system."""
+    __tablename__ = "office_file"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(500), nullable=False)
+    file_path = db.Column(db.String(1000), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)  # Size in bytes
+    file_type = db.Column(db.String(100), nullable=True)  # MIME type or category: document, image, video, etc.
+    folder_id = db.Column(db.Integer, db.ForeignKey("office_folder.id"), nullable=True)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    folder = db.relationship("OfficeFolder", back_populates="files")
+    uploader = db.relationship("User")
+    
+    def __repr__(self):
+        return f'<OfficeFile {self.name}>'
+
+
+# ============================================================================
 # POS MODELS
 # ============================================================================
 
@@ -2474,6 +2806,8 @@ class POSOrder(db.Model):
     shift_id = db.Column(db.Integer, db.ForeignKey("pos_shift.id"), nullable=True)
     device_id = db.Column(db.Integer, db.ForeignKey("pos_device.id"), nullable=True)
     client_id = db.Column(db.Integer, db.ForeignKey("client.id"), nullable=True)
+    client_name = db.Column(db.String(255), nullable=True)
+    client_phone = db.Column(db.String(50), nullable=True)
     order_time = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     total_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0.00)
     tax_amount = db.Column(db.Numeric(14, 2), nullable=False, default=0.00)
@@ -2692,6 +3026,8 @@ class MenuItem(db.Model):
     name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
     price = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
+    cost = db.Column(db.Numeric(12, 2), nullable=True, default=0.00)
+    margin_percent = db.Column(db.Numeric(5, 2), nullable=True)
     image_path = db.Column(db.String(500), nullable=True)
     is_available = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
@@ -3363,6 +3699,42 @@ def seed_initial_data(db_instance):
             )
             db_instance.session.add(client_one)
             db_instance.session.add(client_two)
+
+        # Seed example announcements (once) so dashboards always have content.
+        # Only seed if announcement table exists and is empty.
+        try:
+            if "announcement" in inspector.get_table_names():
+                if Announcement.query.count() == 0:
+                    admin_user = User.query.filter_by(email="admin@sas.com").first() or User.query.first()
+                    created_by = admin_user.id if admin_user else 1
+                    now = datetime.utcnow()
+                    db_instance.session.add(
+                        Announcement(
+                            title="Welcome to SAS Management System",
+                            message="Team,\n\nAll dashboards now show company announcements. Use this feed to share critical updates across departments.\n\n— Management",
+                            created_by=created_by,
+                            created_at=now,
+                        )
+                    )
+                    db_instance.session.add(
+                        Announcement(
+                            title="Kitchen Operations: Daily Checklist",
+                            message="Reminder: Complete the Kitchen Checklist before 10:00 AM daily.\n\n- Hygiene log\n- Temperature log\n- Stock level checks\n\nThank you.",
+                            created_by=created_by,
+                            created_at=now,
+                        )
+                    )
+                    db_instance.session.add(
+                        Announcement(
+                            title="Finance Update",
+                            message="Cashbook & Accounting: Ensure all income/expense transactions are recorded the same day.\n\nBalance Sheet is available (Daily/Weekly/Monthly/Yearly).",
+                            created_by=created_by,
+                            created_at=now,
+                        )
+                    )
+        except Exception:
+            # Never block startup because sample announcements failed.
+            pass
         
         db_instance.session.commit()
     except Exception as e:
