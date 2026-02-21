@@ -4,9 +4,11 @@ import os
 class BaseConfig:
     """Base configuration for SAS Best Foods Catering Management System."""
     SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-key")
-    # Supabase PostgreSQL connection
-    # Set DATABASE_URL environment variable to use Supabase, or it defaults to SQLite
-    # Example Supabase URL: postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres
+    # Supabase PostgreSQL connection - set DATABASE_URL env var
+    # Connection string format (pooler):
+    # postgresql://postgres.[project-ref]:[password]@aws-[region].pooler.supabase.com:6543/postgres
+    # Or direct:
+    # postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///sas.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
