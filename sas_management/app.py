@@ -86,9 +86,10 @@ def create_app():
         # Set default AI features to enabled
         app.config['AI_FEATURES'] = app.config.get('AI_FEATURES', {})
     
-    # FIX DATABASE PATH
-    db_path = os.path.join(app.instance_path, "sas.db")
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+    # Use DATABASE_URL from environment (Supabase) or fallback to SQLite
+    if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+        db_path = os.path.join(app.instance_path, "sas.db")
+        app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", f"sqlite:///{db_path}")
 
     # Setup error logging
     # ---------------- SAFE LOGS FOLDER CREATION ----------------
