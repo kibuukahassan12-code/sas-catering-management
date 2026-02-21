@@ -1,10 +1,15 @@
 import os
+from urllib.parse import quote_plus
 
 
 class BaseConfig:
     """Base configuration for SAS Best Foods Catering Management System."""
     SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-key")
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///sas.db")
+    # Supabase connection - URL encode password with special characters
+    db_password = os.environ.get("DB_PASSWORD", "[@Hassan12345.]")
+    db_password_encoded = quote_plus(db_password)
+    # Try both formats - with or without 'db.' prefix
+    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", f"postgresql://postgres:{db_password_encoded}@wgatfuaxhiurebltzbog.supabase.co:5432/postgres")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DEBUG = False
     
