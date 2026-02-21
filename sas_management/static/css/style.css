@@ -400,6 +400,8 @@ a {
     border-radius: 1rem;
     padding: 1.5rem;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
 }
 
 .table-wrapper {
@@ -412,6 +414,16 @@ a {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1rem;
+    min-width: 0;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .badge {
@@ -553,16 +565,25 @@ tbody tr {
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-radius: 1rem;
     padding: 1rem;
+    min-width: 0;
 }
 
 .summary-card p {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.6);
     margin-bottom: 0.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .summary-card h2 {
-    font-size: 1.5rem;
+    font-size: 1rem;
+    color: #F6BC38;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    word-break: keep-all;
 }
 
 .quick-links {
@@ -1449,24 +1470,46 @@ tbody tr {
 
 /* Dashboard KPI Cards */
 .kpi-bar {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
 }
 
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    overflow: hidden;
+}
+
+@media (max-width: 1600px) {
+    .kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 1000px) {
+    .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .kpi-card {
     background: rgba(242, 104, 34, 0.15);
     border: 1px solid rgba(242, 104, 34, 0.3);
     border-radius: 1rem;
-    padding: 1.5rem;
+    padding: 0.75rem;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
     transition: transform 0.2s, box-shadow 0.2s;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 80px;
+}
+
+.kpi-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
 }
 
 .kpi-card:hover {
@@ -1487,36 +1530,59 @@ tbody tr {
 
 .kpi-content {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .kpi-content p {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .kpi-content h2 {
-    font-size: 1.75rem;
+    font-size: 1.1rem;
     font-weight: 700;
     color: #F6BC38;
     margin: 0;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    word-break: keep-all;
+    line-height: 1.2;
+}
+
+.currency-symbol {
+    font-size: 0.7rem;
+    font-weight: 500;
+    vertical-align: top;
+    margin-right: 1px;
 }
 
 /* Charts Section */
 .charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
     margin-bottom: 1.5rem;
 }
 
+@media (max-width: 1000px) {
+    .charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .chart-panel {
-    min-height: 350px;
+    min-height: 400px;
 }
 
 .chart-container {
     position: relative;
-    height: 300px;
+    height: 320px;
     margin-top: 1rem;
 }
 
@@ -1532,8 +1598,10 @@ tbody tr {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 0.75rem;
-    padding: 1.25rem;
+    padding: 1.5rem;
     transition: transform 0.2s, border-color 0.2s;
+    overflow: hidden;
+    min-height: 140px;
 }
 
 .event-card:hover {
@@ -1548,25 +1616,36 @@ tbody tr {
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    min-width: 0;
 }
 
 .event-card-header h4 {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 600;
     margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .event-card-body {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
     margin-bottom: 1rem;
+}
+
+@media (max-width: 1200px) {
+    .event-card-body {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .event-field {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
+    min-width: 0;
 }
 
 .event-label {
@@ -1577,9 +1656,13 @@ tbody tr {
 }
 
 .event-value {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     color: var(--text);
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+    word-break: keep-all;
 }
 
 .event-card-actions {
@@ -2310,8 +2393,9 @@ tbody tr {
     position: relative;
     width: 100%;
     max-width: 100%;
-    height: auto;
-    min-height: 250px;
+    height: 320px;
+    min-height: 280px;
+    overflow: hidden;
 }
 
 .chart-container-responsive canvas {

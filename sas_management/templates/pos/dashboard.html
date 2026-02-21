@@ -65,7 +65,7 @@
                         <div class="kpi-icon">💰</div>
                         <div class="kpi-content">
                             <p>Revenue Today</p>
-                            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(today_revenue or 0) }}</h2>
+                            <h2>{{ CURRENCY }}{{ format_millions(today_revenue or 0) }}</h2>
                         </div>
                     </article>
                 </a>
@@ -83,7 +83,7 @@
                         <div class="kpi-icon">📅</div>
                         <div class="kpi-content">
                             <p>Weekly Revenue</p>
-                            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(week_revenue or 0) }}</h2>
+                            <h2>{{ CURRENCY }}{{ format_millions(week_revenue or 0) }}</h2>
                         </div>
                     </article>
                 </a>
@@ -92,7 +92,7 @@
                         <div class="kpi-icon">📆</div>
                         <div class="kpi-content">
                             <p>Monthly Revenue</p>
-                            <h2>{{ CURRENCY }}{{ "{:,.0f}".format(month_revenue or 0) }}</h2>
+                            <h2>{{ CURRENCY }}{{ format_millions(month_revenue or 0) }}</h2>
                         </div>
                     </article>
                 </a>

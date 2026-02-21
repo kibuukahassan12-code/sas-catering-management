@@ -7,6 +7,12 @@ from sas_management.utils import permission_required
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
 
+@auth_bp.route("/login")
+def login():
+    """Redirect /auth/login to main login page."""
+    return redirect(url_for("core.login"))
+
+
 @auth_bp.route("/change-password", methods=["GET", "POST"])
 @auth_bp.route("/set-new-password", methods=["GET", "POST"])
 @login_required

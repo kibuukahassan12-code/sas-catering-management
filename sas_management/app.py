@@ -258,6 +258,263 @@ def create_app():
                 app.logger.debug(f"Activity log commit error (non-fatal): {e}")
         return response
     
+    # Context processor to inject modules into all templates for authenticated users
+    @app.context_processor
+    def inject_modules():
+        from flask_login import current_user
+        from flask import url_for
+        from sas_management.utils.permissions import has_permission
+        
+        def has_any_permission(*permission_codes):
+            """Check if user has any of the given permissions."""
+            for perm in permission_codes:
+                if has_permission(perm):
+                    return True
+            return False
+        
+        def format_millions(value):
+            """Format number with M suffix for millions."""
+            if value is None:
+                return "0"
+            try:
+                val = float(value)
+                if val >= 1_000_000:
+                    return f"{val/1_000_000:.0f}M"
+                elif val >= 1_000:
+                    return f"{val/1_000:.0f}K"
+                else:
+                    return f"{val:,.0f}"
+            except:
+                return str(value)
+        
+        modules = []
+        
+        # Only compute modules for authenticated users
+        if current_user.is_authenticated:
+            # Check if user is admin (has full access)
+            is_admin = False
+            if hasattr(current_user, 'role_obj') and current_user.role_obj:
+                if current_user.role_obj.name == 'ADMIN':
+                    is_admin = True
+            elif hasattr(current_user, 'role') and str(current_user.role) == 'UserRole.Admin':
+                is_admin = True
+            
+            # Admin gets ALL modules
+            if is_admin:
+                modules.extend([
+                    {"name": "Dashboard", "url": url_for("core.dashboard")},
+                    {"name": "Clients CRM", "url": url_for("core.clients_list")},
+                    {
+                        "name": "Events",
+                        "url": url_for("events.events_list"),
+                        "children": [
+                            {"name": "All Events", "url": url_for("events.events_list")},
+                            {"name": "Create Event", "url": url_for("events.event_create")},
+                            {"name": "Venues", "url": url_for("events.venues_list")},
+                            {"name": "Menu Packages", "url": url_for("events.menu_packages_list")},
+                            {"name": "Vendors", "url": url_for("events.vendors_manage")},
+                            {"name": "Floor Planner", "url": url_for("floorplanner.dashboard")},
+                            {"name": "Tasks", "url": url_for("tasks.task_list")},
+                        ]
+                    },
+                    {
+                        "name": "Hire Department",
+                        "url": url_for("hire.index"),
+                        "children": [
+                            {"name": "Hire Overview", "url": url_for("hire.index")},
+                            {"name": "Hire Inventory", "url": url_for("hire.inventory_list")},
+                            {"name": "Hire Orders", "url": url_for("hire.orders_list")},
+                            {"name": "Equipment Maintenance", "url": url_for("hire.maintenance_list")},
+                        ]
+                    },
+                    {
+                        "name": "Event Service",
+                        "url": url_for("service.dashboard"),
+                        "children": [
+                            {"name": "Services Overview", "url": url_for("service.dashboard")},
+                            {"name": "All Events", "url": url_for("service.events")},
+                            {"name": "Timeline", "url": url_for("event_service.timeline_index")},
+                            {"name": "Documents", "url": url_for("event_service.documents_index")},
+                            {"name": "Checklists", "url": url_for("event_service.service_checklists")},
+                            {"name": "Messages", "url": url_for("event_service.service_messages")},
+                            {"name": "Reports", "url": url_for("event_service.service_reports")},
+                            {"name": "Analytics", "url": url_for("event_service.service_analytics")},
+                        ]
+                    },
+                    {
+                        "name": "Production Department",
+                        "url": url_for("production.index"),
+                        "children": [
+                            {"name": "Production Overview", "url": url_for("production.index")},
+                            {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
+                            {"name": "Catering Menu", "url": url_for("catering.menu_list")},
+                            {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
+                            {"name": "Kitchen Checklist", "url": url_for("production.kitchen_checklist_list")},
+                            {"name": "Delivery QC Checklist", "url": url_for("production.delivery_qc_list")},
+                            {"name": "Food Safety Logs", "url": url_for("production.food_safety_list")},
+                            {"name": "Hygiene Reports", "url": url_for("production.hygiene_reports_list")},
+                        ]
+                    },
+                    {
+                        "name": "Accounting Department",
+                        "url": url_for("accounting.dashboard"),
+                        "children": [
+                            {"name": "Accounting Overview", "url": url_for("accounting.dashboard")},
+                            {"name": "Receipting System", "url": url_for("accounting.receipts_list")},
+                            {"name": "Quotations", "url": url_for("quotes.list_quotes")},
+                            {"name": "Invoices", "url": url_for("invoices.invoice_list")},
+                            {"name": "Cashbook", "url": url_for("cashbook.index")},
+                            {"name": "Financial Reports", "url": url_for("reports.reports_index")},
+                            {"name": "Payroll Management", "url": url_for("payroll.payroll_list")},
+                        ]
+                    },
+                    {
+                        "name": "Bakery Department",
+                        "url": url_for("bakery.dashboard"),
+                        "children": [
+                            {"name": "Bakery Overview", "url": url_for("bakery.dashboard")},
+                            {"name": "Bakery Menu", "url": url_for("bakery.items_list")},
+                            {"name": "Bakery Orders", "url": url_for("bakery.orders_list")},
+                            {"name": "Production Sheet", "url": url_for("bakery.production_sheet")},
+                            {"name": "Reports", "url": url_for("bakery.reports")},
+                        ]
+                    },
+                    {"name": "POS System", "url": url_for("pos.index")},
+                    {
+                        "name": "HR Department",
+                        "url": url_for("hr.dashboard"),
+                        "children": [
+                            {"name": "HR Overview", "url": url_for("hr.dashboard")},
+                            {"name": "Employee Management", "url": url_for("hr.employee_list")},
+                            {"name": "Roster Builder", "url": url_for("hr.roster_builder")},
+                            {"name": "Leave Requests", "url": url_for("hr.leave_queue")},
+                            {"name": "Attendance Review", "url": url_for("hr.attendance_review")},
+                            {"name": "Payroll Export", "url": url_for("hr.payroll_export")},
+                        ]
+                    },
+                    {"name": "CRM Pipeline", "url": url_for("crm.pipeline")},
+                    {"name": "Dispatch", "url": url_for("dispatch.dashboard")},
+                    {"name": "Employee University", "url": url_for("university.dashboard")},
+                    {"name": "Admin Dashboard", "url": url_for("admin.dashboard")},
+                    {"name": "SAS AI", "url": url_for("ai.chat")},
+                ])
+            else:
+                # Non-admin users - use permission-based filtering
+                if has_any_permission('view_clients', 'manage_clients', 'view_all'):
+                    modules.append({"name": "Clients CRM", "url": url_for("core.clients_list")})
+                
+                if has_any_permission('view_events', 'manage_events', 'event_service.view_events', 'view_all'):
+                    modules.append({
+                        "name": "Events",
+                        "url": url_for("events.events_list"),
+                        "children": [
+                            {"name": "All Events", "url": url_for("events.events_list")},
+                            {"name": "Create Event", "url": url_for("events.event_create")},
+                            {"name": "Venues", "url": url_for("events.venues_list")},
+                            {"name": "Menu Packages", "url": url_for("events.menu_packages_list")},
+                            {"name": "Vendors", "url": url_for("events.vendors_manage")},
+                            {"name": "Floor Planner", "url": url_for("floorplanner.dashboard")},
+                            {"name": "Tasks", "url": url_for("tasks.task_list")},
+                        ]
+                    })
+                
+                if has_any_permission('view_hire', 'manage_hire', 'view_all'):
+                    modules.append({
+                        "name": "Hire Department",
+                        "url": url_for("hire.index"),
+                        "children": [
+                            {"name": "Hire Overview", "url": url_for("hire.index")},
+                            {"name": "Hire Inventory", "url": url_for("hire.inventory_list")},
+                            {"name": "Hire Orders", "url": url_for("hire.orders_list")},
+                            {"name": "Equipment Maintenance", "url": url_for("hire.maintenance_list")},
+                        ]
+                    })
+                
+                if has_any_permission('event_service.view_events', 'event_service.create_events', 'event_service.manage_events', 'view_all'):
+                    modules.append({
+                        "name": "Event Service",
+                        "url": url_for("service.dashboard"),
+                        "children": [
+                            {"name": "Services Overview", "url": url_for("service.dashboard")},
+                            {"name": "All Events", "url": url_for("service.events")},
+                            {"name": "Timeline", "url": url_for("event_service.timeline_index")},
+                            {"name": "Documents", "url": url_for("event_service.documents_index")},
+                            {"name": "Checklists", "url": url_for("event_service.service_checklists")},
+                            {"name": "Messages", "url": url_for("event_service.service_messages")},
+                            {"name": "Reports", "url": url_for("event_service.service_reports")},
+                            {"name": "Analytics", "url": url_for("event_service.service_analytics")},
+                        ]
+                    })
+                
+                if has_any_permission('view_production', 'manage_production', 'view_all'):
+                    modules.append({
+                        "name": "Production Department",
+                        "url": url_for("production.index"),
+                        "children": [
+                            {"name": "Production Overview", "url": url_for("production.index")},
+                            {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
+                            {"name": "Catering Menu", "url": url_for("catering.menu_list")},
+                            {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
+                            {"name": "Kitchen Checklist", "url": url_for("production.kitchen_checklist_list")},
+                            {"name": "Delivery QC Checklist", "url": url_for("production.delivery_qc_list")},
+                            {"name": "Food Safety Logs", "url": url_for("production.food_safety_list")},
+                            {"name": "Hygiene Reports", "url": url_for("production.hygiene_reports_list")},
+                        ]
+                    })
+                
+                if has_any_permission('view_accounting', 'manage_accounting', 'view_all'):
+                    modules.append({
+                        "name": "Accounting Department",
+                        "url": url_for("accounting.dashboard"),
+                        "children": [
+                            {"name": "Accounting Overview", "url": url_for("accounting.dashboard")},
+                            {"name": "Receipting System", "url": url_for("accounting.receipts_list")},
+                            {"name": "Quotations", "url": url_for("quotes.list_quotes")},
+                            {"name": "Invoices", "url": url_for("invoices.invoice_list")},
+                            {"name": "Cashbook", "url": url_for("cashbook.index")},
+                            {"name": "Financial Reports", "url": url_for("reports.reports_index")},
+                            {"name": "Payroll Management", "url": url_for("payroll.payroll_list")},
+                        ]
+                    })
+                
+                if has_any_permission('view_bakery', 'manage_bakery', 'view_all'):
+                    modules.append({
+                        "name": "Bakery Department",
+                        "url": url_for("bakery.dashboard"),
+                        "children": [
+                            {"name": "Bakery Overview", "url": url_for("bakery.dashboard")},
+                            {"name": "Bakery Menu", "url": url_for("bakery.items_list")},
+                            {"name": "Bakery Orders", "url": url_for("bakery.orders_list")},
+                            {"name": "Production Sheet", "url": url_for("bakery.production_sheet")},
+                            {"name": "Reports", "url": url_for("bakery.reports")},
+                        ]
+                    })
+                
+                if has_any_permission('view_pos', 'manage_pos', 'view_all'):
+                    modules.append({"name": "POS System", "url": url_for("pos.index")})
+                
+                if has_any_permission('view_hr', 'manage_hr', 'view_all'):
+                    modules.append({
+                        "name": "HR Department",
+                        "url": url_for("hr.dashboard"),
+                        "children": [
+                            {"name": "HR Overview", "url": url_for("hr.dashboard")},
+                            {"name": "Employee Management", "url": url_for("hr.employee_list")},
+                            {"name": "Roster Builder", "url": url_for("hr.roster_builder")},
+                            {"name": "Leave Requests", "url": url_for("hr.leave_queue")},
+                            {"name": "Attendance Review", "url": url_for("hr.attendance_review")},
+                            {"name": "Payroll Export", "url": url_for("hr.payroll_export")},
+                        ]
+                    })
+                
+                if has_any_permission('view_crm', 'manage_crm', 'view_all'):
+                    modules.append({"name": "CRM Pipeline", "url": url_for("crm.pipeline")})
+                
+                if has_any_permission('view_dispatch', 'manage_dispatch', 'view_all'):
+                    modules.append({"name": "Dispatch", "url": url_for("dispatch.dashboard")})
+        
+        return dict(modules=modules, format_millions=format_millions, has_any_permission=has_any_permission)
+    
     # TEMPORARILY DISABLED: Template context processor for permissions
     # @app.context_processor
     # def inject_permissions():

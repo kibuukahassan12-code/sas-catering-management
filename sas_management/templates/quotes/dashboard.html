@@ -27,7 +27,7 @@
             <div class="kpi-icon">💰</div>
             <div class="kpi-content">
                 <p>Total Pipeline Value</p>
-                <h2>{{ CURRENCY }}{{ "{:,.0f}".format(total_value or 0) }}</h2>
+                <h2>{{ CURRENCY }}{{ format_millions(total_value or 0) }}</h2>
             </div>
         </article>
         <article class="kpi-card kpi-primary">

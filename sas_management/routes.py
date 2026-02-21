@@ -111,9 +111,17 @@ def login():
     
     # If user is already authenticated, go directly to dashboard WITHOUT checking role or permissions
     if current_user.is_authenticated:
+        # Check if temporary password has expired
+        if current_user.is_password_expired():
+            flash("Temporary password expired. Contact admin to reset your password.", "danger")
+            logout_user()
+            return redirect(url_for("core.login"))
+        
         # Admin is exempt from first login password change requirement
-        is_admin = hasattr(current_user, 'is_admin') and current_user.is_admin
-        if not is_admin and (getattr(current_user, "force_password_change", False) or getattr(current_user, "first_login", True)):
+        is_admin = hasattr(current_user, "is_admin") and current_user.is_admin
+        # Only force password change for permanent passwords or first login (not temp passwords)
+        is_temp_pwd = current_user.password_expires_at is not None and not current_user.is_password_expired()
+        if not is_admin and not is_temp_pwd and (getattr(current_user, "force_password_change", False) or getattr(current_user, "first_login", True)):
             return redirect(url_for("core.force_change_password"))
         return redirect(url_for("core.dashboard"))
     
@@ -128,6 +136,11 @@ def login():
         
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
+            # Check if temporary password has expired
+            if user.is_password_expired():
+                flash("Temporary password expired. Contact admin to reset your password.", "danger")
+                return render_template("login.html")
+            
             login_user(user)
             flash("Login successful.", "success")
             
@@ -135,7 +148,9 @@ def login():
             is_admin = hasattr(user, 'is_admin') and user.is_admin
             
             # Check if user must change password or first login (admin exempt)
-            if not is_admin and (getattr(user, 'must_change_password', False) or getattr(user, 'force_password_change', False) or getattr(user, 'first_login', True)):
+            # If user has temp password (not expired), redirect to change password
+            is_temp_pwd = user.password_expires_at is not None and not user.is_password_expired()
+            if not is_admin and (getattr(user, 'must_change_password', False) or getattr(user, 'force_password_change', False) or getattr(user, 'first_login', True) or is_temp_pwd):
                 return redirect(url_for("core.force_change_password"))
             
             # Redirect directly to dashboard WITHOUT checking role or permissions
@@ -164,15 +179,28 @@ def force_change_password():
         new_password = request.form.get("new_password", "").strip()
         confirm_password = request.form.get("confirm_password", "").strip()
         
-        # For first login, require old password
-        if is_first_login:
-            if not old_password:
-                flash("Please provide your current password.", "danger")
-                return render_template("auth/force_change_password.html", is_first_login=True)
-            
-            if not current_user.check_password(old_password):
-                flash("Current password is incorrect.", "danger")
-                return render_template("auth/force_change_password.html", is_first_login=True)
+        # For first login OR temporary password, require old password verification
+        # But if user has a temporary password (password_expires_at is set), verify that instead
+        is_temp_pwd = getattr(current_user, 'password_expires_at', None) is not None
+        
+        if is_first_login or is_temp_pwd:
+            # For temporary passwords, verify using the temp password
+            if is_temp_pwd:
+                if not old_password:
+                    flash("Please enter your temporary password to set a new one.", "danger")
+                    return render_template("auth/force_change_password.html", is_first_login=True, is_temp_password=True)
+                if not current_user.check_password(old_password):
+                    flash("Temporary password is incorrect.", "danger")
+                    return render_template("auth/force_change_password.html", is_first_login=True, is_temp_password=True)
+            else:
+                # For first login without temp password, require old password
+                if not old_password:
+                    flash("Please provide your current password.", "danger")
+                    return render_template("auth/force_change_password.html", is_first_login=True)
+                
+                if not current_user.check_password(old_password):
+                    flash("Current password is incorrect.", "danger")
+                    return render_template("auth/force_change_password.html", is_first_login=True)
         
         if not new_password or not confirm_password:
             flash("Both new password fields are required.", "danger")
@@ -186,16 +214,31 @@ def force_change_password():
             flash("Password must be at least 8 characters long.", "danger")
             return render_template("auth/force_change_password.html", is_first_login=is_first_login)
         
+        # Strong password validation: 1 uppercase, 1 number, 1 symbol
+        import re
+        if not re.search(r'[A-Z]', new_password):
+            flash("Password must contain at least 1 uppercase letter.", "danger")
+            return render_template("auth/force_change_password.html", is_first_login=is_first_login)
+        if not re.search(r'[0-9]', new_password):
+            flash("Password must contain at least 1 number.", "danger")
+            return render_template("auth/force_change_password.html", is_first_login=is_first_login)
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>]', new_password):
+            flash("Password must contain at least 1 symbol (!@#$%^&* etc).", "danger")
+            return render_template("auth/force_change_password.html", is_first_login=is_first_login)
+        
         # Update password and clear flags
-        current_user.set_password(new_password)
+        current_user.set_password(new_password, is_temporary=False)
         current_user.first_login = False
         current_user.must_change_password = False
         current_user.force_password_change = False
+        current_user.password_expires_at = None  # Clear expiry after password change
         db.session.commit()
         flash("Password changed successfully!", "success")
         return redirect(url_for("core.dashboard"))
     
-    return render_template("auth/force_change_password.html", is_first_login=is_first_login)
+    # Check if user has temporary password
+    is_temp_pwd = getattr(current_user, 'password_expires_at', None) is not None
+    return render_template("auth/force_change_password.html", is_first_login=is_first_login, is_temp_password=is_temp_pwd)
 
 
 @core_bp.route("/dashboard")
@@ -207,10 +250,56 @@ def dashboard():
     if getattr(current_user, "role_id", None) is None:
         pass  # allow access
     
-    # If super admin → return dashboard immediately
-    if current_user.is_super_admin():
+    # Check if user is admin - admins see full dashboard
+    is_admin_user = False
+    if current_user.is_authenticated:
+        try:
+            is_admin_user = current_user.is_admin or current_user.is_super_admin()
+        except:
+            pass
+    
+    # If super admin → return dashboard immediately (check if authenticated first)
+    if current_user.is_authenticated and hasattr(current_user, 'is_super_admin') and current_user.is_super_admin():
         # We'll still render the full dashboard, but skip permission checks
         pass
+    elif not is_admin_user:
+        # Non-admin users: redirect to a simplified dashboard or show limited data
+        # Get user's role to determine what to show
+        user_role_name = ""
+        if current_user.is_authenticated and hasattr(current_user, 'role_obj') and current_user.role_obj:
+            user_role_name = current_user.role_obj.name.lower()
+        
+        # Check what modules user has access to
+        user_permissions = []
+        if current_user.is_authenticated:
+            try:
+                for perm in current_user.role_obj.permissions:
+                    user_permissions.append(perm.code)
+            except:
+                pass
+        
+        # Build a simplified dashboard for non-admins
+        # Only show data relevant to their role
+        # We'll still render the full dashboard, but skip permission checks
+        pass
+    
+    # Show full dashboard for admins
+    show_full_dashboard = is_admin_user
+    
+    # Helper function to check if user has permission for a module
+    def can_view_module(*permission_codes):
+        if is_admin_user:
+            return True
+        # Check if user has ADMIN role
+        try:
+            if current_user.role_obj and current_user.role_obj.name == 'ADMIN':
+                return True
+        except:
+            pass
+        for code in permission_codes:
+            if current_user.has_permission(code):
+                return True
+        return False
     
     try:
 
@@ -235,15 +324,18 @@ def dashboard():
         top_clients = []
         announcements = []
 
+        # Load data based on permissions
+        # Only load data for modules user has access to
         try:
-            clients = Client.query.filter(Client.is_archived == False).order_by(Client.name.asc()).all()
-            active_clients = len(clients)
+            if can_view_module('view_clients', 'manage_clients', 'view_all'):
+                clients = Client.query.filter(Client.is_archived == False).order_by(Client.name.asc()).all()
+                active_clients = len(clients)
         except Exception as e:
             current_app.logger.error(f"Error loading clients: {e}")
-            flash("Error loading client data. Some metrics may be incomplete.", "warning")
 
         try:
-            events = Event.query.order_by(Event.event_date.asc()).all()
+            if can_view_module('view_events', 'manage_events', 'event_service.view_events', 'view_all'):
+                events = Event.query.order_by(Event.event_date.asc()).all()
         except Exception as e:
             current_app.logger.error(f"Error loading events: {e}")
             flash("Error loading event data. Some metrics may be incomplete.", "warning")
@@ -381,154 +473,217 @@ def dashboard():
         # Build modules list (filtered by permissions)
         modules = []
         
+        # Helper function to check if user has any of the given permissions
+        def has_any_permission(*permission_codes):
+            # Check if user is authenticated first
+            if not current_user.is_authenticated:
+                return False
+            # Admin users see everything - no need to check specific permissions
+            if is_admin_user:
+                return True
+            for code in permission_codes:
+                if current_user.has_permission(code):
+                    return True
+            return False
+        
         # Dashboard - always available
         modules.append({"name": "Dashboard", "url": url_for("core.dashboard")})
         
-        # Clients CRM - ALL ACCESS GRANTED
-        modules.append({"name": "Clients CRM", "url": url_for("core.clients_list")})
-        
-        # Events - ALL ACCESS GRANTED
-        events_children = [
-            {"name": "All Events", "url": url_for("events.events_list")},
-            {"name": "Create Event", "url": url_for("events.event_create")},
-            {"name": "Venues", "url": url_for("events.venues_list")},
-            {"name": "Menu Packages", "url": url_for("events.menu_packages_list")},
-            {"name": "Vendors", "url": url_for("events.vendors_manage")},
-            {"name": "Floor Planner", "url": url_for("floorplanner.dashboard")},
-            {"name": "Tasks", "url": url_for("tasks.task_list")},
-        ]
-        modules.append({
-            "name": "Events",
-            "url": url_for("events.events_list"),
-            "children": events_children
-        })
-        
-        # Hire Department - ALL ACCESS GRANTED
-        hire_children = [
-            {"name": "Hire Overview", "url": url_for("hire.index")},
-            {"name": "Hire Inventory", "url": url_for("hire.inventory_list")},
-            {"name": "Hire Orders", "url": url_for("hire.orders_list")},
-            {"name": "Equipment Maintenance", "url": url_for("hire.maintenance_list")},
-        ]
-        modules.append({
-            "name": "Hire Department",
-            "url": url_for("hire.index"),
-            "children": hire_children
-        })
-        
-        # Event Service Department - Execution, tracking, and reporting features only
-        event_service_children = [
-            {"name": "Services Overview", "url": url_for("service.dashboard")},
-            {"name": "All Events", "url": url_for("service.events")},
-            # Removed duplicate menu items (routes remain functional):
-            # {"name": "Create Event", "url": url_for("service.event_new")},
-            # {"name": "Service Orders", "url": url_for("service.events")},
-            # {"name": "Costing & Quotations", "url": url_for("service.dashboard")},
-            # {"name": "Staff Assignments", "url": url_for("service.events")},
-            # {"name": "Vendors", "url": url_for("events.vendors_manage")},
-            {"name": "Timeline", "url": url_for("event_service.timeline_index")},
-            {"name": "Documents", "url": url_for("event_service.documents_index")},
-            {"name": "Checklists", "url": url_for("event_service.service_checklists")},
-            {"name": "Messages", "url": url_for("event_service.service_messages")},
-            {"name": "Reports", "url": url_for("event_service.service_reports")},
-            {"name": "Analytics", "url": url_for("event_service.service_analytics")},
-        ]
-        modules.append({
-            "name": "🧾 Event Service",
-            "url": url_for("service.dashboard"),
-            "children": event_service_children
-        })
-        
-        modules.extend([
-            {
-                "name": "Production Department",
-                "url": url_for("production.index"),
-                "children": [
-                    {"name": "Production Overview", "url": url_for("production.index")},
-                    {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
-                    {"name": "Catering Menu", "url": url_for("catering.menu_list")},
-                    {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
-                    {"name": "Kitchen Checklist", "url": url_for("production.kitchen_checklist_list")},
-                    {"name": "Delivery QC Checklist", "url": url_for("production.delivery_qc_list")},
-                    {"name": "Food Safety Logs", "url": url_for("production.food_safety_list")},
-                    {"name": "Hygiene Reports", "url": url_for("production.hygiene_reports_list")},
-                ]
-            },
-            {
-                "name": "Accounting Department",
-                "url": url_for("accounting.dashboard"),
-                "children": [
-                    {"name": "Accounting Overview", "url": url_for("accounting.dashboard")},
-                    {"name": "Receipting System", "url": url_for("accounting.receipts_list")},
-                    {"name": "Quotations", "url": url_for("quotes.dashboard")},
-                    {"name": "Invoices", "url": url_for("invoices.invoice_list")},
-                    {"name": "Cashbook", "url": url_for("cashbook.index")},
-                    {"name": "Financial Reports", "url": url_for("reports.reports_index")},
-                ]
-            },
-            {
-                "name": "Bakery Department",
-                "url": url_for("bakery.dashboard"),
-                "children": [
-                    {"name": "Bakery Overview", "url": url_for("bakery.dashboard")},
-                    {"name": "Bakery Menu", "url": url_for("bakery.items_list")},
-                    {"name": "Bakery Orders", "url": url_for("bakery.orders_list")},
-                    {"name": "Production Sheet", "url": url_for("bakery.production_sheet")},
-                    {"name": "Reports", "url": url_for("bakery.reports")},
-                ]
-            },
-            {"name": "POS System", "url": url_for("pos.index")},
-            {
-                "name": "HR Department",
-                "url": url_for("hr.dashboard"),
-                "children": [
-                    {"name": "HR Overview", "url": url_for("hr.dashboard")},
-                    {"name": "Employee Management", "url": url_for("hr.employee_list")},
-                    {"name": "Roster Builder", "url": url_for("hr.roster_builder")},
-                    {"name": "Leave Requests", "url": url_for("hr.leave_queue")},
-                    {"name": "Attendance Review", "url": url_for("hr.attendance_review")},
-                    {"name": "Payroll Export", "url": url_for("hr.payroll_export")},
-                ]
-            },
-        ])
-        
-        # Check if Employee University is available (safe check)
-        # Only show to authenticated admin users
-        show_employee_university = False
-        if current_user.is_authenticated:
-            # Check if user is admin
-            is_admin = False
-            try:
-                if hasattr(current_user, 'is_super_admin') and current_user.is_super_admin():
-                    is_admin = True
-                elif hasattr(current_user, 'role') and current_user.role == UserRole.Admin:
-                    is_admin = True
-            except Exception:
-                pass
+        # ALL MODULES - Show everything for admin users
+        if is_admin_user:
+            # Clients CRM
+            modules.append({"name": "Clients CRM", "url": url_for("core.clients_list")})
             
-            if is_admin:
-                show_employee_university = True
-        
-        # Add Employee University module right after HR Department if enabled
-        if show_employee_university:
-            hr_index = next((i for i, m in enumerate(modules) if m.get("name") == "HR Department"), -1)
-            if hr_index >= 0:
-                modules.insert(hr_index + 1, {
-                    "name": "🎓 Employee University",
-                    "url": url_for("university.dashboard"),
+            # Events
+            events_children = [
+                {"name": "All Events", "url": url_for("events.events_list")},
+                {"name": "Create Event", "url": url_for("events.event_create")},
+                {"name": "Venues", "url": url_for("events.venues_list")},
+                {"name": "Menu Packages", "url": url_for("events.menu_packages_list")},
+                {"name": "Vendors", "url": url_for("events.vendors_manage")},
+                {"name": "Floor Planner", "url": url_for("floorplanner.dashboard")},
+                {"name": "Tasks", "url": url_for("tasks.task_list")},
+            ]
+            modules.append({"name": "Events", "url": url_for("events.events_list"), "children": events_children})
+            
+            # Hire Department
+            hire_children = [
+                {"name": "Hire Overview", "url": url_for("hire.index")},
+                {"name": "Hire Inventory", "url": url_for("hire.inventory_list")},
+                {"name": "Hire Orders", "url": url_for("hire.orders_list")},
+                {"name": "Equipment Maintenance", "url": url_for("hire.maintenance_list")},
+            ]
+            modules.append({"name": "Hire Department", "url": url_for("hire.index"), "children": hire_children})
+            
+            # Event Service Department
+            event_service_children = [
+                {"name": "Services Overview", "url": url_for("service.dashboard")},
+                {"name": "All Events", "url": url_for("service.events")},
+                {"name": "Timeline", "url": url_for("event_service.timeline_index")},
+                {"name": "Documents", "url": url_for("event_service.documents_index")},
+                {"name": "Checklists", "url": url_for("event_service.service_checklists")},
+                {"name": "Messages", "url": url_for("event_service.service_messages")},
+                {"name": "Reports", "url": url_for("event_service.service_reports")},
+                {"name": "Analytics", "url": url_for("event_service.service_analytics")},
+            ]
+            modules.append({"name": "🧾 Event Service", "url": url_for("service.dashboard"), "children": event_service_children})
+            
+            # Production Department
+            production_children = [
+                {"name": "Production Overview", "url": url_for("production.index")},
+                {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
+                {"name": "Catering Menu", "url": url_for("catering.menu_list")},
+                {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
+                {"name": "Kitchen Checklist", "url": url_for("production.kitchen_checklist_list")},
+                {"name": "Delivery QC Checklist", "url": url_for("production.delivery_qc_list")},
+                {"name": "Food Safety Logs", "url": url_for("production.food_safety_list")},
+                {"name": "Hygiene Reports", "url": url_for("production.hygiene_reports_list")},
+            ]
+            modules.append({"name": "Production Department", "url": url_for("production.index"), "children": production_children})
+            
+            # Accounting Department
+            accounting_children = [
+                {"name": "Accounting Overview", "url": url_for("accounting.dashboard")},
+                {"name": "Receipting System", "url": url_for("accounting.receipts_list")},
+                {"name": "Quotations", "url": url_for("quotes.list_quotes")},
+                {"name": "Invoices", "url": url_for("invoices.invoice_list")},
+                {"name": "Cashbook", "url": url_for("cashbook.index")},
+                {"name": "Financial Reports", "url": url_for("reports.reports_index")},
+                {"name": "Payroll Management", "url": url_for("payroll.payroll_list")},
+            ]
+            modules.append({"name": "Accounting Department", "url": url_for("accounting.dashboard"), "children": accounting_children})
+            
+            # Bakery Department
+            bakery_children = [
+                {"name": "Bakery Overview", "url": url_for("bakery.dashboard")},
+                {"name": "Bakery Menu", "url": url_for("bakery.items_list")},
+                {"name": "Bakery Orders", "url": url_for("bakery.orders_list")},
+                {"name": "Production Sheet", "url": url_for("bakery.production_sheet")},
+                {"name": "Reports", "url": url_for("bakery.reports")},
+            ]
+            modules.append({"name": "Bakery Department", "url": url_for("bakery.dashboard"), "children": bakery_children})
+            
+            # POS System
+            modules.append({"name": "POS System", "url": url_for("pos.index")})
+            
+            # HR Department
+            hr_children = [
+                {"name": "HR Overview", "url": url_for("hr.dashboard")},
+                {"name": "Employee Management", "url": url_for("hr.employee_list")},
+                {"name": "Roster Builder", "url": url_for("hr.roster_builder")},
+                {"name": "Leave Requests", "url": url_for("hr.leave_queue")},
+                {"name": "Attendance Review", "url": url_for("hr.attendance_review")},
+                {"name": "Payroll Export", "url": url_for("hr.payroll_export")},
+            ]
+            modules.append({"name": "HR Department", "url": url_for("hr.dashboard"), "children": hr_children})
+            
+            # CRM/Pipeline
+            modules.append({"name": "CRM Pipeline", "url": url_for("crm.pipeline")})
+            
+            # Dispatch
+            modules.append({"name": "Dispatch", "url": url_for("dispatch.dashboard")})
+            
+        else:
+            # Non-admin users - use permission-based filtering
+            # Clients CRM - check permission
+            if has_any_permission('view_clients', 'manage_clients', 'view_all'):
+                modules.append({"name": "Clients CRM", "url": url_for("core.clients_list")})
+            
+            # Events - check permission
+            if has_any_permission('view_events', 'manage_events', 'event_service.view_events', 'view_all'):
+                events_children = [
+                    {"name": "All Events", "url": url_for("events.events_list")},
+                    {"name": "Create Event", "url": url_for("events.event_create")},
+                    {"name": "Venues", "url": url_for("events.venues_list")},
+                    {"name": "Menu Packages", "url": url_for("events.menu_packages_list")},
+                    {"name": "Vendors", "url": url_for("events.vendors_manage")},
+                    {"name": "Floor Planner", "url": url_for("floorplanner.dashboard")},
+                    {"name": "Tasks", "url": url_for("tasks.task_list")},
+                ]
+                modules.append({"name": "Events", "url": url_for("events.events_list"), "children": events_children})
+            
+            # Hire Department - check permission
+            if has_any_permission('view_hire', 'manage_hire', 'view_all'):
+                hire_children = [
+                    {"name": "Hire Overview", "url": url_for("hire.index")},
+                    {"name": "Hire Inventory", "url": url_for("hire.inventory_list")},
+                    {"name": "Hire Orders", "url": url_for("hire.orders_list")},
+                    {"name": "Equipment Maintenance", "url": url_for("hire.maintenance_list")},
+                ]
+                modules.append({"name": "Hire Department", "url": url_for("hire.index"), "children": hire_children})
+            
+            # Event Service Department - check permission
+            if has_any_permission('event_service.view_events', 'event_service.create_events', 'event_service.manage_events', 'view_all'):
+                event_service_children = [
+                    {"name": "Services Overview", "url": url_for("service.dashboard")},
+                    {"name": "All Events", "url": url_for("service.events")},
+                    {"name": "Timeline", "url": url_for("event_service.timeline_index")},
+                    {"name": "Documents", "url": url_for("event_service.documents_index")},
+                    {"name": "Checklists", "url": url_for("event_service.service_checklists")},
+                    {"name": "Messages", "url": url_for("event_service.service_messages")},
+                    {"name": "Reports", "url": url_for("event_service.service_reports")},
+                    {"name": "Analytics", "url": url_for("event_service.service_analytics")},
+                ]
+                modules.append({"name": "🧾 Event Service", "url": url_for("service.dashboard"), "children": event_service_children})
+            
+            # Production Department - check permission
+            if has_any_permission('view_production', 'manage_production', 'view_all'):
+                modules.append({
+                    "name": "Production Department",
+                    "url": url_for("production.index"),
+                    "children": [
+                        {"name": "Production Overview", "url": url_for("production.index")},
+                        {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
+                        {"name": "Catering Menu", "url": url_for("catering.menu_list")},
+                        {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
+                        {"name": "Kitchen Checklist", "url": url_for("production.kitchen_checklist_list")},
+                        {"name": "Delivery QC Checklist", "url": url_for("production.delivery_qc_list")},
+                        {"name": "Food Safety Logs", "url": url_for("production.food_safety_list")},
+                        {"name": "Hygiene Reports", "url": url_for("production.hygiene_reports_list")},
+                        {"name": "Production Sheet", "url": url_for("bakery.production_sheet")},
+                        {"name": "Reports", "url": url_for("bakery.reports")},
+                    ]
+                })
+            
+            # POS System - check permission
+            if has_any_permission('view_pos', 'manage_pos', 'view_all'):
+                modules.append({"name": "POS System", "url": url_for("pos.index")})
+            
+            # HR Department - check permission
+            if has_any_permission('view_hr', 'manage_hr', 'view_all'):
+                modules.append({
+                    "name": "HR Department",
+                    "url": url_for("hr.dashboard"),
+                    "children": [
+                        {"name": "HR Overview", "url": url_for("hr.dashboard")},
+                        {"name": "Employee Management", "url": url_for("hr.employee_list")},
+                        {"name": "Roster Builder", "url": url_for("hr.roster_builder")},
+                        {"name": "Leave Requests", "url": url_for("hr.leave_queue")},
+                        {"name": "Attendance Review", "url": url_for("hr.attendance_review")},
+                        {"name": "Payroll Export", "url": url_for("hr.payroll_export")},
+                    ]
                 })
         
-        # Add admin-only modules - ALL ACCESS GRANTED
-        admin_module = {
-        "name": "Admin",
-        "url": url_for("admin.roles_list"),
-        "children": [
-        {"name": "Admin Dashboard", "url": url_for("admin.dashboard")},
-        {"name": "Roles & Permissions", "url": url_for("admin.roles_list")},
-        {"name": "🤖 AI Permissions", "url": url_for("admin.ai_permissions")},
-        ]
-        }
-        modules.append(admin_module)
+        # Employee University - show only for admins
+        show_employee_university = is_admin_user
+        if show_employee_university:
+            modules.append({
+                "name": "🎓 Employee University",
+                "url": url_for("university.dashboard"),
+            })
+        
+        # Add admin-only modules - check permission
+        if has_any_permission('view_admin', 'manage_users', 'assign_roles', 'view_all') or (current_user.is_authenticated and current_user.is_admin):
+            admin_module = {
+            "name": "Admin",
+            "url": url_for("admin.roles_list"),
+            "children": [
+            {"name": "Admin Dashboard", "url": url_for("admin.dashboard")},
+            {"name": "Roles & Permissions", "url": url_for("admin.roles_list")},
+            {"name": "🤖 AI Permissions", "url": url_for("admin.ai_permissions")},
+            ]
+            }
+            modules.append(admin_module)
         
         # Add SAS AI Module (always visible if enabled, defaults to True)
         # Check both AI_MODULE_ENABLED and SAS_AI_ENABLED config flags
@@ -585,6 +740,7 @@ def dashboard():
             events=events,
             modules=modules,
             today=today,
+            show_full_dashboard=show_full_dashboard,
             summary={
                 "total_confirmed_quote": total_confirmed_quote,
                 "active_clients": active_clients,
@@ -617,6 +773,7 @@ def dashboard():
             events=[],
             modules=[],
             today=date.today() if 'date' in dir() else None,
+            show_full_dashboard=show_full_dashboard,
             summary={
                 "total_confirmed_quote": Decimal('0.00'),
                 "active_clients": 0,
