@@ -369,11 +369,11 @@ def print_health_banner(validation_result):
     print("="*70)
     
     if validation_result.is_valid:
-        print("✅ Schema Status: VALID")
+        print("[OK] Schema Status: VALID")
     elif validation_result.critical_missing:
-        print("❌ Schema Status: INVALID (Critical columns missing)")
+        print("[ERROR] Schema Status: INVALID (Critical columns missing)")
     else:
-        print("⚠️  Schema Status: PARTIALLY VALID (Non-critical issues)")
+        print("[WARNING] Schema Status: PARTIALLY VALID (Non-critical issues)")
     
     if validation_result.critical_missing:
         print("\n🔴 CRITICAL ISSUES:")
@@ -381,31 +381,31 @@ def print_health_banner(validation_result):
             print(f"   • {table}.{column} - MISSING (CRITICAL)")
     
     if validation_result.non_critical_missing:
-        print("\n🟡 NON-CRITICAL ISSUES:")
+        print("\n[WARNING] NON-CRITICAL ISSUES:")
         for table, column in validation_result.non_critical_missing:
             print(f"   • {table}.{column} - MISSING")
     
     if validation_result.type_mismatches:
-        print("\n🟡 TYPE MISMATCHES:")
+        print("\n[WARNING] TYPE MISMATCHES:")
         for table, column, model_type, db_type in validation_result.type_mismatches:
             print(f"   • {table}.{column} - Model: {model_type}, DB: {db_type}")
     
     if validation_result.failed_fixes:
-        print("\n🔴 FAILED FIXES:")
+        print("\n[ERROR] FAILED FIXES:")
         for table, column, error in validation_result.failed_fixes:
             print(f"   • {table}.{column} - {error}")
     
     if validation_result.critical_missing or validation_result.failed_fixes:
-        print("\n⚠️  ACTION REQUIRED:")
+        print("\n[ACTION REQUIRED]")
         print("   • Run manual migration to fix critical issues")
         print("   • Affected modules may be unavailable")
         print("   • Check logs for detailed error messages")
     elif validation_result.non_critical_missing or validation_result.type_mismatches:
-        print("\n💡 RECOMMENDATION:")
+        print("\n[RECOMMENDATION]")
         print("   • Schema is functional but has minor issues")
         print("   • Consider running manual migration for optimal performance")
     else:
-        print("\n✅ All systems operational")
+        print("\n[OK] All systems operational")
     
     print("="*70 + "\n")
 

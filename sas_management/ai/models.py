@@ -20,6 +20,7 @@ class AIFeature(db.Model):
     Note: `code` is the ONLY identifier (NOT NULL, unique)
     """
     __tablename__ = "ai_features"
+    __table_args__ = {"extend_existing": True}
     
     id = db.Column(db.Integer, primary_key=True)
     code = db.Column(db.String(64), unique=True, nullable=False)  # Single canonical identifier

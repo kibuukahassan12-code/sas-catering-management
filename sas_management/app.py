@@ -86,10 +86,13 @@ def create_app():
         # Set default AI features to enabled
         app.config['AI_FEATURES'] = app.config.get('AI_FEATURES', {})
     
-    # Use DATABASE_URL from environment (Supabase) or fallback to SQLite
-    if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+    # Use DATABASE_URL from environment - Supabase PostgreSQL
+    db_url = os.environ.get('DATABASE_URL', '')
+    if not db_url:
+        # Fallback to SQLite if no DATABASE_URL set
         db_path = os.path.join(app.instance_path, "sas.db")
-        app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", f"sqlite:///{db_path}")
+        db_url = f"sqlite:///{db_path}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 
     # Setup error logging
     # ---------------- SAFE LOGS FOLDER CREATION ----------------
@@ -105,7 +108,8 @@ def create_app():
         os.path.join(logs_path, "error.log"),
         maxBytes=500000,
         backupCount=5,
-        delay=True
+        delay=True,
+        encoding='utf-8'
     )
     handler.setLevel(logging.WARNING)
     app.logger.addHandler(handler)
@@ -400,70 +404,17 @@ def create_app():
                     {"name": "SAS AI", "url": url_for("ai.chat")},
                 ])
             else:
-                # Non-admin users - use permission-based filtering
-                if has_any_permission('view_clients', 'manage_clients', 'view_all'):
-                    modules.append({"name": "Clients CRM", "url": url_for("core.clients_list")})
+                # Non-admin users - check role and show appropriate modules
+                user_role_names = [r.name for r in current_user.roles.all()]
+                user_role_obj_name = current_user.role_obj.name if current_user.role_obj else None
+                all_user_roles = user_role_names + ([user_role_obj_name] if user_role_obj_name else [])
                 
-                if has_any_permission('view_events', 'manage_events', 'event_service.view_events', 'view_all'):
-                    modules.append({
-                        "name": "Events",
-                        "url": url_for("events.events_list"),
-                        "children": [
-                            {"name": "All Events", "url": url_for("events.events_list")},
-                            {"name": "Create Event", "url": url_for("events.event_create")},
-                            {"name": "Venues", "url": url_for("events.venues_list")},
-                            {"name": "Menu Packages", "url": url_for("events.menu_packages_list")},
-                            {"name": "Vendors", "url": url_for("events.vendors_manage")},
-                            {"name": "Floor Planner", "url": url_for("floorplanner.dashboard")},
-                            {"name": "Tasks", "url": url_for("tasks.task_list")},
-                        ]
-                    })
+                # Check if user has specific role
+                def has_role(*role_names):
+                    return any(r in all_user_roles for r in role_names)
                 
-                if has_any_permission('view_hire', 'manage_hire', 'view_all'):
-                    modules.append({
-                        "name": "Hire Department",
-                        "url": url_for("hire.index"),
-                        "children": [
-                            {"name": "Hire Overview", "url": url_for("hire.index")},
-                            {"name": "Hire Inventory", "url": url_for("hire.inventory_list")},
-                            {"name": "Hire Orders", "url": url_for("hire.orders_list")},
-                            {"name": "Equipment Maintenance", "url": url_for("hire.maintenance_list")},
-                        ]
-                    })
-                
-                if has_any_permission('event_service.view_events', 'event_service.create_events', 'event_service.manage_events', 'view_all'):
-                    modules.append({
-                        "name": "Event Service",
-                        "url": url_for("service.dashboard"),
-                        "children": [
-                            {"name": "Services Overview", "url": url_for("service.dashboard")},
-                            {"name": "All Events", "url": url_for("service.events")},
-                            {"name": "Timeline", "url": url_for("event_service.timeline_index")},
-                            {"name": "Documents", "url": url_for("event_service.documents_index")},
-                            {"name": "Checklists", "url": url_for("event_service.service_checklists")},
-                            {"name": "Messages", "url": url_for("event_service.service_messages")},
-                            {"name": "Reports", "url": url_for("event_service.service_reports")},
-                            {"name": "Analytics", "url": url_for("event_service.service_analytics")},
-                        ]
-                    })
-                
-                if has_any_permission('view_production', 'manage_production', 'view_all'):
-                    modules.append({
-                        "name": "Production Department",
-                        "url": url_for("production.index"),
-                        "children": [
-                            {"name": "Production Overview", "url": url_for("production.index")},
-                            {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
-                            {"name": "Catering Menu", "url": url_for("catering.menu_list")},
-                            {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
-                            {"name": "Kitchen Checklist", "url": url_for("production.kitchen_checklist_list")},
-                            {"name": "Delivery QC Checklist", "url": url_for("production.delivery_qc_list")},
-                            {"name": "Food Safety Logs", "url": url_for("production.food_safety_list")},
-                            {"name": "Hygiene Reports", "url": url_for("production.hygiene_reports_list")},
-                        ]
-                    })
-                
-                if has_any_permission('view_accounting', 'manage_accounting', 'view_all'):
+                # Show Accounting modules for ACCOUNTING role
+                if has_role('ACCOUNTING'):
                     modules.append({
                         "name": "Accounting Department",
                         "url": url_for("accounting.dashboard"),
@@ -478,45 +429,18 @@ def create_app():
                         ]
                     })
                 
-                if has_any_permission('view_bakery', 'manage_bakery', 'view_all'):
-                    modules.append({
-                        "name": "Bakery Department",
-                        "url": url_for("bakery.dashboard"),
-                        "children": [
-                            {"name": "Bakery Overview", "url": url_for("bakery.dashboard")},
-                            {"name": "Bakery Menu", "url": url_for("bakery.items_list")},
-                            {"name": "Bakery Orders", "url": url_for("bakery.orders_list")},
-                            {"name": "Production Sheet", "url": url_for("bakery.production_sheet")},
-                            {"name": "Reports", "url": url_for("bakery.reports")},
-                        ]
-                    })
-                
-                if has_any_permission('view_pos', 'manage_pos', 'view_all'):
-                    modules.append({"name": "POS System", "url": url_for("pos.index")})
-                
-                if has_any_permission('view_hr', 'manage_hr', 'view_all'):
-                    modules.append({
-                        "name": "HR Department",
-                        "url": url_for("hr.dashboard"),
-                        "children": [
-                            {"name": "HR Overview", "url": url_for("hr.dashboard")},
-                            {"name": "Employee Management", "url": url_for("hr.employee_list")},
-                            {"name": "Roster Builder", "url": url_for("hr.roster_builder")},
-                            {"name": "Leave Requests", "url": url_for("hr.leave_queue")},
-                            {"name": "Attendance Review", "url": url_for("hr.attendance_review")},
-                            {"name": "Payroll Export", "url": url_for("hr.payroll_export")},
-                        ]
-                    })
-                
-                if has_any_permission('view_crm', 'manage_crm', 'view_all'):
-                    modules.append({"name": "CRM Pipeline", "url": url_for("crm.pipeline")})
-                
-                if has_any_permission('view_dispatch', 'manage_dispatch', 'view_all'):
-                    modules.append({"name": "Dispatch", "url": url_for("dispatch.dashboard")})
+                # These modules are available to all authenticated users
+                modules.append({"name": "Employee University", "url": url_for("university.dashboard")})
+                modules.append({"name": "SAS AI", "url": url_for("ai.chat")})
+                modules.append({"name": "Announcements", "url": url_for("communication.announcements_list")})
         
         return dict(modules=modules, format_millions=format_millions, has_any_permission=has_any_permission)
     
     # TEMPORARILY DISABLED: Template context processor for permissions
+    # @app.context_processor
+    # def inject_permissions():
+    #     from sas_management.utils.permissions import has_permission
+    #     return dict(has_permission=has_permission)
     # @app.context_processor
     # def inject_permissions():
     #     from sas_management.utils.permissions import has_permission
