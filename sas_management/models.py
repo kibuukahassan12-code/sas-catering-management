@@ -236,6 +236,9 @@ class User(UserMixin, db.Model):
     force_password_change = db.Column(db.Boolean, default=False)  # Legacy field, kept for compatibility
     first_login = db.Column(db.Boolean, default=True)
     
+    # Password expiry tracking
+    password_expires_at = db.Column(db.DateTime, nullable=True)  # Temporary password expiry (24 hours)
+    
     # Legacy single role (for backward compatibility)
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
     role_obj = db.relationship("Role", foreign_keys=[role_id], backref="legacy_users", lazy=True)
@@ -270,6 +273,10 @@ class User(UserMixin, db.Model):
     def is_admin(self):
         """Check if user has Admin role - bypasses all permission checks."""
         try:
+            # Safety check - ensure user has valid id
+            if not hasattr(self, 'id') or not self.id:
+                return False
+            
             # Check legacy role enum field first
             if self.role == UserRole.Admin:
                 return True
@@ -278,7 +285,7 @@ class User(UserMixin, db.Model):
                 if self.role_obj.name == 'Admin':
                     return True
             # Check roles relationship
-            if self.roles.count() > 0:
+            if hasattr(self, 'roles') and self.roles:
                 for role in self.roles:
                     if role.name == 'Admin':
                         return True
@@ -290,6 +297,10 @@ class User(UserMixin, db.Model):
     def is_super_admin(self):
         """Check if user is SuperAdmin - bypasses all permission checks."""
         try:
+            # Safety check - ensure user has valid id
+            if not hasattr(self, 'id') or not self.id:
+                return False
+            
             # PRIORITY 1: Grant admin access to first user (system owner)
             # This ensures the first user always has admin access
             if hasattr(self, 'id') and self.id == 1:
@@ -327,11 +338,35 @@ class User(UserMixin, db.Model):
     
     def has_permission(self, code):
         """Check if user has a specific permission. Admin always has full access."""
+        # Safety check - ensure user is authenticated
+        if not hasattr(self, 'id') or not self.id:
+            return False
+        
         # Admin bypass: If user is Admin, grant all permissions
         if self.is_admin:
             return True
-        # ALL PERMISSIONS GRANTED - No restrictions for non-admin users
-        return True
+        
+        # Check if user has a role with this permission
+        try:
+            # Check primary role (role_id)
+            if self.role_id:
+                role = db.session.get(Role, self.role_id)
+                if role:
+                    # Force load permissions
+                    perms = list(role.permissions)
+                    for perm in perms:
+                        if perm.code == code:
+                            return True
+            
+            # Check additional roles
+            for role in self.roles:
+                for perm in role.permissions:
+                    if perm.code == code:
+                        return True
+        except Exception:
+            pass
+        
+        return False
     
     def get_role_name(self):
         """Get the role name for display purposes."""
@@ -348,16 +383,42 @@ class User(UserMixin, db.Model):
         # Admin bypass: If user is Admin, grant all roles
         if self.is_admin:
             return True
-        # ALL ROLES GRANTED - No restrictions for non-admin users
-        return True
+        
+        # Check user's roles
+        try:
+            # Check primary role
+            if self.role_id:
+                role = db.session.get(Role, self.role_id)
+                if role and role.name.lower() == role_name.lower():
+                    return True
+            
+            # Check additional roles
+            for role in self.roles:
+                if role.name.lower() == role_name.lower():
+                    return True
+        except:
+            pass
+        
+        return False
     
-    def set_password(self, password):
+    def set_password(self, password, is_temporary=False):
         """Set password hash."""
         self.password_hash = generate_password_hash(password)
-
+        if is_temporary:
+            from datetime import timedelta
+            self.password_expires_at = datetime.utcnow() + timedelta(hours=24)
+        else:
+            self.password_expires_at = None  # Clear expiry for permanent passwords
+    
     def check_password(self, password):
         """Check password against hash."""
         return check_password_hash(self.password_hash, password)
+    
+    def is_password_expired(self):
+        """Check if temporary password has expired."""
+        if self.password_expires_at is None:
+            return False
+        return datetime.utcnow() > self.password_expires_at
     
     def __repr__(self):
         return f'<User {self.email}>'

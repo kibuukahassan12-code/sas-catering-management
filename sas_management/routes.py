@@ -486,6 +486,11 @@ def dashboard():
                     return True
             return False
         
+        # DEBUG: Log user info
+        import sys
+        print(f"DEBUG: user={current_user.email}, is_admin={is_admin_user}, role_id={current_user.role_id}", file=sys.stderr)
+        print(f"DEBUG: has_permission('accounting.view_accounting')={current_user.has_permission('accounting.view_accounting')}", file=sys.stderr)
+        
         # Dashboard - always available
         modules.append({"name": "Dashboard", "url": url_for("core.dashboard")})
         
@@ -663,6 +668,19 @@ def dashboard():
                         {"name": "Payroll Export", "url": url_for("hr.payroll_export")},
                     ]
                 })
+            
+            # Accounting Department - check permission
+            if has_any_permission('accounting.view_accounting', 'accounting.create_invoice', 'accounting.approve_payments', 'view_all'):
+                accounting_children = [
+                    {"name": "Accounting Overview", "url": url_for("accounting.dashboard")},
+                    {"name": "Receipting System", "url": url_for("accounting.receipts_list")},
+                    {"name": "Quotations", "url": url_for("quotes.list_quotes")},
+                    {"name": "Invoices", "url": url_for("invoices.invoice_list")},
+                    {"name": "Cashbook", "url": url_for("cashbook.index")},
+                    {"name": "Financial Reports", "url": url_for("reports.reports_index")},
+                    {"name": "Payroll Management", "url": url_for("payroll.payroll_list")},
+                ]
+                modules.append({"name": "Accounting Department", "url": url_for("accounting.dashboard"), "children": accounting_children})
         
         # Employee University - show only for admins
         show_employee_university = is_admin_user
