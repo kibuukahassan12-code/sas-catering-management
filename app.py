@@ -14,6 +14,4 @@ from sas_management.app import app
 # Vercel requires the app instance to be named 'app'
 # The app is already imported above
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+# Note: Do NOT call app.run() - Vercel handles serverless execution
