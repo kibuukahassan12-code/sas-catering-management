@@ -9,11 +9,16 @@ logger = logging.getLogger(__name__)
 
 logger.info("Loading SAS Catering Management System...")
 
-from sas_management.app import app
-
-logger.info(f"Flask app loaded successfully. Debug mode: {app.debug}")
-logger.info(f"Template folder: {app.template_folder}")
-logger.info(f"Static folder: {app.static_folder}")
+try:
+    from sas_management.app import app
+    logger.info(f"Flask app loaded successfully. Debug mode: {app.debug}")
+    logger.info(f"Template folder: {app.template_folder}")
+    logger.info(f"Static folder: {app.static_folder}")
+except Exception as e:
+    logger.error(f"Failed to load Flask app: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
