@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+/* Production department: dropdowns transparent (same as Hire/Events) */
+select, select.form-control, select option, option { background: transparent !important; background-color: transparent !important; color: var(--text, #f5f5f5) !important; }
+select:focus, select.form-control:focus, select:focus option { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+select option:hover, select option:checked { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+</style>
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>{{ action }} Daily Use Item</h1>
+        <p class="muted">Maintain Production daily-use inventory for tools and kitchen equipment.</p>
+    </div>
+    <a class="btn-secondary" href="{{ url_for('production.daily_inventory_list') }}">← Back to Daily Use Inventory</a>
+</section>
+
+<section class="panel">
+    <form method="post" class="form-grid">
+        <label class="form-control">
+            <span>Item Name</span>
+            <input type="text" name="name" value="{{ item.name if item else '' }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Category</span>
+            <input type="text" name="category" placeholder="e.g. Tools, Cookware" value="{{ item.category if item else '' }}">
+        </label>
+
+        <label class="form-control">
+            <span>Unit</span>
+            <input type="text" name="unit" placeholder="e.g. pcs, sets" value="{{ item.unit if item else 'pcs' }}">
+        </label>
+
+        <label class="form-control">
+            <span>Quantity</span>
+            <input type="number" name="quantity" min="0" step="1" value="{{ item.quantity if item else 0 }}" required>
+        </label>
+
+        <label class="form-control">
+            <span>Minimum Quantity (Low Stock Threshold)</span>
+            <input type="number" name="min_quantity" min="0" step="1" value="{{ item.min_quantity if item else 0 }}">
+        </label>
+
+        <label class="form-control">
+            <span>Condition</span>
+            <select name="condition">
+                {% set cond = (item.condition if item else 'Good') %}
+                {% for c in ['Excellent','Good','Fair','Needs Repair','Damaged'] %}
+                <option value="{{ c }}" {% if cond == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label class="form-control">
+            <span>Location</span>
+            <input type="text" name="location" placeholder="e.g. Kitchen, Store" value="{{ item.location if item else '' }}">
+        </label>
+
+        <label class="form-control" style="grid-column: 1 / -1;">
+            <span>Notes</span>
+            <textarea name="notes" rows="4" placeholder="Optional notes...">{{ item.notes if item and item.notes else '' }}</textarea>
+        </label>
+
+        <div class="form-actions" style="grid-column: 1 / -1;">
+            <button type="submit" class="btn-primary">{{ action }} Item</button>
+            <a class="btn-ghost" href="{{ url_for('production.daily_inventory_list') }}">Cancel</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+

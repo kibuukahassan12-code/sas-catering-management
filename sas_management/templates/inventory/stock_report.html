@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Inventory · Ingredients</p>
+        <h1>Ingredient Stock Report</h1>
+        <p class="muted">
+            Generated {{ generated_at.strftime('%b %d, %Y %H:%M') if generated_at else '' }}
+            • Low-stock threshold: {{ threshold }}
+        </p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('inventory.ingredients_list') }}">← Back</a>
+        <a class="btn-secondary" href="{{ url_for('inventory.ingredients_stock_report_csv') }}">Export CSV</a>
+        <a class="btn-secondary" href="{{ url_for('inventory.ingredients_stock_report_pdf') }}" target="_blank">Export PDF</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Summary</h3>
+        <span class="badge">{{ (ingredients|length) if ingredients is defined and ingredients else 0 }} items</span>
+    </div>
+    <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+        <article class="summary-card">
+            <p>Total Ingredients</p>
+            <h2>{{ (ingredients|length) if ingredients is defined and ingredients else 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Low Stock Items</p>
+            <h2 class="{% if (low_stock|length) > 0 %}kpi-low-stock--danger{% endif %}">{{ (low_stock|length) if low_stock is defined and low_stock else 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Stock Value</p>
+            <h2 style="text-align:right;">{{ CURRENCY }}{{ "{:,.2f}".format(total_value or 0) }}</h2>
+        </article>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Current Stock Levels</h3>
+        <span class="badge">Live</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Ingredient</th>
+                    <th>Unit</th>
+                    <th style="text-align:right;">Stock</th>
+                    <th style="text-align:right;">Unit Cost</th>
+                    <th style="text-align:right;">Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for i in ingredients %}
+                {% set stock = (i.stock_count or 0) %}
+                {% set cost = (i.unit_cost_ugx or 0) %}
+                <tr>
+                    <td data-label="Ingredient"><strong>{{ i.name }}</strong></td>
+                    <td data-label="Unit">{{ i.unit_of_measure }}</td>
+                    <td data-label="Stock" style="text-align:right;">
+                        <strong class="{% if stock <= threshold %}summary-overdue--danger{% endif %}">{{ "{:,.2f}".format(stock) }}</strong>
+                    </td>
+                    <td data-label="Unit Cost" style="text-align:right;">{{ CURRENCY }}{{ "{:,.2f}".format(cost) }}</td>
+                    <td data-label="Value" style="text-align:right;">{{ CURRENCY }}{{ "{:,.2f}".format(stock * cost) }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="5">No ingredients recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Recent Stock Movements</h3>
+        <span class="badge">{{ (movements|length) if movements is defined and movements else 0 }} recent</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="responsive-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Ingredient</th>
+                    <th>Type</th>
+                    <th style="text-align:right;">Change</th>
+                    <th style="text-align:right;">Result</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in movements %}
+                <tr>
+                    <td data-label="Date" class="muted">{{ m.created_at.strftime('%b %d, %Y %H:%M') if m.created_at else '' }}</td>
+                    <td data-label="Ingredient"><strong>{{ m.ingredient.name if m.ingredient else '' }}</strong></td>
+                    <td data-label="Type"><span class="badge">{{ m.movement_type }}</span></td>
+                    <td data-label="Change" style="text-align:right;">
+                        {% set ch = (m.quantity_change or 0) %}
+                        <strong class="{% if ch < 0 %}summary-overdue--danger{% else %}summary-overdue--ok{% endif %}">{{ "{:,.3f}".format(ch) }}</strong>
+                    </td>
+                    <td data-label="Result" style="text-align:right;"><strong>{{ "{:,.3f}".format(m.resulting_stock or 0) }}</strong></td>
+                    <td data-label="Note" class="muted" style="max-width: 420px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.note or '' }}">{{ m.note or '—' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6">No stock movements recorded yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+/* Production department: dropdowns transparent (same as Hire/Events) */
+select, select option, option { background: transparent !important; background-color: transparent !important; color: var(--text, #f5f5f5) !important; }
+select:focus, select:focus option { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+select option:hover, select option:checked { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+</style>
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Production Department</p>
+    <h1>Event Budget</h1>
+    <p class="muted">
+      {% if budget and budget.event %}
+        {{ budget.event.title or budget.event.event_name or 'Untitled Event' }}
+        {% set evt_date = budget.event.event_date or budget.event.date %}
+        {% if evt_date %}• {{ evt_date.strftime('%b %d, %Y') }}{% endif %}
+      {% else %}
+        Budget #{{ budget.id if budget else 'N/A' }}
+      {% endif %}
+    </p>
+  </div>
+  <div class="quick-links">
+    <a class="btn-secondary" href="{{ url_for('production.budgets_list') }}">← Budgets</a>
+    {% if budget and budget.status and budget.status.value == 'Draft' %}
+      <form method="post" action="{{ url_for('production.budget_submit', budget_id=budget.id) }}" style="margin:0;">
+        <button type="submit" class="btn-primary">Submit to Admin</button>
+      </form>
+    {% endif %}
+    {% if budget and budget.status and budget.status.value == 'Approved' %}
+      <a class="btn-secondary" href="{{ url_for('production.budget_pdf', budget_id=budget.id) }}" target="_blank">📄 Download PDF</a>
+    {% endif %}
+  </div>
+</section>
+
+<!-- Status & Info Cards -->
+<section class="panel">
+  <div class="panel-header">
+    <h3>Budget Information</h3>
+    <span class="badge badge-{{ (budget.status.value if budget and budget.status else 'Draft')|lower|replace(' ', '-') }}">
+      {{ budget.status.value if budget and budget.status else 'Draft' }}
+    </span>
+  </div>
+  
+  {% if budget and budget.event and budget.event.client %}
+  <div style="padding: 1rem; background: rgba(34, 197, 94, 0.1); border-radius: 6px; margin-bottom: 1rem; border-left: 3px solid #22c55e;">
+    <h4 style="color: white; margin-bottom: 0.75rem; font-size: 1rem;">Client Information</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; color: rgba(255,255,255,0.9);">
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Client Name:</strong>
+        <div style="font-weight: 600; margin-top: 0.25rem;">{{ budget.event.client.name }}</div>
+      </div>
+      {% if budget.event.client.company %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Company:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client.company }}</div>
+      </div>
+      {% endif %}
+      {% if budget.event.client.phone %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Phone:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client.phone }}</div>
+      </div>
+      {% endif %}
+      {% if budget.event.client.email %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Email:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client.email }}</div>
+      </div>
+      {% endif %}
+      {% if budget.event.client.contact_person %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Contact Person:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client.contact_person }}</div>
+      </div>
+      {% endif %}
+      {% if budget.event.client.address %}
+      <div style="grid-column: 1 / -1;">
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Address:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client.address }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% elif budget and budget.event and budget.event.client_name %}
+  <div style="padding: 1rem; background: rgba(34, 197, 94, 0.1); border-radius: 6px; margin-bottom: 1rem; border-left: 3px solid #22c55e;">
+    <h4 style="color: white; margin-bottom: 0.75rem; font-size: 1rem;">Client Information</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; color: rgba(255,255,255,0.9);">
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Client Name:</strong>
+        <div style="font-weight: 600; margin-top: 0.25rem;">{{ budget.event.client_name }}</div>
+      </div>
+      {% if budget.event.client_phone %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Phone:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client_phone }}</div>
+      </div>
+      {% endif %}
+      {% if budget.event.client_email %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Email:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client_email }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  
+  {% if budget and budget.status and budget.status.value == 'Draft' and upcoming_events is defined %}
+  <div style="padding: 1rem; background: rgba(242, 104, 34, 0.1); border-radius: 6px; margin-bottom: 1rem;">
+    <form method="POST" action="{{ url_for('production.budget_update_event', budget_id=budget.id) }}" style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+      <label style="font-weight: 600; color: white;">Attach to Event:</label>
+      <select name="event_id" style="flex: 1; min-width: 250px; padding: 0.5rem; border-radius: 4px; background: transparent !important; color: white; border: 1px solid rgba(255,255,255,0.2);">
+        <option value="">No Event (Standalone Budget)</option>
+        {% for event in upcoming_events %}
+          <option value="{{ event.id }}" {% if budget.event_id == event.id %}selected{% endif %}>
+            {{ event.title or event.event_name or 'Untitled' }}{% if event.event_date or event.date %} - {{ (event.event_date or event.date).strftime('%b %d, %Y') }}{% endif %}
+          </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn-primary btn-sm">Update Event</button>
+    </form>
+  </div>
+  {% endif %}
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+    <article class="summary-card">
+      <p>Submitted</p>
+      <h3 style="text-align:right;">{{ budget.submitted_at.strftime('%b %d, %Y') if budget and budget.submitted_at else '—' }}</h3>
+    </article>
+    <article class="summary-card">
+      <p>Reviewed</p>
+      <h3 style="text-align:right;">{{ budget.reviewed_at.strftime('%b %d, %Y') if budget and budget.reviewed_at else '—' }}</h3>
+    </article>
+    <article class="summary-card">
+      <p>Total Items</p>
+      <h3 style="text-align:right;" id="info-total-items">{{ (budget_items|length) if budget_items else 0 }}</h3>
+    </article>
+  </div>
+</section>
+
+<!-- BUDGET SUMMARY - Categories with Totals -->
+<section class="panel" id="budget-summary-panel">
+  <div class="panel-header">
+    <h3>📊 Budget Summary</h3>
+    <span class="muted">Categories & Totals</span>
+  </div>
+  
+  <div class="budget-summary-table">
+    <table class="responsive-table" id="category-summary-table">
+      <thead>
+        <tr style="background: linear-gradient(135deg, #F26822 0%, #e55a1b 100%);">
+          <th style="color: white; font-weight: 600;">Category</th>
+          <th style="color: white; font-weight: 600; text-align: right; width: 180px;">Amount (UGX)</th>
+          <th style="color: white; font-weight: 600; text-align: center; width: 120px;">Breakdown</th>
+        </tr>
+      </thead>
+      <tbody id="budget-categories-body">
+        <!-- Rendered by JavaScript -->
+      </tbody>
+      <tfoot>
+        <tr class="grand-total-row">
+          <td><strong style="font-size: 1.1em;">GRAND TOTAL</strong></td>
+          <td style="text-align: right;">
+            <strong class="grand-total-amount">{{ CURRENCY }}{{ "{:,.0f}".format(budget.total_cost_ugx|default(0, true)) }}</strong>
+          </td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<!-- BREAKDOWN MODAL/SECTION (Hidden by default) -->
+<section class="panel" id="breakdown-panel" style="display: none;">
+  <div class="panel-header">
+    <h3 id="breakdown-title">📋 Category Breakdown</h3>
+    <button type="button" class="btn-secondary btn-sm" onclick="hideBreakdown()">✕ Close</button>
+  </div>
+  <div class="table-wrapper">
+    <table class="responsive-table" id="breakdown-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;">#</th>
+          <th>Description</th>
+          <th style="text-align: right; width: 80px;">Qty</th>
+          <th style="text-align: right; width: 130px;">Unit Cost</th>
+          <th style="text-align: right; width: 140px;">Total</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody id="breakdown-body">
+        <!-- Filled by JavaScript -->
+      </tbody>
+      <tfoot>
+        <tr style="background-color: #fff3ed;">
+          <td colspan="4" style="text-align: right;"><strong>Category Total:</strong></td>
+          <td style="text-align: right;"><strong id="breakdown-total" style="color: #F26822;">UGX 0</strong></td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<style>
+/* Budget Summary Styles */
+.budget-summary-table {
+  margin-top: 0.5rem;
+}
+
+.budget-summary-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.budget-summary-table th,
+.budget-summary-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.budget-summary-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.budget-summary-table tbody tr:hover {
+  background-color: #fff8f5;
+}
+
+.category-name {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.category-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #F26822 0%, #e55a1b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.9rem;
+}
+
+.category-label {
+  font-weight: 500;
+  color: #333;
+}
+
+.category-count {
+  font-size: 0.8em;
+  color: #888;
+  margin-left: 0.5rem;
+}
+
+.category-amount {
+  font-weight: 600;
+  font-size: 1.05em;
+  color: #333;
+}
+
+.btn-view-breakdown {
+  background: linear-gradient(135deg, #F26822 0%, #e55a1b 100%);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.btn-view-breakdown:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(242, 104, 34, 0.3);
+}
+
+.grand-total-row {
+  background: linear-gradient(135deg, #2c3e50 0%, #1a252f 100%);
+}
+
+.grand-total-row td {
+  padding: 1rem;
+  border: none;
+}
+
+.grand-total-row td:first-child strong {
+  color: white;
+}
+
+.grand-total-amount {
+  font-size: 1.4em;
+  color: #F26822;
+  background: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+}
+
+/* Breakdown Panel Styles */
+#breakdown-panel {
+  border: 2px solid #F26822;
+  border-radius: 8px;
+}
+
+#breakdown-panel .panel-header {
+  background: linear-gradient(135deg, #fff8f5 0%, #fff 100%);
+  border-bottom: 1px solid #F26822;
+}
+
+#breakdown-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+#breakdown-table td {
+  font-size: 0.92em;
+}
+
+.item-notes {
+  color: #888;
+  font-size: 0.85em;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Badge Styles */
+.badge-draft { background-color: #6c757d; color: white; }
+.badge-submitted { background-color: #F26822; color: white; }
+.badge-approved { background-color: #28a745; color: white; }
+.badge-rejected { background-color: #dc3545; color: white; }
+</style>
+
+<script>
+// Budget items data from server
+const budgetItems = [
+  {% if budget_items %}
+  {% for it in budget_items %}
+  {
+    "category": "{{ (it.category or 'Other')|e }}",
+    "description": "{{ (it.description or '')|e }}",
+    "quantity": {{ it.quantity|default(0, true) }},
+    "unit_cost": {{ it.unit_cost_ugx|default(0, true) }},
+    "total_cost": {{ it.total_cost_ugx|default(0, true) }},
+    "notes": "{{ (it.notes or '')|e }}"
+  }{% if not loop.last %},{% endif %}
+  {% endfor %}
+  {% endif %}
+];
+
+const CURRENCY = "{{ CURRENCY }}";
+
+// Category icons mapping
+const categoryIcons = {
+  'Food Items': '🍚',
+  'Sauces': '🫙',
+  'Market Accessories': '🛒',
+  'Spices': '🌶️',
+  'Fruits': '🍎',
+  'Tea & Beverages': '☕',
+  'Transport': '🚛',
+  'Hire': '🏷️',
+  'Production Labour': '👨‍🍳',
+  'Service Labour': '🤵',
+  'Other': '📦'
+};
+
+// Group items by category
+function groupByCategory(items) {
+  const groups = {};
+  items.forEach(item => {
+    const cat = item.category || 'Other';
+    if (!groups[cat]) {
+      groups[cat] = { items: [], total: 0 };
+    }
+    groups[cat].items.push(item);
+    groups[cat].total += parseFloat(item.total_cost) || 0;
+  });
+  return groups;
+}
+
+// Format money
+function formatMoney(amount) {
+  return CURRENCY + parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
+function formatMoneyDecimal(amount) {
+  return CURRENCY + parseFloat(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Render category summary table
+function renderCategorySummary() {
+  const tbody = document.getElementById('budget-categories-body');
+  const groups = groupByCategory(budgetItems);
+  let html = '';
+  
+  // Category order
+  const categoryOrder = [
+    'Food Items', 'Sauces', 'Market Accessories', 'Spices', 'Fruits',
+    'Tea & Beverages', 'Transport', 'Hire', 'Production Labour', 'Service Labour', 'Other'
+  ];
+  
+  // Sort categories
+  const sortedCategories = Object.keys(groups).sort((a, b) => {
+    const aIdx = categoryOrder.indexOf(a);
+    const bIdx = categoryOrder.indexOf(b);
+    if (aIdx === -1 && bIdx === -1) return a.localeCompare(b);
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  });
+  
+  sortedCategories.forEach((catName, index) => {
+    const group = groups[catName];
+    const icon = categoryIcons[catName] || '📦';
+    const catSlug = catName.replace(/\s+/g, '-').replace(/&/g, 'and').toLowerCase();
+    
+    html += `
+      <tr>
+        <td>
+          <div class="category-name">
+            <span class="category-icon">${icon}</span>
+            <span>
+              <span class="category-label">${catName}</span>
+              <span class="category-count">(${group.items.length} items)</span>
+            </span>
+          </div>
+        </td>
+        <td style="text-align: right;">
+          <span class="category-amount">${formatMoney(group.total)}</span>
+        </td>
+        <td style="text-align: center;">
+          <button type="button" class="btn-view-breakdown" onclick="showBreakdown('${catName}')">
+            👁️ View
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+  
+  if (sortedCategories.length === 0) {
+    html = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: #888;">No budget items added yet.</td></tr>';
+  }
+  
+  tbody.innerHTML = html;
+}
+
+// Show breakdown for a category
+function showBreakdown(categoryName) {
+  const groups = groupByCategory(budgetItems);
+  const group = groups[categoryName];
+  
+  if (!group) return;
+  
+  const icon = categoryIcons[categoryName] || '📦';
+  document.getElementById('breakdown-title').innerHTML = `${icon} ${categoryName} - Detailed Breakdown`;
+  
+  let html = '';
+  group.items.forEach((item, index) => {
+    html += `
+      <tr>
+        <td style="text-align: center; color: #888;">${index + 1}</td>
+        <td><strong>${item.description}</strong></td>
+        <td style="text-align: right;">${parseFloat(item.quantity).toLocaleString()}</td>
+        <td style="text-align: right;">${formatMoney(item.unit_cost)}</td>
+        <td style="text-align: right;"><strong>${formatMoney(item.total_cost)}</strong></td>
+        <td><span class="item-notes" title="${item.notes || ''}">${item.notes || '—'}</span></td>
+      </tr>
+    `;
+  });
+  
+  document.getElementById('breakdown-body').innerHTML = html;
+  document.getElementById('breakdown-total').textContent = formatMoney(group.total);
+  document.getElementById('breakdown-panel').style.display = 'block';
+  
+  // Scroll to breakdown panel
+  document.getElementById('breakdown-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Hide breakdown
+function hideBreakdown() {
+  document.getElementById('breakdown-panel').style.display = 'none';
+  document.getElementById('budget-summary-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', renderCategorySummary);
+</script>
+
+{% if budget and budget.admin_recommendations %}
+<section class="panel">
+  <div class="panel-header">
+    <h3>📝 Admin Recommendations</h3>
+  </div>
+  <div style="white-space: pre-wrap; line-height: 1.6; padding: 0.5rem; background: #f8f9fa; border-radius: 6px;">{{ budget.admin_recommendations }}</div>
+</section>
+{% endif %}
+
+{% set is_admin = false %}
+{% if current_user is defined and current_user %}
+  {% if current_user.role == 'Admin' %}
+    {% set is_admin = true %}
+  {% elif current_user.role is defined and current_user.role and current_user.role.value == 'Admin' %}
+    {% set is_admin = true %}
+  {% elif current_user.is_admin is defined and current_user.is_admin %}
+    {% set is_admin = true %}
+  {% elif current_user.is_super_admin is defined and current_user.is_super_admin() %}
+    {% set is_admin = true %}
+  {% endif %}
+{% endif %}
+
+{% if is_admin and budget and budget.status and budget.status.value == 'Submitted' %}
+<section class="panel" style="border: 2px solid #F26822;">
+  <div class="panel-header" style="background: linear-gradient(135deg, #fff8f5 0%, #fff 100%);">
+    <h3>⚖️ Admin Review</h3>
+    <span class="badge badge-submitted">Pending Decision</span>
+  </div>
+  <form method="post" action="{{ url_for('production.budget_review', budget_id=budget.id) }}">
+    <label class="form-control" style="display:block;">
+      <span>Recommendations / Notes to Production</span>
+      <textarea name="admin_recommendations" rows="5" placeholder="Add recommendations, adjustments, cost-saving suggestions..." style="width:100%;">{{ budget.admin_recommendations or '' }}</textarea>
+    </label>
+    <div class="form-actions" style="margin-top: 1rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <button class="btn-primary" type="submit" name="action" value="approve" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); padding: 0.75rem 1.5rem;">
+        ✓ Approve Budget
+      </button>
+      <button class="btn-danger" type="submit" name="action" value="reject" style="padding: 0.75rem 1.5rem;">
+        ✗ Reject Budget
+      </button>
+    </div>
+  </form>
+</section>
+{% elif is_admin and budget and budget.status and budget.status.value in ['Approved', 'Rejected'] %}
+<section class="panel">
+  <div class="panel-header">
+    <h3>Review Status</h3>
+    <span class="badge badge-{{ budget.status.value|lower }}">{{ budget.status.value }}</span>
+  </div>
+  <p class="muted">This budget has been {{ budget.status.value|lower }} by admin{% if budget.reviewed_at %} on {{ budget.reviewed_at.strftime('%b %d, %Y at %H:%M') }}{% endif %}.</p>
+</section>
+{% endif %}
+{% endblock %}

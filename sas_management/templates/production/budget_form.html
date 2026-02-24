@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+/* Production department: dropdowns transparent (same as Hire/Events) */
+select, select.form-control, select.category-select, select option, option { background: transparent !important; background-color: transparent !important; color: var(--text, #f5f5f5) !important; }
+select:focus, select.form-control:focus, select:focus option { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+select option:hover, select option:checked { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+</style>
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Production Department</p>
+    <h1>Create Event Budget</h1>
+    <p class="muted">Add budget items: Food Items, Sauces, Market Accessories, Spices, Fruits, Tea & Beverages, Transport, Hire, Production Labour, Service Labour.</p>
+  </div>
+  <div class="quick-links">
+    <a class="btn-secondary" href="{{ url_for('production.budgets_list') }}">← Budgets</a>
+  </div>
+</section>
+
+<section class="panel">
+  <form method="post">
+    <div class="form-grid">
+      <label class="form-control" style="grid-column: 1 / -1;">
+        <span>Event *</span>
+        <select name="event_id" required>
+          <option value="">Select an event</option>
+          {% for e in events %}
+            {% set d = (e.event_date or e.date) %}
+            <option value="{{ e.id }}" {% if event and e.id == event.id %}selected{% endif %}>
+              {{ e.title or e.event_name or 'Untitled' }}{% if d %} — {{ d.strftime('%b %d, %Y') }}{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+
+    <div class="panel" style="margin-top: 1rem;">
+      <div class="panel-header">
+        <h3>Budget Items</h3>
+        <button type="button" class="btn-secondary btn-sm" onclick="addBudgetRow()">+ Add Item</button>
+      </div>
+
+      <div class="table-wrapper">
+        <table class="responsive-table" id="budget-items-table">
+          <thead>
+            <tr>
+              <th style="width: 180px;">Category</th>
+              <th>Description</th>
+              <th style="width: 110px; text-align:right;">Qty</th>
+              <th style="width: 160px; text-align:right;">Unit Cost (UGX)</th>
+              <th style="width: 220px;">Notes</th>
+              <th style="width: 90px;"></th>
+            </tr>
+          </thead>
+          <tbody id="budget-items-body">
+            <tr class="budget-row">
+              <td>
+                <div style="position: relative;">
+                  <select name="category[]" class="category-select" required onchange="handleCategoryChange(this)" title="Select a category to see available items">
+                    {% for c in categories %}
+                      <option value="{{ c.value }}">{{ c.value }}</option>
+                    {% endfor %}
+                  </select>
+                  <div class="category-items-dropdown" style="display: none;">
+                    <div class="dropdown-items"></div>
+                  </div>
+                </div>
+              </td>
+              <td><input type="text" name="description[]" class="description-input" placeholder="e.g., Rice, Cooking Oil, Tomatoes, Pepper, Mangoes, Tea bags, Fuel, Chafing dishes, Chef..." required></td>
+              <td><input type="number" step="0.01" min="0" name="quantity[]" value="1" style="text-align:right;"></td>
+              <td><input type="number" step="0.01" min="0" name="unit_cost_ugx[]" value="0" style="text-align:right;"></td>
+              <td><input type="text" name="notes[]" placeholder="Optional"></td>
+              <td style="text-align:right;">
+                <button type="button" class="btn-danger btn-sm" onclick="removeBudgetRow(this)">Remove</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-actions" style="margin-top: 1rem;">
+      <button type="submit" class="btn-primary">Create Draft Budget</button>
+      <a class="btn-ghost" href="{{ url_for('production.budgets_list') }}">Cancel</a>
+    </div>
+  </form>
+</section>
+
+<style>
+.category-items-dropdown {
+  position: absolute;
+  background: #1a1a1a !important;
+  border: 2px solid #f26822 !important;
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 350px;
+  overflow-y: auto;
+  z-index: 10000 !important;
+  box-shadow: 0 8px 24px rgba(242, 104, 34, 0.4), 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+  min-width: 280px;
+  max-width: 400px;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-items {
+  padding: 0.25rem 0;
+  background: #1a1a1a;
+}
+
+.dropdown-item {
+  padding: 0.875rem 1.25rem;
+  cursor: pointer;
+  color: white !important;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+}
+
+.dropdown-item:first-child {
+  border-top: none;
+}
+
+.dropdown-item:hover {
+  background: rgba(242, 104, 34, 0.3) !important;
+  color: white !important;
+  padding-left: 1.5rem;
+  border-left: 3px solid #f26822;
+}
+
+.dropdown-item:active {
+  background: rgba(242, 104, 34, 0.4) !important;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+/* Scrollbar styling for dropdown */
+.category-items-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.category-items-dropdown::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.category-items-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(242, 104, 34, 0.5);
+  border-radius: 4px;
+}
+
+.category-items-dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(242, 104, 34, 0.7);
+}
+
+.category-select-wrapper {
+  position: relative;
+}
+
+td:first-child {
+  position: relative;
+}
+
+/* Make category select more visible when dropdown is active */
+.category-select:focus {
+  border-color: #f26822 !important;
+  box-shadow: 0 0 0 3px rgba(242, 104, 34, 0.2) !important;
+  outline: none;
+}
+
+/* Style the select element to be more visible */
+.category-select {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  padding: 0.5rem 2rem 0.5rem 0.75rem !important;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.category-select:hover {
+  border-color: rgba(242, 104, 34, 0.5) !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Add a visual indicator arrow */
+td:first-child > div {
+  position: relative;
+}
+
+td:first-child > div::after {
+  content: '▼';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #f26822;
+  font-size: 0.75rem;
+  z-index: 1;
+}
+
+/* Ensure all form inputs have white text */
+.description-input,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+textarea,
+select {
+  color: white !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(255,255,255,0.5) !important;
+}
+
+select option {
+  color: white !important;
+  background: var(--surface) !important;
+}
+
+/* Ensure table text is white */
+#budget-items-table th,
+#budget-items-table td {
+  color: white !important;
+}
+
+#budget-items-table input,
+#budget-items-table select {
+  color: white !important;
+  background: transparent !important;
+}
+</style>
+
+<script>
+// Category items data
+const categoryItems = {
+  "Food Items": [
+    "MATOOKE",
+    "MAOOKE",
+    "RICE",
+    "IRISH",
+    "PLANTAIN",
+    "PLAINTAIN",
+    "PUMPKIN",
+    "PUMKIN",
+    "CHAPATTIS",
+    "SUPAGHETTI",
+    "SPAGHETTI",
+    "PASTAS",
+    "WHEAT FLOUR",
+    "MAIZE FLOUR",
+    "Beans",
+    "Maize",
+    "Sugar",
+    "Salt",
+    "Cooking Oil",
+    "Butter",
+    "Margarine",
+    "Potatoes",
+    "Sweet Potatoes",
+    "Cassava",
+    "Yams",
+    "YAMS",
+    "Chicken Breast",
+    "Beef",
+    "Mixed Vegetables",
+    "Flour",
+    "Rice & Beans",
+    "Matoke",
+    "Chicken Stew",
+    "Beef Stew",
+    "Fish & Chips",
+    "Vegetable Plate",
+    "French Fries",
+    "Vegetable Salad",
+    "Coleslaw",
+    "Grilled Chicken Breast",
+    "Beef Steak",
+    "Fish Fillet",
+    "Vegetarian Pasta",
+    "Samosa",
+    "Mandazi",
+    "Roasted Peanuts",
+    "Chips",
+    "Bread (White)",
+    "Bread (Brown)",
+    "Doughnut",
+    "Cookie",
+    "Muffin"
+  ],
+  "Sauces": [
+    "Tomato Sauce",
+    "Soy Sauce",
+    "Worcestershire Sauce",
+    "Hot Sauce",
+    "BBQ Sauce",
+    "Mayonnaise",
+    "Ketchup",
+    "Chili Sauce",
+    "Mustard",
+    "Vinegar",
+    "Lemon Juice",
+    "Tartar Sauce",
+    "Horseradish Sauce",
+    "BEEF",
+    "GOATS MEAT",
+    "LOCAL CHICKEN",
+    "MUKKO CHICKEN",
+    "BROILER CHICKEN"
+  ],
+  "Market Accessories": [
+    "TOMATOES",
+    "ONIONS",
+    "CARROTS",
+    "GREEN PEPPER",
+    "GARLIC",
+    "BELL PEPPER",
+    "GREENS",
+    "GINGER",
+    "CABBAGE",
+    "CUCUMBER",
+    "OVACCADO",
+    "COATMEAL",
+    "CELERY",
+    "LETTUCE",
+    "PASLERY",
+    "SPRING ONIONS",
+    "CINAMON STICKS",
+    "BAY LEAVES",
+    "JERA SEEDS",
+    "GREEN CHILLI",
+    "PEAS",
+    "SMOCKED LEAVES",
+    "BANANA LEAVES",
+    "BANANA FIBRES",
+    "CHARCOAL",
+    "FIREWOOD",
+    "SPIRIT",
+    "MILK",
+    "CLING FILM",
+    "FOIL PAPER",
+    "COTTON",
+    "SERVIETTES",
+    "GLOVES",
+    "TOOTH PICKS",
+    "HAIR NETS",
+    "HAND WASH",
+    "WIPPERS",
+    "DISPOSABLE PLATES",
+    "DISPOSABLE FORKS",
+    "BELL PEPPERS",
+    "GREEN OLIVES",
+    "SHERRY TOMATOES",
+    "MAYONNAISE",
+    "VINEGAR",
+    "BLACK OLIVES"
+  ],
+  "Spices": [
+    "Black Pepper",
+    "White Pepper",
+    "Cumin",
+    "Coriander",
+    "Turmeric",
+    "Paprika",
+    "Curry Powder",
+    "Garam Masala",
+    "Cardamom",
+    "Cloves",
+    "Nutmeg",
+    "Cinnamon",
+    "CINAMON STICKS",
+    "BAY LEAVES",
+    "JERA SEEDS",
+    "GREEN CHILLI",
+    "Ginger",
+    "GINGER",
+    "Garlic",
+    "GARLIC",
+    "Star Anise",
+    "Fennel Seeds",
+    "Mustard Seeds",
+    "Fenugreek",
+    "Asafoetida",
+    "ROYCO",
+    "OYO",
+    "SIMBA MBILI",
+    "TOMATO PASTE",
+    "DARK SOYI",
+    "LIGHT SOYI",
+    "CORNSTARCH",
+    "TOMATO SAUCE",
+    "BBQ SAUCE",
+    "MAYONNAISE",
+    "VINEGAR",
+    "PILAO MASALA",
+    "CHICKEN MASALA",
+    "BEEF MASALA",
+    "PAPRIKA",
+    "TURMERIC",
+    "CORRIADER",
+    "BLACK OLIVES",
+    "GREN OLIVES"
+  ],
+  "Fruits": [
+    "Mangoes",
+    "Bananas",
+    "Oranges",
+    "Apples",
+    "Pineapples",
+    "Watermelons",
+    "Avocados",
+    "OVACCADO",
+    "Lemons",
+    "Limes",
+    "Passion Fruit",
+    "Pawpaw",
+    "Guavas",
+    "Grapes",
+    "Strawberries",
+    "Fruit Salad",
+    "Ice Cream (Scoop)",
+    "Cake Slice"
+  ],
+  "Tea & Beverages": [
+    "Tea Bags",
+    "Coffee",
+    "Coffee (Regular)",
+    "Coffee (Cappuccino)",
+    "Tea (Black)",
+    "Sugar",
+    "Milk",
+    "MILK",
+    "Juice",
+    "Fresh Juice",
+    "Soft Drinks",
+    "Water",
+    "Bottled Water",
+    "Energy Drinks",
+    "Hot Chocolate",
+    "Cocoa",
+    "Honey",
+    "Lemon",
+    "Mint Leaves",
+    "Ginger Tea",
+    "Herbal Tea",
+    "SUGAR",
+    "OMUJJAJA",
+    "KISUBI",
+    "G.NUTS",
+    "COOKIES",
+    "GAS"
+  ],
+  "Transport": [
+    "Fuel",
+    "Vehicle Hire",
+    "Driver Allowance",
+    "Parking Fees",
+    "Toll Fees",
+    "Loading/Unloading",
+    "Vehicle Maintenance",
+    "Insurance",
+    "Permits"
+  ],
+  "Hire": [
+    "Chafing Dishes",
+    "Tables",
+    "Chairs",
+    "Tents",
+    "Sound System",
+    "Lighting",
+    "Generator",
+    "Cooking Equipment",
+    "Serving Trays",
+    "Table Linens",
+    "Dinnerware",
+    "Cutlery",
+    "Glassware",
+    "Coolers",
+    "Refrigerators",
+    "Stoves",
+    "Ovens",
+    "Grills",
+    "Dishwashers",
+    "Equipment",
+    "Staff",
+    "Deliverables"
+  ],
+  "Production Labour": [
+    "Chef",
+    "Sous Chef",
+    "Cook",
+    "Kitchen Assistant",
+    "Prep Cook",
+    "Dishwasher",
+    "Head Chef",
+    "Pastry Chef",
+    "Grill Cook",
+    "Salad Chef",
+    "Butcher",
+    "Baker",
+    "OVERALL SUPERVISOR",
+    "HAJJATI - RICE, BEEF STEW, PAN FRIED GOAT, PAN FRIED CHICKEN",
+    "MUM JANAT - MATOOKE, G.NUTS, KIVAAVA",
+    "INNOCENT - SALADS, FRUITS, PLANTAIN, IRISH",
+    "ALI - SMOCKING BEEF, PARATHA (PAROTA)",
+    "DALAUSI - HELPER (MANUAL ASSISTANCE)"
+  ],
+  "Service Labour": [
+    "Waiter",
+    "Waitress",
+    "Server",
+    "Bartender",
+    "Host",
+    "Event Coordinator",
+    "Head Waiter",
+    "Busboy",
+    "Barista",
+    "Sommelier",
+    "Security",
+    "Cleaner"
+  ]
+};
+
+function handleCategoryChange(selectElement) {
+  const row = selectElement.closest('tr');
+  const dropdown = row.querySelector('.category-items-dropdown');
+  const itemsContainer = row.querySelector('.dropdown-items');
+  const category = selectElement.value;
+  
+  // Hide all dropdowns first
+  document.querySelectorAll('.category-items-dropdown').forEach(dd => {
+    dd.style.display = 'none';
+  });
+  
+  // Show dropdown for this category if it has items
+  if (categoryItems[category] && categoryItems[category].length > 0) {
+    itemsContainer.innerHTML = '';
+    categoryItems[category].forEach(item => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'dropdown-item';
+      itemDiv.textContent = item;
+      itemDiv.style.color = 'white';
+      itemDiv.style.setProperty('color', 'white', 'important');
+      itemDiv.onclick = function() {
+        addItemToDescription(row, item);
+        dropdown.style.display = 'none';
+      };
+      itemsContainer.appendChild(itemDiv);
+    });
+    dropdown.style.display = 'block';
+  } else {
+    dropdown.style.display = 'none';
+  }
+}
+
+function addItemToDescription(row, item) {
+  const descriptionInput = row.querySelector('.description-input');
+  const currentValue = descriptionInput.value.trim();
+  
+  if (currentValue) {
+    // Add comma and space if there's already content
+    descriptionInput.value = currentValue + ', ' + item;
+  } else {
+    descriptionInput.value = item;
+  }
+  
+  // Trigger input event for any validation
+  descriptionInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function addBudgetRow() {
+  const body = document.getElementById('budget-items-body');
+  const row = document.createElement('tr');
+  row.className = 'budget-row';
+  row.innerHTML = `
+    <td>
+      <div style="position: relative;">
+        <select name="category[]" class="category-select" required onchange="handleCategoryChange(this)" title="Select a category to see available items">
+          {% for c in categories %}
+            <option value="{{ c.value }}">{{ c.value }}</option>
+          {% endfor %}
+        </select>
+        <div class="category-items-dropdown" style="display: none;">
+          <div class="dropdown-header">📋 Select Item to Add</div>
+          <div class="dropdown-items"></div>
+        </div>
+      </div>
+    </td>
+    <td><input type="text" name="description[]" class="description-input" placeholder="Description" required></td>
+    <td><input type="number" step="0.01" min="0" name="quantity[]" value="1" style="text-align:right;"></td>
+    <td><input type="number" step="0.01" min="0" name="unit_cost_ugx[]" value="0" style="text-align:right;"></td>
+    <td><input type="text" name="notes[]" placeholder="Optional"></td>
+    <td style="text-align:right;"><button type="button" class="btn-danger btn-sm" onclick="removeBudgetRow(this)">Remove</button></td>
+  `;
+  body.appendChild(row);
+}
+
+function removeBudgetRow(btn) {
+  const row = btn.closest('tr');
+  if (!row) return;
+  const body = document.getElementById('budget-items-body');
+  if (body.children.length <= 1) return; // keep at least one row
+  row.remove();
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.category-select') && !e.target.closest('.category-items-dropdown')) {
+    document.querySelectorAll('.category-items-dropdown').forEach(dd => {
+      dd.style.display = 'none';
+    });
+  }
+});
+</script>
+{% endblock %}
+

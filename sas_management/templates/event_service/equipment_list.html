@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 24px;">
+    <!-- Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <p class="eyebrow">SAS Event Service</p>
+            <h1>Prepare Equipment List</h1>
+            <p class="muted">{{ event.title }} - {{ event.date.strftime('%B %d, %Y') if event.date else (event.event_date.strftime('%B %d, %Y') if event.event_date else 'Date TBD') }}</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+            <a href="{{ url_for('event_service.event_view', event_id=event.id) }}" class="btn-secondary">← Back to Event</a>
+            {% if equipment_list and equipment_list.items %}
+            <a href="{{ url_for('event_service.equipment_list_pdf', event_id=event.id) }}" class="btn-download-pdf">
+                📄 Download Equipment List (PDF)
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Event Summary -->
+    <div class="panel" style="margin-bottom: 1.5rem;">
+        <div class="panel-header">
+            <h3>Event Details</h3>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div>
+                <strong>Venue:</strong>
+                <p>{{ event.venue_obj.name if event.venue_obj else (event.venue or 'TBD') }}</p>
+            </div>
+            <div>
+                <strong>Guest Count:</strong>
+                <p>{{ event.guest_count or 'TBD' }}</p>
+            </div>
+            <div>
+                <strong>Client:</strong>
+                <p>{{ event.client.name if event.client else 'N/A' }}</p>
+            </div>
+            <div>
+                <strong>Event Type:</strong>
+                <p>{{ event.event_type or 'General' }}</p>
+            </div>
+        </div>
+    </div>
+
+    {% if not equipment_list %}
+    <!-- Create Equipment List -->
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Create Equipment List</h3>
+        </div>
+        <p class="muted" style="margin-bottom: 1rem;">No equipment list exists for this event yet. Create one to start adding catering equipment.</p>
+        <form method="post" action="{{ url_for('event_service.equipment_list_create', event_id=event.id) }}">
+            <div class="form-grid" style="max-width: 600px;">
+                <label class="form-control">
+                    <span>List Title</span>
+                    <input type="text" name="title" value="Equipment List - {{ event.title }}" required>
+                </label>
+                <label class="form-control">
+                    <span>Notes (optional)</span>
+                    <textarea name="notes" rows="3" placeholder="Any special notes about this equipment list..."></textarea>
+                </label>
+                <div>
+                    <button type="submit" class="btn-primary">Create Equipment List</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% else %}
+    <!-- Equipment List Status Bar -->
+    <div class="panel" style="margin-bottom: 1.5rem; border-left: 4px solid {% if equipment_list.status.value == 'Draft' %}#ffc107{% elif equipment_list.status.value == 'Submitted' %}#17a2b8{% elif equipment_list.status.value == 'Approved' %}#F26822{% else %}#dc3545{% endif %};">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h3 style="margin: 0;">{{ equipment_list.title or 'Equipment List' }}</h3>
+                <p class="muted" style="margin: 0.25rem 0 0 0;">
+                    Created by {{ equipment_list.creator.email if equipment_list.creator else 'Unknown' }} on {{ equipment_list.created_at.strftime('%Y-%m-%d') }}
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <span class="badge" style="background: {% if equipment_list.status.value == 'Draft' %}#ffc107; color: #000;{% elif equipment_list.status.value == 'Submitted' %}#17a2b8;{% elif equipment_list.status.value == 'Approved' %}#F26822;{% else %}#dc3545;{% endif %}">
+                    {{ equipment_list.status.value }}
+                </span>
+                {% if equipment_list.status.value == 'Draft' and equipment_list.items %}
+                <form method="post" action="{{ url_for('event_service.equipment_list_submit', event_id=event.id) }}" style="margin: 0;">
+                    <button type="submit" class="btn-primary btn-sm" onclick="return confirm('Submit this equipment list for approval?');">
+                        Submit List
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% if equipment_list.notes %}
+        <p style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #dee2e6;">
+            <strong>Notes:</strong> {{ equipment_list.notes }}
+        </p>
+        {% endif %}
+    </div>
+
+    <!-- Add Item Form -->
+    {% if equipment_list.status.value == 'Draft' %}
+    <div class="panel" style="margin-bottom: 1.5rem;">
+        <div class="panel-header">
+            <h3>Add Equipment Item</h3>
+        </div>
+        <form method="post" action="{{ url_for('event_service.equipment_list_add_item', event_id=event.id) }}">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; align-items: end;">
+                <!-- Select from Inventory -->
+                <label class="form-control">
+                    <span>Select from Inventory</span>
+                    <select name="inventory_item_id" id="inventory_item_select">
+                        <option value="">-- Select Item --</option>
+                        {% for category, items in categories.items() %}
+                        <optgroup label="{{ category }}">
+                            {% for item in items %}
+                            <option value="{{ item.id }}" data-category="{{ item.category }}">
+                                {{ item.name }} (Stock: {{ item.stock_count }})
+                            </option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </label>
+                
+                <!-- OR Custom Item -->
+                <label class="form-control">
+                    <span>Or Enter Custom Item</span>
+                    <input type="text" name="custom_item_name" id="custom_item_name" placeholder="Custom item name...">
+                </label>
+                
+                <label class="form-control">
+                    <span>Category</span>
+                    <select name="category">
+                        <option value="">-- Category --</option>
+                        <option value="Cooking Equipment">Cooking Equipment</option>
+                        <option value="Serving Equipment">Serving Equipment</option>
+                        <option value="Tableware">Tableware</option>
+                        <option value="Linens">Linens</option>
+                        <option value="Furniture">Furniture</option>
+                        <option value="Refrigeration">Refrigeration</option>
+                        <option value="Warmers">Warmers</option>
+                        <option value="Beverage">Beverage</option>
+                        <option value="Decoration">Decoration</option>
+                        <option value="Cleaning">Cleaning</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </label>
+                
+                <label class="form-control">
+                    <span>Quantity *</span>
+                    <input type="number" name="quantity" min="1" value="1" required>
+                </label>
+                
+                <label class="form-control">
+                    <span>Notes</span>
+                    <input type="text" name="notes" placeholder="Special notes...">
+                </label>
+                
+                <div>
+                    <button type="submit" class="btn-primary">+ Add Item</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Equipment Items List -->
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Equipment Items</h3>
+            {% if equipment_list.items %}
+            <span class="badge">{{ equipment_list.items | length }} items</span>
+            {% endif %}
+        </div>
+        
+        {% if equipment_list.items %}
+        {% for category, items in equipment_list.items | groupby('category') | sort %}
+        <div style="margin-bottom: 1.5rem;">
+            <h4 style="margin: 1rem 0 0.5rem 0; color: #495057; border-bottom: 1px solid #dee2e6; padding-bottom: 0.25rem;">
+                {{ category or 'General' }} ({{ items | list | length }})
+            </h4>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">#</th>
+                            <th>Item Name</th>
+                            <th style="width: 80px;">Qty</th>
+                            <th>Notes</th>
+                            {% if equipment_list.status.value == 'Draft' %}
+                            <th style="width: 150px;">Actions</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <strong>{{ item.item_name }}</strong>
+                                {% if item.inventory_item %}
+                                <br><small class="muted">From Inventory (Stock: {{ item.inventory_item.stock_count }})</small>
+                                {% endif %}
+                            </td>
+                            <td style="text-align: center;">
+                                {% if equipment_list.status.value == 'Draft' %}
+                                <form method="post" action="{{ url_for('event_service.equipment_list_update_item', event_id=event.id, item_id=item.id) }}" style="display: inline;">
+                                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" style="width: 60px; text-align: center;" onchange="this.form.submit();">
+                                    <input type="hidden" name="notes" value="{{ item.notes or '' }}">
+                                </form>
+                                {% else %}
+                                {{ item.quantity }}
+                                {% endif %}
+                            </td>
+                            <td>{{ item.notes or '-' }}</td>
+                            {% if equipment_list.status.value == 'Draft' %}
+                            <td>
+                                <form method="post" action="{{ url_for('event_service.equipment_list_remove_item', event_id=event.id, item_id=item.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn-danger btn-sm" onclick="return confirm('Remove this item?');">
+                                        Remove
+                                    </button>
+                                </form>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Summary -->
+        <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+            <strong>Summary:</strong>
+            <span style="margin-left: 1rem;">Total Items: <strong>{{ equipment_list.items | length }}</strong></span>
+            <span style="margin-left: 1rem;">Total Quantity: <strong>{{ equipment_list.items | sum(attribute='quantity') }}</strong></span>
+            <span style="margin-left: 1rem;">Categories: <strong>{{ equipment_list.items | groupby('category') | list | length }}</strong></span>
+        </div>
+        {% else %}
+        <p class="muted" style="text-align: center; padding: 2rem;">
+            No items added yet. Use the form above to add equipment items.
+        </p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+}
+</style>
+
+<script>
+// Disable custom item input when inventory item is selected and vice versa
+document.addEventListener('DOMContentLoaded', function() {
+    const inventorySelect = document.getElementById('inventory_item_select');
+    const customInput = document.getElementById('custom_item_name');
+    
+    if (inventorySelect && customInput) {
+        inventorySelect.addEventListener('change', function() {
+            if (this.value) {
+                customInput.value = '';
+                customInput.disabled = true;
+            } else {
+                customInput.disabled = false;
+            }
+        });
+        
+        customInput.addEventListener('input', function() {
+            if (this.value.trim()) {
+                inventorySelect.value = '';
+                inventorySelect.disabled = true;
+            } else {
+                inventorySelect.disabled = false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

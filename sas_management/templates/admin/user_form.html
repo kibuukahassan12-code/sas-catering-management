@@ -8,7 +8,7 @@
             {% if action == 'Add' %}
             Create a new user. A secure password will be auto-generated.
             {% else %}
-            Edit user details and permissions.
+            Edit user details and permissions. You can set a temporary password for the user.
             {% endif %}
         </p>
     </div>
@@ -35,20 +35,21 @@
                     <input type="checkbox" 
                            name="role_ids" 
                            value="{{ role.id }}"
-                           {% if user %}
-                               {% set user_has_role = False %}
-                               {% if user.roles %}
-                                   {% for ur in user.roles %}
-                                       {% if ur.id == role.id %}
-                                           {% set user_has_role = True %}
-                                       {% endif %}
-                                   {% endfor %}
-                               {% endif %}
-                               {% if not user_has_role and user.role_id == role.id %}
-                                   {% set user_has_role = True %}
-                               {% endif %}
-                               {% if user_has_role %}checked{% endif %}
-                           {% endif %}
+                            {% if user %}
+                                {% set user_roles_list = user.roles.all() %}
+                                {% set user_has_role = False %}
+                                {% if user_roles_list %}
+                                    {% for ur in user_roles_list %}
+                                        {% if ur.id == role.id %}
+                                            {% set user_has_role = True %}
+                                        {% endif %}
+                                    {% endfor %}
+                                {% endif %}
+                                {% if not user_has_role and user.role_id == role.id %}
+                                    {% set user_has_role = True %}
+                                {% endif %}
+                                {% if user_has_role %}checked{% endif %}
+                            {% endif %}
                            style="width: auto; cursor: pointer;">
                     <span>{{ role.name }}</span>
                     {% if role.description %}
@@ -61,6 +62,19 @@
                 {% endif %}
             </div>
         </div>
+        
+        <label class="form-control">
+            <span>Department (Optional)</span>
+            <select name="department_id">
+                <option value="">Select department</option>
+                {% for dept in departments %}
+                <option value="{{ dept.id }}" {% if user and user.employee and user.employee.department_id == dept.id %}selected{% endif %}>
+                    {{ dept.name }}
+                </option>
+                {% endfor %}
+            </select>
+            <small class="muted">Assign user to a department</small>
+        </label>
         
         <label class="form-control">
             <span>Legacy Role (for backward compatibility)</span>
@@ -82,6 +96,24 @@
             <input type="checkbox" name="must_change_password" {% if user and (user.must_change_password or user.force_password_change) %}checked{% endif %}>
             <span>Force password change on next login</span>
         </label>
+        
+        <label class="form-control">
+            <span>Temporary Password (Optional)</span>
+            <input type="password" name="temp_password" id="temp_password" autocomplete="new-password" placeholder="Enter a new temporary password">
+            <small class="muted">Leave blank to keep current password. Enter a new password to reset it.</small>
+        </label>
+        
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <input type="checkbox" id="generate_password" onclick="togglePasswordGeneration()" style="width: auto;">
+            <label for="generate_password" style="margin: 0; cursor: pointer;">Generate secure random password</label>
+        </div>
+        
+        <div id="generated_password_display" style="display: none; padding: 1rem; background: rgba(242, 104, 34, 0.1); border: 1px solid rgba(242, 104, 34, 0.3); border-radius: 8px; margin-bottom: 1rem;">
+            <p style="margin: 0;">
+                <strong>Generated Password:</strong> <code id="generated_pw" style="font-size: 1.1em; color: var(--brand);"></code>
+                <button type="button" onclick="copyPassword()" class="btn-ghost btn-sm" style="margin-left: 0.5rem;">Copy</button>
+            </p>
+        </div>
         {% endif %}
         
         <div class="form-actions">
@@ -98,5 +130,38 @@
     </div>
     {% endif %}
 </section>
+
+{% if action == 'Edit' %}
+<script>
+function togglePasswordGeneration() {
+    const generateCheckbox = document.getElementById('generate_password');
+    const tempPasswordField = document.getElementById('temp_password');
+    const displayDiv = document.getElementById('generated_password_display');
+    
+    if (generateCheckbox.checked) {
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+        let password = '';
+        for (let i = 0; i < 12; i++) {
+            password += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        tempPasswordField.value = password;
+        document.getElementById('generated_pw').textContent = password;
+        displayDiv.style.display = 'block';
+    } else {
+        tempPasswordField.value = '';
+        displayDiv.style.display = 'none';
+    }
+}
+
+function copyPassword() {
+    const password = document.getElementById('generated_pw').textContent;
+    navigator.clipboard.writeText(password).then(function() {
+        alert('Password copied to clipboard!');
+    }, function(err) {
+        console.error('Could not copy text: ', err);
+    });
+}
+</script>
+{% endif %}
 {% endblock %}
 

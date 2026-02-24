@@ -18,6 +18,7 @@ def seed_hr_data():
                 {"name": "Bakery", "manager_id": None},
                 {"name": "Sales", "manager_id": None},
                 {"name": "Administration", "manager_id": None},
+                {"name": "Hire", "description": "Equipment Hire Department"},
             ]
             
             for dept_data in departments_data:

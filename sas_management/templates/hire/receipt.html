@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Hire Order Receipt - {{ order.reference }}{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+    .page-header, .quick-links, .no-print { display: none !important; }
+    .receipt-print { margin: 0; padding: 0; }
+    body { background: white !important; }
+}
+.receipt-print { background: white; padding: 2rem; max-width: 900px; margin: 0 auto; color: #111; position: relative; }
+.doc-watermark { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40%; opacity: 0.08; pointer-events: none; z-index: 0; }
+.receipt-content { position: relative; z-index: 1; }
+.rcpt-top { display: flex; justify-content: space-between; gap: 1.25rem; border-bottom: 2px solid #b9b9b9; padding-bottom: 12px; margin-bottom: 14px; }
+.rcpt-title { font-size: 18pt; font-weight: 800; letter-spacing: 0.5px; margin: 0 0 10px 0; color: #111; }
+.rcpt-brand { display: flex; gap: 12px; align-items: flex-start; }
+.rcpt-logo { width: 90px; height: auto; object-fit: contain; }
+.rcpt-brand-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; color: #111; }
+.rcpt-brand-meta { margin: 2px 0; color: #555; font-size: 0.95rem; }
+.rcpt-meta { min-width: 280px; border: 1px solid #b9b9b9; padding: 10px 12px; height: fit-content; }
+.rcpt-meta-row { display: flex; justify-content: space-between; gap: 10px; margin: 4px 0; color: #222; }
+.rcpt-grand { margin-top: 10px; border-top: 1px solid #b9b9b9; padding-top: 10px; display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; }
+.rcpt-bill { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0 14px 0; }
+.rcpt-box { border: 1px solid #b9b9b9; padding: 10px 12px; }
+.rcpt-box-title { font-size: 0.95rem; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 8px; font-weight: 700; color: #222; }
+.rcpt-box p { margin: 3px 0; color: #333; }
+.rcpt-muted { color: #666; font-size: 0.9rem; }
+.rcpt-items { width: 100%; border-collapse: collapse; border: 1px solid #b9b9b9; margin-top: 10px; }
+.rcpt-items th, .rcpt-items td { border-bottom: 1px solid #d5d5d5; padding: 8px 10px; vertical-align: top; }
+.rcpt-items th { background: #efefef; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.4px; color: #222; }
+.num { text-align: right; white-space: nowrap; }
+.rcpt-bottom { display: grid; grid-template-columns: 1fr 320px; gap: 14px; margin-top: 12px; align-items: start; }
+.rcpt-totals { border: 1px solid #b9b9b9; padding: 10px 12px; }
+.rcpt-total-row { display: flex; justify-content: space-between; margin: 6px 0; color: #222; }
+.rcpt-total-final { border-top: 1px solid #b9b9b9; padding-top: 8px; margin-top: 10px; font-weight: 800; font-size: 1.05rem; }
+.rcpt-footer { margin-top: 18px; border-top: 1px solid #d5d5d5; padding-top: 10px; text-align: center; color: #666; font-size: 0.9rem; }
+.payment-stamp { background: #F26822; color: white; padding: 8px 16px; border-radius: 4px; display: inline-block; font-weight: bold; text-transform: uppercase; margin-top: 10px; }
+.payment-stamp.partial { background: #ffc107; color: #000; }
+.payment-stamp.unpaid { background: #dc3545; }
+</style>
+
+<section class="page-header no-print">
+    <div>
+        <p class="eyebrow">Hire · Receipt</p>
+        <h1>Receipt for Order {{ order.reference }}</h1>
+        <p class="muted">Payment receipt for equipment hire order.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hire.order_receipt_pdf', order_id=order.id) }}" style="text-decoration: none;">Download PDF</a>
+        <button class="btn-secondary" onclick="window.print()">Print</button>
+        <a class="btn-secondary" href="{{ url_for('hire.order_details', order_id=order.id) }}" style="text-decoration: none;">← Back to Order</a>
+    </div>
+</section>
+
+<section class="panel receipt-print">
+    <img class="doc-watermark" src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="" onerror="this.style.display='none';">
+    
+    <div class="receipt-content">
+        <div class="rcpt-top">
+            <div>
+                <div class="rcpt-title">EQUIPMENT HIRE RECEIPT</div>
+                <div class="rcpt-brand">
+                    <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods Logo" class="rcpt-logo" onerror="this.style.display='none';">
+                    <div>
+                        <div class="rcpt-brand-name">SAS Best Foods</div>
+                        <div class="rcpt-brand-meta">Equipment Hire Division</div>
+                        <div class="rcpt-brand-meta">Near Akamwesi Mall, Gayaza Rd, Opp Electoral Commission Kawempe Offices</div>
+                        <div class="rcpt-brand-meta">Kawempe, Kampala, Uganda</div>
+                        <div class="rcpt-brand-meta">Tel: 0702060778 / 0745705088</div>
+                        <div class="rcpt-brand-meta">Email: info@sasbestfoods.com | Website: www.sasbestfoods.com</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rcpt-meta">
+                <div class="rcpt-meta-row"><span><b>Receipt #</b></span><span>RCP-{{ order.reference }}</span></div>
+                <div class="rcpt-meta-row"><span><b>Order Ref</b></span><span>{{ order.reference }}</span></div>
+                <div class="rcpt-meta-row"><span><b>Date</b></span><span>{{ order.created_at.strftime('%b %d, %Y') if order.created_at else 'N/A' }}</span></div>
+                <div class="rcpt-meta-row"><span><b>Status</b></span><span>{{ order.status }}</span></div>
+                {% set subtotal = order.total_cost or 0 %}
+                {% set discount = order.discount_amount or 0 %}
+                {% set final_total = subtotal - discount %}
+                <div class="rcpt-grand"><span>TOTAL</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(final_total) }}</span></div>
+            </div>
+        </div>
+
+        <div class="rcpt-bill">
+            <div class="rcpt-box">
+                <div class="rcpt-box-title">Client Information</div>
+                <p><b>{{ order.client_name or 'Walk-in Client' }}</b></p>
+                {% if order.telephone %}<p>Tel: {{ order.telephone }}</p>{% endif %}
+                {% if order.email %}<p>Email: {{ order.email }}</p>{% endif %}
+                {% if order.delivery_address %}<p>Address: {{ order.delivery_address }}</p>{% endif %}
+            </div>
+            <div class="rcpt-box">
+                <div class="rcpt-box-title">Rental Period</div>
+                <p><b>Start:</b> {{ order.start_date.strftime('%b %d, %Y') if order.start_date else '—' }}</p>
+                <p><b>End:</b> {{ order.end_date.strftime('%b %d, %Y') if order.end_date else '—' }}</p>
+                <p><b>Duration:</b> {{ rental_days }} day{{ 's' if rental_days != 1 else '' }}</p>
+                {% if order.event %}
+                <p><b>Event:</b> {{ order.event.event_name }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <table class="rcpt-items">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Item Description</th>
+                    <th class="num" style="width: 10%;">Qty</th>
+                    <th class="num" style="width: 15%;">Unit Price</th>
+                    <th class="num" style="width: 10%;">Days</th>
+                    <th class="num" style="width: 25%;">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td>
+                        <b>{{ item.inventory_item.name if item.inventory_item else 'Item #' + item.item_id|string }}</b>
+                        {% if item.inventory_item and item.inventory_item.sku %}
+                        <br><small style="color: #666;">SKU: {{ item.inventory_item.sku }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="num">{{ item.qty }}</td>
+                    <td class="num">{{ CURRENCY }}{{ "{:,.2f}".format(item.price or 0) }}</td>
+                    <td class="num">{{ rental_days }}</td>
+                    <td class="num"><b>{{ CURRENCY }}{{ "{:,.2f}".format(item.subtotal or 0) }}</b></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 1rem; color: #666;">No items in this order.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="rcpt-bottom">
+            <div class="rcpt-box">
+                <div class="rcpt-box-title">Payment Status</div>
+                {% set subtotal = order.total_cost or 0 %}
+                {% set discount = order.discount_amount or 0 %}
+                {% set final_total = subtotal - discount %}
+                {% if order.amount_paid and order.amount_paid >= final_total %}
+                    <span class="payment-stamp">PAID IN FULL</span>
+                    <p class="rcpt-muted" style="margin-top: 10px;">Thank you for your payment!</p>
+                {% elif order.amount_paid and order.amount_paid > 0 %}
+                    <span class="payment-stamp partial">PARTIAL PAYMENT</span>
+                    <p class="rcpt-muted" style="margin-top: 10px;">Outstanding balance: {{ CURRENCY }}{{ "{:,.2f}".format(order.balance_due or 0) }}</p>
+                {% else %}
+                    <span class="payment-stamp unpaid">UNPAID</span>
+                    <p class="rcpt-muted" style="margin-top: 10px;">Payment due upon collection/delivery.</p>
+                {% endif %}
+                {% if order.comments %}
+                <p style="margin-top: 12px;"><b>Notes:</b></p>
+                <p class="rcpt-muted">{{ order.comments }}</p>
+                {% endif %}
+            </div>
+            <div class="rcpt-totals">
+                {% set subtotal = order.total_cost or 0 %}
+                {% set discount = order.discount_amount or 0 %}
+                {% set final_total = subtotal - discount %}
+                <div class="rcpt-total-row"><span>Subtotal ({{ order.items|length }} items)</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(subtotal) }}</span></div>
+                {% if discount > 0 %}
+                <div class="rcpt-total-row"><span style="color: #4caf50;">Discount</span><span style="color: #4caf50;">-{{ CURRENCY }}{{ "{:,.2f}".format(discount) }}</span></div>
+                {% endif %}
+                <div class="rcpt-total-row" style="border-top: 1px solid #b9b9b9; padding-top: 8px; margin-top: 8px;"><span><strong>Total</strong></span><span><strong>{{ CURRENCY }}{{ "{:,.2f}".format(final_total) }}</strong></span></div>
+                <div class="rcpt-total-row"><span>Amount Paid</span><span style="color: #F26822;">{{ CURRENCY }}{{ "{:,.2f}".format(order.amount_paid or 0) }}</span></div>
+                <div class="rcpt-total-row rcpt-total-final">
+                    <span>Balance Due</span>
+                    <span style="color: {% if order.balance_due and order.balance_due > 0 %}#dc3545{% else %}#F26822{% endif %};">
+                        {{ CURRENCY }}{{ "{:,.2f}".format(order.balance_due or 0) }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <div style="border-top: 1px solid #333; padding-top: 8px;">
+                <p style="margin: 0; color: #666; font-size: 0.9rem;">Received By (Client Signature)</p>
+                <p style="margin: 8px 0 0 0; height: 40px;"></p>
+                <p style="margin: 0; color: #666; font-size: 0.85rem;">Date: _______________</p>
+            </div>
+            <div style="border-top: 1px solid #333; padding-top: 8px;">
+                <p style="margin: 0; color: #666; font-size: 0.9rem;">Issued By (Staff Signature)</p>
+                <p style="margin: 8px 0 0 0; height: 40px;"></p>
+                <p style="margin: 0; color: #666; font-size: 0.85rem;">Date: _______________</p>
+            </div>
+        </div>
+
+        <footer class="rcpt-footer">
+            <p><b>Terms & Conditions:</b> All hired equipment must be returned in the same condition as received. Client is responsible for any damage or loss.</p>
+            <p style="margin-top: 8px;">Generated by SAS Management System · SAS Best Foods</p>
+        </footer>
+    </div>
+</section>
+{% endblock %}

@@ -2,7 +2,7 @@
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import func, or_
-from sas_management.models import Role, Permission, RolePermission, User, UserRole, Group, db, Event, Client, Transaction, AuditLog, RoleAssignmentLog
+from sas_management.models import Role, Permission, RolePermission, User, UserRole, Group, Department, db, Event, Client, Transaction, AuditLog, RoleAssignmentLog
 from sas_management.utils import require_permission, role_required, paginate_query
 from sas_management.utils.helpers import get_or_404
 from sas_management.utils.permissions import require_role
@@ -855,27 +855,29 @@ def users_list():
 def users_add():
     """Create a new user with auto-generated password."""
     roles = Role.query.order_by(Role.name.asc()).all()
+    departments = Department.query.order_by(Department.name.asc()).all()
     
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         role_ids = request.form.getlist("role_ids")  # Multiple roles
         legacy_role = request.form.get("legacy_role", "")
+        department_id = request.form.get("department_id")
         
         # Validate email
         if not email or "@" not in email:
             flash("Please provide a valid email address.", "danger")
-            return render_template("admin/user_form.html", action="Add", user=None, roles=roles)
+            return render_template("admin/user_form.html", action="Add", user=None, roles=roles, departments=departments)
         
         # Check if user already exists
         existing_user = User.query.filter(func.lower(User.email) == email).first()
         if existing_user:
             flash(f"User with email '{email}' already exists.", "danger")
-            return render_template("admin/user_form.html", action="Add", user=None, roles=roles)
+            return render_template("admin/user_form.html", action="Add", user=None, roles=roles, departments=departments)
         
         # Generate secure password using production password generator
         import secrets
         import string
-        generated_password = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+        generated_password = "".join(secrets.choice(string.ascii_letters + string.digits + "!@#$%^&*") for _ in range(12))
         temp_password = generated_password
         
         # Create user
@@ -893,8 +895,8 @@ def users_add():
             except (KeyError, ValueError):
                 pass
         
-        # Set the auto-generated password
-        user.set_password(temp_password)
+        # Set the auto-generated password with 24-hour expiry
+        user.set_password(temp_password, is_temporary=True)
         
         db.session.add(user)
         db.session.flush()  # Flush to get user.id
@@ -916,13 +918,28 @@ def users_add():
             except (ValueError, TypeError):
                 pass
         
+        # Create employee record if department is selected
+        if department_id:
+            from sas_management.models import Employee
+            try:
+                emp = Employee(
+                    user_id=user.id,
+                    department_id=int(department_id),
+                    first_name=email.split('@')[0],
+                    last_name='',
+                    email=email
+                )
+                db.session.add(emp)
+            except (ValueError, TypeError):
+                pass
+        
         db.session.commit()
         
         # Flash message with the temporary password
-        flash(f"User '{email}' created successfully! Temporary password: {temp_password}", "success")
+        flash(f"User '{email}' created successfully! Temporary password: {temp_password} (expires in 24 hours)", "success")
         return redirect(url_for("admin.users_list"))
     
-    return render_template("admin/user_form.html", action="Add", user=None, roles=roles)
+    return render_template("admin/user_form.html", action="Add", user=None, roles=roles, departments=departments)
 
 
 @admin_bp.route("/users/<int:user_id>/edit", methods=["GET", "POST"])
@@ -931,17 +948,19 @@ def users_edit(user_id):
     """Edit a user."""
     user = get_or_404(User, user_id)
     roles = Role.query.order_by(Role.name.asc()).all()
+    departments = Department.query.order_by(Department.name.asc()).all()
     
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         role_ids = request.form.getlist("role_ids")  # Multiple roles
         legacy_role = request.form.get("legacy_role", "")
         must_change_password = request.form.get("must_change_password") == "on"
+        department_id = request.form.get("department_id")
         
         # Validate email
         if not email or "@" not in email:
             flash("Please provide a valid email address.", "danger")
-            return render_template("admin/user_form.html", action="Edit", user=user, roles=roles)
+            return render_template("admin/user_form.html", action="Edit", user=user, roles=roles, departments=departments)
         
         # Check if email is already taken by another user
         existing_user = User.query.filter(
@@ -950,11 +969,21 @@ def users_edit(user_id):
         ).first()
         if existing_user:
             flash(f"User with email '{email}' already exists.", "danger")
-            return render_template("admin/user_form.html", action="Edit", user=user, roles=roles)
+            return render_template("admin/user_form.html", action="Edit", user=user, roles=roles, departments=departments)
+        
+        temp_password = request.form.get("temp_password", "").strip()
         
         user.email = email
         user.must_change_password = must_change_password
         user.force_password_change = must_change_password  # Legacy compatibility
+        
+        # Handle temporary password if provided
+        if temp_password:
+            user.set_password(temp_password, is_temporary=True)
+            user.force_password_change = True
+            user.first_login = True
+            user.must_change_password = True
+            flash(f"Password has been reset to a temporary password for user '{email}'. Temporary password: {temp_password} (expires in 24 hours)", "success")
         
         # Admin role protection: Prevent removing or downgrading Admin role
         was_admin = user.is_admin
@@ -979,10 +1008,12 @@ def users_edit(user_id):
             
             if not has_admin_role:
                 flash("Cannot remove Admin role from a user. Admin role cannot be downgraded.", "danger")
-                return render_template("admin/user_form.html", action="Edit", user=user, roles=roles)
+                return render_template("admin/user_form.html", action="Edit", user=user, roles=roles, departments=departments)
         
         # Update roles (many-to-many)
-        user.roles.clear()
+        # Need to properly clear dynamic relationship
+        for role in list(user.roles.all()):
+            user.roles.remove(role)
         for role_id_str in role_ids:
             try:
                 role_id = int(role_id_str)
@@ -1008,15 +1039,36 @@ def users_edit(user_id):
                 # Ensure Admin role is preserved if user was admin
                 if was_admin and legacy_role != 'Admin':
                     flash("Cannot downgrade Admin role. Admin users must retain Admin role.", "danger")
-                    return render_template("admin/user_form.html", action="Edit", user=user, roles=roles)
+                    return render_template("admin/user_form.html", action="Edit", user=user, roles=roles, departments=departments)
             except (KeyError, ValueError):
                 pass
+        
+        # Update employee department if selected
+        if department_id:
+            from sas_management.models import Employee
+            emp = Employee.query.filter_by(user_id=user.id).first()
+            if emp:
+                emp.department_id = int(department_id)
+            else:
+                emp = Employee(
+                    user_id=user.id,
+                    department_id=int(department_id),
+                    first_name=user.email.split('@')[0],
+                    last_name='',
+                    email=user.email
+                )
+                db.session.add(emp)
+        elif department_id == '':
+            from sas_management.models import Employee
+            emp = Employee.query.filter_by(user_id=user.id).first()
+            if emp:
+                emp.department_id = None
         
         db.session.commit()
         flash(f"User '{email}' updated successfully.", "success")
         return redirect(url_for("admin.users_list"))
     
-    return render_template("admin/user_form.html", action="Edit", user=user, roles=roles)
+    return render_template("admin/user_form.html", action="Edit", user=user, roles=roles, departments=departments)
 
 
 @admin_bp.route("/users/<int:user_id>/reset-password", methods=["POST"])
@@ -1025,14 +1077,15 @@ def users_reset_password(user_id):
     """Reset a user's password and generate a new temporary password."""
     user = get_or_404(User, user_id)
     
-    # Generate new secure password
+    # Generate new secure password with 24-hour expiry
     temp_password = generate_secure_password(12)
-    user.set_password(temp_password)
+    user.set_password(temp_password, is_temporary=True)
     user.force_password_change = True
     user.first_login = True  # Require password change on next login
+    user.must_change_password = True
     db.session.commit()
     
-    flash(f"Password reset for '{user.email}'. New temporary password: {temp_password}", "success")
+    flash(f"Password reset for '{user.email}'. New temporary password: {temp_password} (expires in 24 hours)", "success")
     return redirect(url_for("admin.users_list"))
 
 
@@ -1254,9 +1307,15 @@ def assign_roles():
     users = User.query.order_by(User.email.asc()).all()
     roles = Role.query.order_by(Role.name.asc()).all()
 
+    generated_password = None
+    assigned_email = None
+
     if request.method == "POST":
         user_id = request.form.get("user_id", type=int)
         role_id = request.form.get("role_id", type=int)
+        set_temporary_password = request.form.get("set_temporary_password") == "on"
+        generate_password = request.form.get("generate_password") == "on"
+        temp_password = request.form.get("temp_password", "").strip()
 
         if not user_id or not role_id:
             flash("Both user and role are required.", "danger")
@@ -1282,6 +1341,22 @@ def assign_roles():
             # If we cannot determine admin status safely, fall back to allowing assignment
             pass
 
+        # Handle temporary password
+        if set_temporary_password:
+            if generate_password:
+                import secrets
+                import string
+                generated_password = "".join(secrets.choice(string.ascii_letters + string.digits + "!@#$%^&*") for _ in range(12))
+                temp_password = generated_password
+            elif temp_password:
+                generated_password = temp_password
+            
+            if generated_password:
+                user.set_password(generated_password, is_temporary=True)
+                user.must_change_password = True
+                user.force_password_change = True
+                assigned_email = user.email
+
         # Perform assignment
         old_role_id = user.role_id
         user.role_id = role.id
@@ -1295,8 +1370,19 @@ def assign_roles():
             flash("An error occurred while assigning the role.", "danger")
             return redirect(url_for("admin.assign_roles"))
 
-        flash(f"Role '{role.name}' assigned to {user.email}.", "success")
-        return redirect(url_for("admin.assign_roles"))
+        if generated_password:
+            flash(f"Role '{role.name}' assigned to {user.email}. Temporary password generated (expires in 24 hours).", "success")
+        else:
+            flash(f"Role '{role.name}' assigned to {user.email}.", "success")
+        
+        return render_template(
+            "admin/assign_roles.html",
+            users=users,
+            roles=roles,
+            current_user=current_user,
+            generated_password=generated_password,
+            assigned_email=assigned_email,
+        )
 
     return render_template(
         "admin/assign_roles.html",
@@ -1371,4 +1457,162 @@ def toggle_ai_feature(feature_id):
         from flask import current_app
         current_app.logger.exception(f"Error toggling AI feature (id={feature_id}): {e}")
         return jsonify({"success": False, "error": "Internal server error"}), 500
+
+
+# ============================================================================
+# DEPARTMENT MANAGEMENT ROUTES
+# ============================================================================
+
+@admin_bp.route("/departments")
+@admin_required
+def departments_list():
+    """List all departments with user counts."""
+    try:
+        departments = Department.query.order_by(Department.name.asc()).all()
+        from sas_management.models import Employee
+        dept_with_counts = []
+        for dept in departments:
+            user_count = Employee.query.filter_by(department_id=dept.id).count()
+            dept_with_counts.append({
+                'department': dept,
+                'user_count': user_count,
+                'manager': dept.manager.email if dept.manager else None
+            })
+        return render_template("admin/departments_list.html", departments=dept_with_counts)
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception(f"Error loading departments: {e}")
+        flash("Error loading departments.", "danger")
+        return render_template("admin/departments_list.html", departments=[])
+
+
+@admin_bp.route("/departments/add", methods=["GET", "POST"])
+@admin_required
+def departments_add():
+    """Create a new department."""
+    users = User.query.order_by(User.email.asc()).all()
+    
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        manager_id = request.form.get("manager_id")
+        
+        if not name:
+            flash("Department name is required.", "danger")
+            return render_template("admin/department_form.html", action="Add", department=None, users=users)
+        
+        existing = Department.query.filter(func.lower(Department.name) == name.lower()).first()
+        if existing:
+            flash(f"Department '{name}' already exists.", "danger")
+            return render_template("admin/department_form.html", action="Add", department=None, users=users)
+        
+        dept = Department(
+            name=name,
+            description=description,
+            manager_id=int(manager_id) if manager_id else None
+        )
+        db.session.add(dept)
+        db.session.commit()
+        flash(f"Department '{name}' created successfully!", "success")
+        return redirect(url_for("admin.departments_list"))
+    
+    return render_template("admin/department_form.html", action="Add", department=None, users=users)
+
+
+@admin_bp.route("/departments/<int:dept_id>/edit", methods=["GET", "POST"])
+@admin_required
+def departments_edit(dept_id):
+    """Edit a department."""
+    dept = get_or_404(Department, dept_id)
+    users = User.query.order_by(User.email.asc()).all()
+    
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        description = request.form.get("description", "").strip()
+        manager_id = request.form.get("manager_id")
+        
+        if not name:
+            flash("Department name is required.", "danger")
+            return render_template("admin/department_form.html", action="Edit", department=dept, users=users)
+        
+        existing = Department.query.filter(
+            func.lower(Department.name) == name.lower(),
+            Department.id != dept_id
+        ).first()
+        if existing:
+            flash(f"Department '{name}' already exists.", "danger")
+            return render_template("admin/department_form.html", action="Edit", department=dept, users=users)
+        
+        dept.name = name
+        dept.description = description
+        dept.manager_id = int(manager_id) if manager_id else None
+        db.session.commit()
+        flash(f"Department '{name}' updated successfully!", "success")
+        return redirect(url_for("admin.departments_list"))
+    
+    return render_template("admin/department_form.html", action="Edit", department=dept, users=users)
+
+
+@admin_bp.route("/departments/<int:dept_id>/delete", methods=["POST"])
+@admin_required
+def departments_delete(dept_id):
+    """Delete a department."""
+    dept = get_or_404(Department, dept_id)
+    
+    if dept.employees:
+        flash(f"Cannot delete department '{dept.name}' - it has employees assigned.", "danger")
+        return redirect(url_for("admin.departments_list"))
+    
+    dept_name = dept.name
+    db.session.delete(dept)
+    db.session.commit()
+    flash(f"Department '{dept_name}' deleted successfully!", "success")
+    return redirect(url_for("admin.departments_list"))
+
+
+@admin_bp.route("/departments/<int:dept_id>/users")
+@admin_required
+def departments_users(dept_id):
+    """View users/employees in a specific department."""
+    dept = get_or_404(Department, dept_id)
+    employees = Employee.query.filter_by(department_id=dept_id).all()
+    return render_template("admin/department_users.html", department=dept, employees=employees)
+
+
+# ============================================================================
+# USER MANAGEMENT BY DEPARTMENT
+# ============================================================================
+
+@admin_bp.route("/users/by-department")
+@admin_required
+def users_by_department():
+    """View all users grouped by department."""
+    departments = Department.query.order_by(Department.name.asc()).all()
+    users = User.query.order_by(User.email.asc()).all()
+    
+    from sas_management.models import Employee
+    users_by_dept = {}
+    for dept in departments:
+        users_in_dept = []
+        for user in users:
+            emp = Employee.query.filter_by(user_id=user.id, department_id=dept.id).first()
+            if emp:
+                users_in_dept.append({
+                    'user': user,
+                    'employee': emp,
+                    'position': emp.position_obj.title if emp.position_obj else emp.position
+                })
+        if users_in_dept:
+            users_by_dept[dept.id] = {
+                'department': dept,
+                'users': users_in_dept,
+                'count': len(users_in_dept)
+            }
+    
+    users_without_dept = [u for u in users if not Employee.query.filter_by(user_id=u.id).first()]
+    
+    return render_template("admin/users_by_department.html", 
+                           users_by_dept=users_by_dept,
+                           users_without_dept=users_without_dept,
+                           departments=departments)
 

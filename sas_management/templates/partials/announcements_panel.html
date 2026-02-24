@@ -1,0 +1,51 @@
+{# Reusable announcements panel for all dashboards #}
+{% set announcements_rendered = true %}
+{% set _anns = (announcements if announcements is defined and announcements) or (global_announcements if global_announcements is defined and global_announcements) or [] %}
+
+<section class="panel" style="margin-top: 1.5rem;">
+  <div class="panel-header">
+    <h3>Announcements</h3>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+      <a class="btn-secondary btn-sm" href="{{ url_for('communication.announcements_list') }}">View All</a>
+      {% if current_user is defined and (current_user.is_authenticated if current_user.is_authenticated is defined else false) %}
+        {% if (current_user.role == 'Admin') or (current_user.is_admin is defined and current_user.is_admin) or (current_user.is_super_admin is defined and current_user.is_super_admin()) %}
+          <a class="btn-primary btn-sm" href="{{ url_for('communication.announcement_new') }}">+ New</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if _anns %}
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+      {# Only show the 2 latest announcements on dashboards #}
+      {% for ann in _anns[:2] %}
+        <article class="panel" style="margin:0;">
+          <div style="display:flex; justify-content:space-between; gap:1rem; align-items:flex-start;">
+            <div>
+              <h4 style="margin:0 0 0.25rem 0;">{{ ann.title }}</h4>
+              <p class="muted" style="margin:0; white-space:pre-wrap; line-height:1.4;">
+                {{ ann.message[:140] }}{% if ann.message and ann.message|length > 140 %}...{% endif %}
+              </p>
+              <small class="muted">
+                {{ ann.created_at.strftime('%b %d, %Y %H:%M') if ann.created_at else '' }}
+              </small>
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <a class="btn-ghost btn-sm" href="{{ url_for('communication.announcement_view', announcement_id=ann.id) }}">View</a>
+              {% if current_user is defined and (current_user.is_authenticated if current_user.is_authenticated is defined else false) %}
+                {% if (current_user.role == 'Admin') or (current_user.is_admin is defined and current_user.is_admin) or (current_user.is_super_admin is defined and current_user.is_super_admin()) %}
+                  <form method="post" action="{{ url_for('communication.announcement_delete', announcement_id=ann.id) }}" onsubmit="return confirm('Delete this announcement?');" style="margin:0;">
+                    <button type="submit" class="btn-danger btn-sm">Delete</button>
+                  </form>
+                {% endif %}
+              {% endif %}
+            </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="muted" style="text-align:center; padding: 1rem;">No announcements yet.</p>
+  {% endif %}
+</section>
+

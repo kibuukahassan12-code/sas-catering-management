@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+/* Production department: dropdowns transparent (same as Hire/Events) */
+select, select.form-control, select option, option { background: transparent !important; background-color: transparent !important; color: var(--text, #f5f5f5) !important; }
+select:focus, select.form-control:focus, select:focus option { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+select option:hover, select option:checked { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+</style>
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Daily Use Inventory</h1>
+        <p class="muted">Track kitchen tools and daily-use items (knives, pans, chopping boards, etc.).</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('production.daily_inventory_report') }}">Report</a>
+        <a class="btn-primary" href="{{ url_for('production.daily_inventory_add') }}">+ Add Item</a>
+    </div>
+</section>
+
+<!-- Filters -->
+<section class="panel">
+    <form method="get" class="form-grid">
+        <label class="form-control">
+            <span>Search</span>
+            <input type="text" name="q" placeholder="e.g. knife, saucepan" value="{{ search or '' }}">
+        </label>
+        <label class="form-control">
+            <span>Category</span>
+            <select name="category">
+                <option value="">-- All --</option>
+                {% for c in categories %}
+                <option value="{{ c }}" {% if selected_category == c %}selected{% endif %}>{{ c }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label class="form-control" style="display:flex; gap:0.5rem; align-items:center;">
+            <input type="checkbox" name="low_stock" value="1" {% if low_stock in ['1','true','yes','on'] %}checked{% endif %}>
+            <span>Low stock only</span>
+        </label>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Filter</button>
+            <a href="{{ url_for('production.daily_inventory_list') }}" class="btn-ghost">Clear</a>
+        </div>
+    </form>
+</section>
+
+<!-- Items list -->
+<section class="panel">
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th>Min</th>
+                    <th>Unit</th>
+                    <th>Condition</th>
+                    <th>Location</th>
+                    <th>Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in items %}
+                <tr>
+                    <td><strong>{{ it.name }}</strong></td>
+                    <td>{{ it.category or '' }}</td>
+                    <td>
+                        {% set qty = (it.quantity or 0) %}
+                        {% set minq = (it.min_quantity or 0) %}
+                        <span class="badge {% if qty <= minq %}warning{% else %}success{% endif %}">
+                            {{ qty }}
+                        </span>
+                    </td>
+                    <td>{{ it.min_quantity or 0 }}</td>
+                    <td>{{ it.unit or 'pcs' }}</td>
+                    <td>{{ it.condition or 'Good' }}</td>
+                    <td>{{ it.location or '' }}</td>
+                    <td class="muted">{{ it.updated_at.strftime('%Y-%m-%d %H:%M') if it.updated_at else '' }}</td>
+                    <td style="display:flex; gap:0.5rem; align-items:center;">
+                        <a class="btn-ghost btn-sm" href="{{ url_for('production.daily_inventory_edit', item_id=it.id) }}">Edit</a>
+                        <form method="post" action="{{ url_for('production.daily_inventory_delete', item_id=it.id) }}" onsubmit="return confirm('Delete this item?');">
+                            <button type="submit" class="btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center muted">
+                        No daily-use items recorded yet.
+                        <a href="{{ url_for('production.daily_inventory_add') }}">Add your first item</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if pagination.pages > 1 %}
+    <div class="pagination">
+        {% if pagination.has_prev %}
+        <a class="btn-ghost" href="?page={{ pagination.prev_num }}{% if search %}&q={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if low_stock %}&low_stock={{ low_stock }}{% endif %}">Previous</a>
+        {% endif %}
+        <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+        {% if pagination.has_next %}
+        <a class="btn-ghost" href="?page={{ pagination.next_num }}{% if search %}&q={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if low_stock %}&low_stock={{ low_stock }}{% endif %}">Next</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</section>
+{% endblock %}
+

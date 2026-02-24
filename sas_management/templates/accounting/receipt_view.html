@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Accounting · Receipts</p>
+        <h1>Receipt {{ receipt.reference }}</h1>
+        <p class="muted">Payment receipt{% if invoice %} for invoice {{ invoice.invoice_number }}{% endif %}.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('accounting.view_receipt', receipt_id=receipt.id) }}" target="_blank">📄 Download PDF</a>
+        <button class="btn-secondary" onclick="window.print()">Print</button>
+        <a class="btn-secondary" href="{{ url_for('accounting.receipts_list') }}">← Back to Receipts</a>
+    </div>
+</section>
+
+<section class="panel invoice-print">
+    {% set amt = (receipt.amount if receipt.amount is not none else (payment.amount if payment else 0)) %}
+    <img class="doc-watermark" src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="" onerror="this.style.display='none';">
+
+    <div class="inv-top">
+        <div>
+            <div class="inv-title">PAYMENT RECEIPT</div>
+            <div class="inv-brand">
+                <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods Logo" class="inv-logo" onerror="this.style.display='none'; document.getElementById('inv-logo-fallback').style.display='block';">
+                <div id="inv-logo-fallback" style="display:none;">
+                    <div class="inv-brand-name">SAS Best Foods</div>
+                </div>
+                <div>
+                    <div class="inv-brand-name">SAS Best Foods</div>
+                    <div class="inv-brand-meta">Near Akamwesi Mall, Gayaza Rd, Opp Electoral Commission Kawempe Offices</div>
+                    <div class="inv-brand-meta">Kawempe, Kampala, Uganda</div>
+                    <div class="inv-brand-meta">Tel: 0702060778 / 0745705088</div>
+                    <div class="inv-brand-meta">Email: info@sasbestfoods.com | Website: www.sasbestfoods.com</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="inv-meta">
+            <div class="inv-meta-row"><span><b>Receipt #</b></span><span>{{ receipt.reference }}</span></div>
+            <div class="inv-meta-row"><span><b>Date</b></span><span>{{ receipt.date.strftime('%b %d, %Y') if receipt.date else 'N/A' }}</span></div>
+            <div class="inv-meta-row"><span><b>Method</b></span><span>{{ receipt.method or (payment.method if payment else 'N/A') }}</span></div>
+            {% if invoice %}
+            <div class="inv-meta-row"><span><b>Invoice #</b></span><span>{{ invoice.invoice_number }}</span></div>
+            {% endif %}
+            <div class="inv-grand"><span>AMOUNT</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(amt or 0) }}</span></div>
+        </div>
+    </div>
+
+    <div class="inv-bill">
+        <div class="inv-box">
+            <div class="inv-box-title">Received From</div>
+            {% if client %}
+                <p><b>{{ client.name or 'Client' }}</b></p>
+                {% if client.contact_person %}<p>{{ client.contact_person }}</p>{% endif %}
+                {% if client.phone %}<p>{{ client.phone }}</p>{% endif %}
+                {% if client.email %}<p>{{ client.email }}</p>{% endif %}
+            {% else %}
+                <p class="inv-muted">No client information available</p>
+            {% endif %}
+        </div>
+        <div class="inv-box">
+            <div class="inv-box-title">Details</div>
+            {% if invoice and invoice.event %}
+                <p><b>{{ invoice.event.title or 'Event' }}</b></p>
+                {% set d = invoice.event.date or invoice.event.event_date %}
+                <p>{{ d.strftime('%b %d, %Y') if d else 'No Date' }}</p>
+            {% elif invoice %}
+                <p><b>Invoice {{ invoice.invoice_number }}</b></p>
+            {% else %}
+                <p class="inv-muted">No invoice linked</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <table class="inv-items">
+        <thead>
+            <tr>
+                <th style="width: 70%;">Description</th>
+                <th style="width: 30%;" class="num">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><b>Payment received{% if invoice %} for Invoice {{ invoice.invoice_number }}{% endif %}</b></td>
+                <td class="num">{{ CURRENCY }}{{ "{:,.2f}".format(amt or 0) }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="inv-bottom">
+        <div class="inv-box">
+            <div class="inv-box-title">Notes</div>
+            <p class="inv-muted">{{ receipt.notes or 'Thank you for your business.' }}</p>
+        </div>
+        <div class="inv-totals">
+            <div class="inv-total-row inv-total-final"><span>Total Received</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(amt or 0) }}</span></div>
+        </div>
+    </div>
+
+    <footer class="inv-footer">
+        Generated by SAS Management System · SAS Best Foods
+    </footer>
+</section>
+
+<style>
+@media print {
+    .page-header, .quick-links { display: none !important; }
+    .invoice-print { margin: 0; padding: 0; }
+}
+.invoice-print { background: white; padding: 2rem; max-width: 900px; margin: 0 auto; }
+.inv-top { display: flex; justify-content: space-between; gap: 1.25rem; border-bottom: 2px solid #b9b9b9; padding-bottom: 12px; margin-bottom: 14px; }
+.inv-title { font-size: 18pt; font-weight: 800; letter-spacing: 0.5px; margin: 0 0 10px 0; color: #111; }
+.inv-brand { display: flex; gap: 12px; align-items: flex-start; }
+.inv-logo { width: 90px; height: auto; object-fit: contain; }
+.inv-brand-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; color: #111; }
+.inv-brand-meta { margin: 2px 0; color: #555; font-size: 0.95rem; }
+.inv-meta { min-width: 260px; border: 1px solid #b9b9b9; padding: 10px 12px; height: fit-content; }
+.inv-meta-row { display: flex; justify-content: space-between; gap: 10px; margin: 4px 0; color: #222; }
+.inv-grand { margin-top: 10px; border-top: 1px solid #b9b9b9; padding-top: 10px; display: flex; justify-content: space-between; font-size: 1.15rem; font-weight: 800; }
+.inv-bill { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 12px 0 14px 0; }
+.inv-box { border: 1px solid #b9b9b9; padding: 10px 12px; }
+.inv-box-title { font-size: 0.95rem; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 8px; font-weight: 700; color: #222; }
+.inv-box p { margin: 3px 0; color: #333; }
+.inv-muted { color: #666; font-size: 0.9rem; }
+.inv-items { width: 100%; border-collapse: collapse; border: 1px solid #b9b9b9; margin-top: 10px; }
+.inv-items th, .inv-items td { border-bottom: 1px solid #d5d5d5; padding: 8px 10px; vertical-align: top; }
+.inv-items th { background: #efefef; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.4px; color: #222; }
+.num { text-align: right; white-space: nowrap; }
+.inv-bottom { display: grid; grid-template-columns: 1fr 320px; gap: 14px; margin-top: 12px; align-items: start; }
+.inv-totals { border: 1px solid #b9b9b9; padding: 10px 12px; }
+.inv-total-row { display: flex; justify-content: space-between; margin: 6px 0; color: #222; }
+.inv-total-final { border-top: 1px solid #b9b9b9; padding-top: 8px; margin-top: 10px; font-weight: 800; font-size: 1.05rem; }
+.inv-footer { margin-top: 18px; border-top: 1px solid #d5d5d5; padding-top: 10px; text-align: center; color: #666; font-size: 0.9rem; }
+</style>
+{% endblock %}
+

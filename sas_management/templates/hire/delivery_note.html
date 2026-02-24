@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}Delivery Note - {{ order.reference }}{% endblock %}
+
+{% block content %}
+<style>
+@media print {
+    .page-header, .quick-links, .no-print { display: none !important; }
+    .delivery-note-print { margin: 0; padding: 1rem !important; }
+    body { background: white !important; }
+    @page { size: A4; margin: 1.2cm; }
+    .delivery-note-print { 
+        min-height: calc(100vh - 2.4cm);
+        display: flex;
+        flex-direction: column;
+    }
+    .dn-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .dn-footer {
+        margin-top: auto;
+        page-break-inside: avoid;
+        page-break-after: avoid;
+    }
+    .signature-section {
+        page-break-inside: avoid;
+        page-break-after: avoid;
+        margin-top: 20px !important;
+    }
+    .dn-items {
+        font-size: 0.8rem;
+    }
+    .dn-items th, .dn-items td {
+        padding: 8px 10px !important;
+    }
+    .signature-box {
+        min-height: 150px !important;
+    }
+    .dn-bill {
+        margin: 12px 0 !important;
+    }
+}
+.delivery-note-print { background: white; padding: 2rem; max-width: 900px; margin: 0 auto; color: #111; position: relative; min-height: calc(100vh - 4rem); display: flex; flex-direction: column; }
+.doc-watermark { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 40%; opacity: 0.08; pointer-events: none; z-index: 0; }
+.dn-content { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; }
+.dn-top { display: flex; justify-content: space-between; gap: 1.25rem; border-bottom: 3px solid #333; padding-bottom: 12px; margin-bottom: 14px; }
+.dn-title { font-size: 20pt; font-weight: 800; letter-spacing: 0.5px; margin: 0 0 10px 0; color: #111; text-transform: uppercase; }
+.dn-subtitle { font-size: 10pt; color: #555; margin: 0; }
+.dn-brand { display: flex; gap: 12px; align-items: flex-start; }
+.dn-logo { width: 90px; height: auto; object-fit: contain; }
+.dn-brand-name { font-size: 14pt; font-weight: 800; margin-bottom: 2px; color: #111; }
+.dn-brand-meta { margin: 2px 0; color: #555; font-size: 0.95rem; }
+.dn-meta { min-width: 280px; border: 2px solid #333; padding: 10px 12px; height: fit-content; }
+.dn-meta-row { display: flex; justify-content: space-between; gap: 10px; margin: 4px 0; color: #222; }
+.dn-meta-row b { min-width: 100px; }
+.dn-bill { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+.dn-box { border: 1px solid #999; padding: 12px; }
+.dn-box-title { font-size: 0.95rem; letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 10px; font-weight: 700; color: #111; background: #f0f0f0; padding: 6px 8px; margin: -12px -12px 10px -12px; }
+.dn-box p { margin: 4px 0; color: #333; }
+.dn-muted { color: #666; font-size: 0.9rem; }
+.dn-items { width: 100%; border-collapse: collapse; border: 2px solid #333; margin-top: 16px; }
+.dn-items th, .dn-items td { border: 1px solid #999; padding: 10px 12px; vertical-align: top; }
+.dn-items th { background: #333; color: white; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.4px; }
+.num { text-align: right; white-space: nowrap; }
+.center { text-align: center; }
+.dn-checklist { width: 25px; height: 25px; border: 2px solid #333; display: inline-block; vertical-align: middle; margin-right: 8px; }
+.signature-section { margin-top: 30px; page-break-inside: avoid; page-break-after: avoid; }
+.signature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+.signature-box { border: 2px solid #333; padding: 16px; min-height: 180px; }
+.signature-box-title { font-weight: 800; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px; margin-bottom: 12px; background: #333; color: white; padding: 8px 10px; margin: -16px -16px 16px -16px; }
+.signature-line { border-bottom: 1px solid #333; margin: 12px 0 4px 0; height: 30px; }
+.signature-label { color: #666; font-size: 0.85rem; }
+.dn-footer { margin-top: auto; border-top: 2px solid #333; padding-top: 12px; page-break-inside: avoid; }
+.dn-footer p { margin: 4px 0; color: #444; font-size: 0.85rem; }
+.condition-note { background: #fff3cd; border: 1px solid #ffc107; padding: 12px; margin-top: 16px; border-radius: 4px; page-break-inside: avoid; }
+.condition-note h4 { margin: 0 0 8px 0; color: #856404; }
+.condition-note p { margin: 0; color: #856404; font-size: 0.9rem; }
+</style>
+
+<section class="page-header no-print">
+    <div>
+        <p class="eyebrow">Hire · Delivery Note</p>
+        <h1>Delivery Note for Order {{ order.reference }}</h1>
+        <p class="muted">Equipment delivery/collection document with signature requirements.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-primary" href="{{ url_for('hire.order_delivery_note_pdf', order_id=order.id) }}" style="text-decoration: none;">Download PDF</a>
+        <button class="btn-secondary" onclick="window.print()">Print</button>
+        <a class="btn-secondary" href="{{ url_for('hire.order_details', order_id=order.id) }}" style="text-decoration: none;">← Back to Order</a>
+    </div>
+</section>
+
+<section class="panel delivery-note-print">
+    <img class="doc-watermark" src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="" onerror="this.style.display='none';">
+    
+    <div class="dn-content">
+        <div class="dn-top">
+            <div>
+                <div class="dn-title">Delivery Note</div>
+                <p class="dn-subtitle">Equipment Hire - Delivery/Collection Record</p>
+                <div class="dn-brand" style="margin-top: 12px;">
+                    <img src="{{ url_for('static', filename='images/ssas_logo.png') }}" alt="SAS Best Foods Logo" class="dn-logo" onerror="this.style.display='none';">
+                    <div>
+                        <div class="dn-brand-name">SAS Best Foods</div>
+                        <div class="dn-brand-meta">Equipment Hire Division</div>
+                        <div class="dn-brand-meta">Near Akamwesi Mall, Gayaza Rd</div>
+                        <div class="dn-brand-meta">Kawempe, Kampala, Uganda</div>
+                        <div class="dn-brand-meta">Tel: 0702060778 / 0745705088</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dn-meta">
+                <div class="dn-meta-row"><b>DN Number:</b><span>DN-{{ order.reference }}</span></div>
+                <div class="dn-meta-row"><b>Order Ref:</b><span>{{ order.reference }}</span></div>
+                <div class="dn-meta-row"><b>Issue Date:</b><span>{{ now.strftime('%b %d, %Y') }}</span></div>
+                <div class="dn-meta-row"><b>Delivery Date:</b><span>{{ order.delivery_date.strftime('%b %d, %Y') if order.delivery_date else order.start_date.strftime('%b %d, %Y') if order.start_date else '—' }}</span></div>
+                <div class="dn-meta-row"><b>Return Date:</b><span>{{ order.pickup_date.strftime('%b %d, %Y') if order.pickup_date else order.end_date.strftime('%b %d, %Y') if order.end_date else '—' }}</span></div>
+            </div>
+        </div>
+
+        <div class="dn-bill">
+            <div class="dn-box">
+                <div class="dn-box-title">Deliver To / Collect By</div>
+                <p><b>{{ order.client_name or 'Client Name' }}</b></p>
+                {% if order.telephone %}<p>Tel: {{ order.telephone }}</p>{% endif %}
+                {% if order.email %}<p>Email: {{ order.email }}</p>{% endif %}
+                {% if order.delivery_address %}
+                <p style="margin-top: 8px;"><b>Delivery Address:</b></p>
+                <p>{{ order.delivery_address }}</p>
+                {% endif %}
+            </div>
+            <div class="dn-box">
+                <div class="dn-box-title">Rental Details</div>
+                <p><b>Rental Period:</b> {{ rental_days }} day{{ 's' if rental_days != 1 else '' }}</p>
+                <p><b>Start Date:</b> {{ order.start_date.strftime('%b %d, %Y') if order.start_date else '—' }}</p>
+                <p><b>End Date:</b> {{ order.end_date.strftime('%b %d, %Y') if order.end_date else '—' }}</p>
+                {% if order.event %}
+                <p style="margin-top: 8px;"><b>Event:</b> {{ order.event.event_name }}</p>
+                <p><b>Event Date:</b> {{ order.event_date.strftime('%b %d, %Y') if order.event_date else '—' }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <table class="dn-items">
+            <thead>
+                <tr>
+                    <th style="width: 5%;">✓</th>
+                    <th style="width: 35%;">Item Description</th>
+                    <th style="width: 10%;" class="center">Qty</th>
+                    <th style="width: 15%;" class="center">Condition Out</th>
+                    <th style="width: 15%;" class="center">Condition In</th>
+                    <th style="width: 20%;">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td class="center"><span class="dn-checklist"></span></td>
+                    <td>
+                        <b>{{ item.inventory_item.name if item.inventory_item else 'Item #' + item.item_id|string }}</b>
+                        {% if item.inventory_item and item.inventory_item.sku %}
+                        <br><small style="color: #666;">SKU: {{ item.inventory_item.sku }}</small>
+                        {% endif %}
+                        {% if item.inventory_item and item.inventory_item.category %}
+                        <br><small style="color: #666;">Category: {{ item.inventory_item.category }}</small>
+                        {% endif %}
+                    </td>
+                    <td class="center"><b>{{ item.qty }}</b></td>
+                    <td class="center" style="background: #f9f9f9;"></td>
+                    <td class="center" style="background: #f9f9f9;"></td>
+                    <td style="background: #f9f9f9;"></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 1rem; color: #666;">No items in this order.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="background: #f0f0f0;">
+                    <td colspan="2" style="text-align: right; font-weight: bold;">Total Items:</td>
+                    <td class="center" style="font-weight: bold;">{{ order.items|sum(attribute='qty') }}</td>
+                    <td colspan="3"></td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <div class="condition-note">
+            <h4>Condition Guide</h4>
+            <p><b>E</b> = Excellent | <b>G</b> = Good | <b>F</b> = Fair | <b>P</b> = Poor | <b>D</b> = Damaged | <b>M</b> = Missing</p>
+        </div>
+
+        <div class="signature-section">
+            <h3 style="text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 0;">Authorization Signatures</h3>
+            
+            <div class="signature-grid">
+                <div class="signature-box">
+                    <div class="signature-box-title">Issued By (SAS Staff)</div>
+                    <p style="margin: 0; font-size: 0.9rem; color: #666;">I confirm that all items listed above have been checked and released in the condition indicated.</p>
+                    
+                    <p style="margin: 20px 0 4px 0; font-weight: 600;">Full Name:</p>
+                    <div class="signature-line"></div>
+                    
+                    <p style="margin: 12px 0 4px 0; font-weight: 600;">Signature:</p>
+                    <div class="signature-line"></div>
+                    
+                    <div style="display: flex; gap: 20px; margin-top: 12px;">
+                        <div style="flex: 1;">
+                            <p style="margin: 0 0 4px 0; font-weight: 600;">Date:</p>
+                            <div class="signature-line"></div>
+                        </div>
+                        <div style="flex: 1;">
+                            <p style="margin: 0 0 4px 0; font-weight: 600;">Time:</p>
+                            <div class="signature-line"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="signature-box">
+                    <div class="signature-box-title">Received By (Client/Representative)</div>
+                    <p style="margin: 0; font-size: 0.9rem; color: #666;">I confirm receipt of all items listed and agree to return them in the same condition.</p>
+                    
+                    <p style="margin: 20px 0 4px 0; font-weight: 600;">Full Name:</p>
+                    <div class="signature-line"></div>
+                    
+                    <p style="margin: 12px 0 4px 0; font-weight: 600;">Signature:</p>
+                    <div class="signature-line"></div>
+                    
+                    <div style="display: flex; gap: 20px; margin-top: 12px;">
+                        <div style="flex: 1;">
+                            <p style="margin: 0 0 4px 0; font-weight: 600;">Date:</p>
+                            <div class="signature-line"></div>
+                        </div>
+                        <div style="flex: 1;">
+                            <p style="margin: 0 0 4px 0; font-weight: 600;">ID/Phone:</p>
+                            <div class="signature-line"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; border: 2px solid #333; padding: 16px; page-break-inside: avoid; page-break-after: avoid;">
+            <h3 style="text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px 0; background: #333; color: white; padding: 8px 10px; margin: -16px -16px 16px -16px;">Return Authorization</h3>
+            
+            <div class="signature-grid" style="margin-top: 0;">
+                <div>
+                    <p style="margin: 0; font-size: 0.9rem; color: #666;">I confirm that all items have been returned and inspected.</p>
+                    
+                    <p style="margin: 16px 0 4px 0; font-weight: 600;">Received By (SAS Staff):</p>
+                    <div class="signature-line"></div>
+                    <p class="signature-label">Name & Signature</p>
+                    
+                    <p style="margin: 12px 0 4px 0; font-weight: 600;">Date & Time:</p>
+                    <div class="signature-line"></div>
+                </div>
+                <div>
+                    <p style="margin: 0; font-size: 0.9rem; color: #666;">I confirm returning all hired items as listed above.</p>
+                    
+                    <p style="margin: 16px 0 4px 0; font-weight: 600;">Returned By (Client):</p>
+                    <div class="signature-line"></div>
+                    <p class="signature-label">Name & Signature</p>
+                    
+                    <p style="margin: 12px 0 4px 0; font-weight: 600;">Date & Time:</p>
+                    <div class="signature-line"></div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 16px;">
+                <p style="margin: 0 0 4px 0; font-weight: 600;">Damage/Missing Items (if any):</p>
+                <div style="border: 1px solid #999; min-height: 60px; background: #f9f9f9;"></div>
+            </div>
+        </div>
+
+        <div class="dn-footer">
+            <p><b>Terms & Conditions:</b></p>
+            <p>1. All equipment must be returned by the agreed return date. Late returns may incur additional charges.</p>
+            <p>2. The client is responsible for any damage, loss, or theft of hired equipment during the rental period.</p>
+            <p>3. Equipment must be returned clean and in the same condition as received.</p>
+            <p>4. Replacement costs will be charged for damaged or missing items.</p>
+            <p style="margin-top: 12px; text-align: center;">Generated by SAS Management System · SAS Best Foods</p>
+        </div>
+    </div>
+</section>
+{% endblock %}

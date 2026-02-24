@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Departments</p>
+        <h1>Departments</h1>
+        <p class="muted">Manage system departments and their managers.</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a class="btn-secondary" href="{{ url_for('admin.dashboard') }}">← Dashboard</a>
+        <a class="btn-primary" href="{{ url_for('admin.departments_add') }}">+ Add Department</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>All Departments</h3>
+        <span class="badge">{{ departments|length }} departments</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Department Name</th>
+                    <th>Description</th>
+                    <th>Manager</th>
+                    <th>Users</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in departments %}
+                <tr>
+                    <td><strong>{{ item.department.name }}</strong></td>
+                    <td>{{ item.department.description or '-' }}</td>
+                    <td>
+                        {% if item.manager %}
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">
+                            {{ item.manager }}
+                        </span>
+                        {% else %}
+                        <span class="muted">No manager</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge">{{ item.user_count }} users</span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{{ url_for('admin.departments_users', dept_id=item.department.id) }}" class="btn-ghost btn-sm">View Users</a>
+                            <a href="{{ url_for('admin.departments_edit', dept_id=item.department.id) }}" class="btn-ghost btn-sm">Edit</a>
+                            {% if item.user_count == 0 %}
+                            <form method="post" action="{{ url_for('admin.departments_delete', dept_id=item.department.id) }}" 
+                                  onsubmit="return confirm('Are you sure you want to delete department {{ item.department.name }}?');" 
+                                  style="display: inline;">
+                                <button type="submit" class="btn-ghost btn-sm" style="color: #e74c3c;">Delete</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No departments found.</p>
+                        <a class="btn-primary" href="{{ url_for('admin.departments_add') }}">Create First Department</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

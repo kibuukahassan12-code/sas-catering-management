@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ invoice.invoice_number }} - SAS Best Foods</title>
+    <style>
+        @page { size: A4; margin: 1.5cm; }
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10.5pt;
+            color: #222;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+        .sheet {
+            width: 100%;
+            background: #fff;
+            position: relative;
+        }
+        .wm {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 40%;
+            opacity: 0.12;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .top, .bill, table.items, .bottom, .footer {
+            position: relative;
+            z-index: 1;
+        }
+        .top {
+            display: flex;
+            justify-content: space-between;
+            gap: 1.25rem;
+            border-bottom: 2px solid #b9b9b9;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .title {
+            font-size: 18pt;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            margin: 0 0 10px 0;
+        }
+        .brand {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+        }
+        .logo {
+            width: 90px;
+            height: auto;
+            object-fit: contain;
+        }
+        .brand h2 {
+            margin: 0;
+            font-size: 14pt;
+            font-weight: 800;
+        }
+        .brand p { margin: 2px 0; color: #555; font-size: 9.5pt; }
+        .meta {
+            min-width: 240px;
+            border: 1px solid #b9b9b9;
+            padding: 10px 12px;
+        }
+        .meta .row {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin: 4px 0;
+            font-size: 9.5pt;
+        }
+        .meta .row b { color: #222; }
+        .meta .grand {
+            margin-top: 10px;
+            border-top: 1px solid #b9b9b9;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12pt;
+            font-weight: 800;
+        }
+        .bill {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin: 12px 0 14px 0;
+        }
+        .box {
+            border: 1px solid #b9b9b9;
+            padding: 10px 12px;
+        }
+        .box h3 {
+            margin: 0 0 8px 0;
+            font-size: 10pt;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+        }
+        .box p { margin: 3px 0; color: #333; }
+
+        table.items {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #b9b9b9;
+            margin-top: 10px;
+        }
+        table.items th, table.items td {
+            border-bottom: 1px solid #d5d5d5;
+            padding: 8px 10px;
+            vertical-align: top;
+        }
+        table.items th {
+            background: #efefef;
+            text-transform: uppercase;
+            font-size: 9pt;
+            letter-spacing: 0.4px;
+        }
+        .num { text-align: right; white-space: nowrap; }
+        .muted { color: #666; font-size: 9pt; }
+
+        .bottom {
+            display: grid;
+            grid-template-columns: 1fr 320px;
+            gap: 14px;
+            margin-top: 12px;
+            align-items: start;
+        }
+        .totals {
+            border: 1px solid #b9b9b9;
+            padding: 10px 12px;
+        }
+        .totals .trow {
+            display: flex;
+            justify-content: space-between;
+            margin: 6px 0;
+        }
+        .totals .trow.total {
+            border-top: 1px solid #b9b9b9;
+            padding-top: 8px;
+            margin-top: 10px;
+            font-weight: 800;
+            font-size: 11pt;
+        }
+        .footer {
+            margin-top: 18px;
+            border-top: 1px solid #d5d5d5;
+            padding-top: 10px;
+            text-align: center;
+            color: #666;
+            font-size: 9pt;
+        }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <img class="wm" src="{{ url_for('static', filename='images/ssas_logo.png', _external=True) }}" alt="" onerror="this.style.display='none';">
+        <div class="top">
+            <div>
+                <div class="title">CATERING INVOICE</div>
+                <div class="brand">
+                    <img class="logo" src="{{ url_for('static', filename='images/ssas_logo.png', _external=True) }}" alt="SAS Best Foods Logo" onerror="this.style.display='none';">
+                    <div>
+                        <h2>SAS Best Foods</h2>
+                        <p>Near Akamwesi Mall, Gayaza Rd, Opp Electoral Commission Kawempe Offices</p>
+                        <p>Kawempe, Kampala, Uganda</p>
+                        <p>Tel: 0702060778 / 0745705088</p>
+                        <p>Email: info@sasbestfoods.com | Website: www.sasbestfoods.com</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="meta">
+                <div class="row"><span><b>Invoice #</b></span><span>{{ invoice.invoice_number }}</span></div>
+                <div class="row"><span><b>Issue Date</b></span><span>{{ invoice.issue_date.strftime('%b %d, %Y') if invoice.issue_date else 'N/A' }}</span></div>
+                <div class="row"><span><b>Due Date</b></span><span>{{ invoice.due_date.strftime('%b %d, %Y') if invoice.due_date else 'N/A' }}</span></div>
+                {% set inv_status = (invoice.status.value if invoice.status is not none and invoice.status.value is defined else invoice.status) %}
+                <div class="row"><span><b>Status</b></span><span>{{ inv_status or 'N/A' }}</span></div>
+                <div class="row"><span><b>Discount</b></span><span>-{{ CURRENCY }}{{ "{:,.2f}".format(discount or 0) }}</span></div>
+                <div class="row"><span><b>Amount Paid</b></span><span>{{ CURRENCY }}{{ "{:,.2f}".format(amount_paid or 0) }}</span></div>
+                <div class="row"><span><b>Balance Due</b></span><span>{{ CURRENCY }}{{ "{:,.2f}".format(balance_due or 0) }}</span></div>
+                <div class="grand"><span>TOTAL</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(total or 0) }}</span></div>
+            </div>
+        </div>
+
+        <div class="bill">
+            <div class="box">
+                <h3>Bill To</h3>
+                {% if invoice.event and invoice.event.client %}
+                    <p><b>{{ invoice.event.client.name }}</b></p>
+                    {% if invoice.event.client.contact_person %}<p>{{ invoice.event.client.contact_person }}</p>{% endif %}
+                    {% if invoice.event.client.phone %}<p>{{ invoice.event.client.phone }}</p>{% endif %}
+                    {% if invoice.event.client.email %}<p>{{ invoice.event.client.email }}</p>{% endif %}
+                {% else %}
+                    <p class="muted">No client information available.</p>
+                {% endif %}
+            </div>
+            <div class="box">
+                <h3>Event</h3>
+                {% if invoice.event %}
+                    <p><b>{{ invoice.event.title }}</b></p>
+                    {% set d = invoice.event.date or invoice.event.event_date %}
+                    <p>{{ d.strftime('%b %d, %Y') if d else 'No Date' }}</p>
+                    {% if invoice.event.guest_count %}<p>{{ invoice.event.guest_count }} guests</p>{% endif %}
+                {% else %}
+                    <p class="muted">No event linked.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <table class="items">
+            <thead>
+                <tr>
+                    <th style="width: 52%;">Description</th>
+                    <th style="width: 12%;" class="num">Qty</th>
+                    <th style="width: 18%;" class="num">Unit Price</th>
+                    <th style="width: 18%;" class="num">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if line_items and line_items|length > 0 %}
+                    {% for item in line_items %}
+                        <tr>
+                            <td>
+                                <b>{{ item.name }}</b>
+                                {% if item.description %}<div class="muted">{{ item.description }}</div>{% endif %}
+                            </td>
+                            <td class="num">{{ item.quantity or 0 }}</td>
+                            <td class="num">{{ CURRENCY }}{{ "{:,.2f}".format(item.unit_price or 0) }}</td>
+                            <td class="num">{{ CURRENCY }}{{ "{:,.2f}".format(item.line_total or 0) }}</td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td><b>Catering services</b></td>
+                        <td class="num">1</td>
+                        <td class="num">{{ CURRENCY }}{{ "{:,.2f}".format(total or 0) }}</td>
+                        <td class="num">{{ CURRENCY }}{{ "{:,.2f}".format(total or 0) }}</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <div class="bottom">
+            <div class="box">
+                <h3>Notes / Terms</h3>
+                <p class="muted">Payment terms: 30 days from invoice date. Thank you for your business.</p>
+            </div>
+            <div class="totals">
+                <div class="trow"><span>Subtotal</span><span>{{ CURRENCY }}{{ "{:,.2f}".format((subtotal or 0) + (discount or 0)) }}</span></div>
+                <div class="trow"><span>Discount</span><span>-{{ CURRENCY }}{{ "{:,.2f}".format(discount or 0) }}</span></div>
+                <div class="trow total"><span>Total</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(total or 0) }}</span></div>
+                <div class="trow"><span>Amount Paid</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(amount_paid or 0) }}</span></div>
+                <div class="trow total"><span>Balance Due</span><span>{{ CURRENCY }}{{ "{:,.2f}".format(balance_due or 0) }}</span></div>
+            </div>
+        </div>
+
+        <div class="footer">
+            Generated by SAS Management System · SAS Best Foods
+        </div>
+    </div>
+</body>
+</html>
+

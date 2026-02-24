@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · Department Users</p>
+        <h1>{{ department.name }} - Users</h1>
+        <p class="muted">View users in this department</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a class="btn-secondary" href="{{ url_for('admin.departments_list') }}">← Departments</a>
+        <a class="btn-primary" href="{{ url_for('admin.users_add') }}">+ Add User</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Users in {{ department.name }}</h3>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>User Email</th>
+                    <th>Employee Name</th>
+                    <th>Position</th>
+                    <th>Phone</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td><strong>{{ emp.user.email if emp.user else 'No user linked' }}</strong></td>
+                    <td>{{ emp.first_name }} {{ emp.last_name }}</td>
+                    <td>
+                        {% if emp.position_obj %}
+                        <span class="badge">{{ emp.position_obj.title }}</span>
+                        {% else %}
+                        <span class="muted">{{ emp.position or 'Not assigned' }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ emp.phone or '-' }}</td>
+                    <td>
+                        {% if emp.user %}
+                        <a href="{{ url_for('admin.users_edit', user_id=emp.user.id) }}" class="btn-ghost btn-sm">Edit User</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        <p class="muted">No users in this department.</p>
+                        <a class="btn-primary" href="{{ url_for('admin.users_add') }}">Add User to Department</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

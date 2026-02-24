@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Production Department</p>
+        <h1>Daily Use Inventory Report</h1>
+        <p class="muted">Current stock snapshot and low-stock alerts.</p>
+    </div>
+    <div class="quick-links">
+        <a class="btn-secondary" href="{{ url_for('production.daily_inventory_list') }}">Back</a>
+        <a class="btn-primary" href="{{ url_for('production.daily_inventory_report_csv') }}">Download CSV</a>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <article class="summary-card">
+            <p>Total Items</p>
+            <h2>{{ total_items or 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Total Quantity</p>
+            <h2>{{ total_quantity or 0 }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Low Stock</p>
+            <h2 class="{% if (low_stock_items|length) > 0 %}kpi-low-stock--danger{% endif %}">{{ low_stock_items|length }}</h2>
+        </article>
+        <article class="summary-card">
+            <p>Generated</p>
+            <h2 style="font-size: 1rem;">{{ generated_at.strftime('%Y-%m-%d %H:%M') if generated_at else '' }}</h2>
+        </article>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>Low Stock Items</h3>
+        <span class="badge">{{ low_stock_items|length }} low</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th>Min</th>
+                    <th>Unit</th>
+                    <th>Condition</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in low_stock_items %}
+                <tr>
+                    <td><strong>{{ it.name }}</strong></td>
+                    <td>{{ it.category or '' }}</td>
+                    <td><span class="badge warning">{{ it.quantity or 0 }}</span></td>
+                    <td>{{ it.min_quantity or 0 }}</td>
+                    <td>{{ it.unit or 'pcs' }}</td>
+                    <td>{{ it.condition or 'Good' }}</td>
+                    <td>{{ it.location or '' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center muted">No low-stock items right now.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    <div class="panel-header">
+        <h3>All Items</h3>
+        <span class="badge">{{ items|length }} items</span>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Category</th>
+                    <th>Qty</th>
+                    <th>Min</th>
+                    <th>Unit</th>
+                    <th>Condition</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in items %}
+                <tr>
+                    <td>{{ it.name }}</td>
+                    <td>{{ it.category or '' }}</td>
+                    <td>{{ it.quantity or 0 }}</td>
+                    <td>{{ it.min_quantity or 0 }}</td>
+                    <td>{{ it.unit or 'pcs' }}</td>
+                    <td>{{ it.condition or 'Good' }}</td>
+                    <td>{{ it.location or '' }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center muted">No items recorded.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}
+

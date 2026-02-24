@@ -9,6 +9,21 @@
     <a class="btn-secondary" href="{{ url_for('admin.roles_list') }}">← Back to Roles</a>
 </section>
 
+{% if generated_password %}
+<section class="panel" style="border: 2px solid #28a745; background: rgba(40, 167, 69, 0.1);">
+    <div style="padding: 1.5rem; text-align: center;">
+        <h3 style="color: #28a745; margin-top: 0;">Temporary Password Generated</h3>
+        <p style="margin-bottom: 1rem;">The temporary password for <strong>{{ assigned_email }}</strong> is:</p>
+        <div style="display: inline-block; padding: 1rem 2rem; background: #fff; border-radius: 8px; font-size: 1.5em; font-family: monospace; font-weight: bold; color: #333; margin-bottom: 1rem;">
+            {{ generated_password }}
+        </div>
+        <p style="font-size: 0.9rem; color: #856404;">
+            <strong>Important:</strong> This password will expire in 24 hours. Please share this password with the user securely.
+        </p>
+    </div>
+</section>
+{% endif %}
+
 <section class="panel">
     <div class="panel-header">
         <h3>Role Assignment</h3>
@@ -48,6 +63,37 @@
                         </option>
                         {% endfor %}
                     </select>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 193, 7, 0.1); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 8px;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                    <input type="checkbox" id="set_temporary_password" name="set_temporary_password" onclick="togglePasswordFields()" style="width: auto;">
+                    <label for="set_temporary_password" style="margin: 0; font-weight: 600;">Set Temporary Password for User</label>
+                </div>
+                
+                <div id="password_fields" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+                        <input type="checkbox" id="generate_password" name="generate_password" checked onclick="togglePasswordGeneration()" style="width: auto;">
+                        <label for="generate_password" style="margin: 0;">Generate secure random password</label>
+                    </div>
+                    
+                    <div id="generated_option" style="display: block;">
+                        <div style="padding: 1rem; background: rgba(242, 104, 34, 0.1); border: 1px solid rgba(242, 104, 34, 0.3); border-radius: 8px; margin-bottom: 1rem;">
+                            <p style="margin: 0 0 0.5rem 0;">
+                                <strong>Generated Password (12 characters):</strong>
+                            </p>
+                            <code id="generated_pw_display" style="font-size: 1.2em; color: var(--brand);"></code>
+                            <button type="button" onclick="copyGeneratedPassword()" class="btn-ghost btn-sm" style="margin-left: 0.5rem;">Copy</button>
+                        </div>
+                    </div>
+                    
+                    <div id="manual_option" style="display: none;">
+                        <div class="form-group">
+                            <label for="temp_password">Enter Temporary Password</label>
+                            <input type="password" name="temp_password" id="temp_password" autocomplete="new-password" placeholder="Enter a custom temporary password">
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -94,6 +140,51 @@
         </table>
     </div>
 </section>
+
+<script>
+function togglePasswordFields() {
+    const checkbox = document.getElementById('set_temporary_password');
+    const passwordFields = document.getElementById('password_fields');
+    passwordFields.style.display = checkbox.checked ? 'block' : 'none';
+    
+    if (checkbox.checked) {
+        generatePassword();
+    }
+}
+
+function togglePasswordGeneration() {
+    const generateCheckbox = document.getElementById('generate_password');
+    const generatedOption = document.getElementById('generated_option');
+    const manualOption = document.getElementById('manual_option');
+    
+    if (generateCheckbox.checked) {
+        generatedOption.style.display = 'block';
+        manualOption.style.display = 'none';
+        generatePassword();
+    } else {
+        generatedOption.style.display = 'none';
+        manualOption.style.display = 'block';
+    }
+}
+
+function generatePassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('generated_pw_display').textContent = password;
+}
+
+function copyGeneratedPassword() {
+    const password = document.getElementById('generated_pw_display').textContent;
+    navigator.clipboard.writeText(password).then(function() {
+        alert('Password copied to clipboard!');
+    }, function(err) {
+        console.error('Could not copy text: ', err);
+    });
+}
+</script>
 {% endblock %}
 
 

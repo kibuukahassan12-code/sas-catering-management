@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">Admin · User Management</p>
+        <h1>Users by Department</h1>
+        <p class="muted">View all system users grouped by their departments</p>
+    </div>
+    <div style="display: flex; gap: 1rem;">
+        <a class="btn-secondary" href="{{ url_for('admin.dashboard') }}">← Dashboard</a>
+        <a class="btn-secondary" href="{{ url_for('admin.manage_users') }}">All Users</a>
+        <a class="btn-primary" href="{{ url_for('admin.users_add') }}">+ Add User</a>
+    </div>
+</section>
+
+{% for dept_id, dept_data in users_by_dept.items() %}
+<section class="panel" style="margin-bottom: 2rem;">
+    <div class="panel-header">
+        <h3>{{ dept_data.department.name }}</h3>
+        <span class="badge">{{ dept_data.count }} users</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Position</th>
+                    <th>Role</th>
+                    <th>Password Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in dept_data.users %}
+                <tr>
+                    <td>
+                        <strong>{{ item.user.email }}</strong><br>
+                        <small class="muted">{{ item.employee.first_name }} {{ item.employee.last_name }}</small>
+                    </td>
+                    <td>{{ item.position or 'Not assigned' }}</td>
+                    <td>
+                        {% if item.user.role_obj %}
+                        <span class="badge" style="background: rgba(246, 188, 56, 0.2); color: var(--accent);">
+                            {{ item.user.role_obj.name }}
+                        </span>
+                        {% else %}
+                        <span class="muted">No role</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.user.force_password_change %}
+                        <span class="badge" style="background: rgba(255, 92, 92, 0.2); color: #ff5c5c;">
+                            Must Change
+                        </span>
+                        {% else %}
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">
+                            Active
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{{ url_for('admin.users_edit', user_id=item.user.id) }}" class="btn-ghost btn-sm">Edit</a>
+                            <form method="post" action="{{ url_for('admin.users_reset_password', user_id=item.user.id) }}" 
+                                  onsubmit="return confirm('Reset password for {{ item.user.email }}?');" 
+                                  style="display: inline;">
+                                <button type="submit" class="btn-secondary btn-sm">Reset Password</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endfor %}
+
+{% if users_without_dept %}
+<section class="panel">
+    <div class="panel-header">
+        <h3>Users Without Department</h3>
+        <span class="badge">{{ users_without_dept|length }} users</span>
+    </div>
+    <div class="table-wrapper table-responsive">
+        <table>
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Password Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users_without_dept %}
+                <tr>
+                    <td><strong>{{ user.email }}</strong></td>
+                    <td>
+                        {% if user.role_obj %}
+                        <span class="badge" style="background: rgba(246, 188, 56, 0.2); color: var(--accent);">
+                            {{ user.role_obj.name }}
+                        </span>
+                        {% else %}
+                        <span class="muted">No role</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.force_password_change %}
+                        <span class="badge" style="background: rgba(255, 92, 92, 0.2); color: #ff5c5c;">
+                            Must Change
+                        </span>
+                        {% else %}
+                        <span class="badge" style="background: rgba(46, 204, 113, 0.2); color: #2ecc71;">
+                            Active
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('admin.users_edit', user_id=user.id) }}" class="btn-ghost btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+
+{% if not users_by_dept and not users_without_dept %}
+<section class="panel">
+    <div style="text-align: center; padding: 3rem;">
+        <p class="muted">No users found.</p>
+        <a class="btn-primary" href="{{ url_for('admin.users_add') }}">Add First User</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

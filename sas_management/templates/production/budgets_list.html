@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Production Department</p>
+    <h1>Event Budgets</h1>
+    <p class="muted">Create production budgets for events and submit to Admin for approval.</p>
+  </div>
+  <div class="quick-links">
+    <a class="btn-primary" href="{{ url_for('production.budget_new') }}">+ New Budget</a>
+    <button type="button" class="btn-secondary" onclick="openFileManagerForBudget()">📁 Import from File Manager</button>
+    <a class="btn-secondary" href="{{ url_for('production.index') }}">← Production Dashboard</a>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h3>Budgets</h3>
+    <span class="badge">{{ budgets|length }} shown</span>
+  </div>
+  <div class="table-wrapper">
+    <table class="responsive-table">
+      <thead>
+        <tr>
+          <th>Event / Client</th>
+          <th>Status</th>
+          <th>Total</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in budgets %}
+        <tr>
+          <td>
+            <strong>{{ b.event.title or b.event.event_name or 'Untitled Event' }}</strong><br>
+            <small class="muted">
+              {% if b.event.client %}
+                👤 {{ b.event.client.name }}{% if b.event.client.company %} - {{ b.event.client.company }}{% endif %}
+              {% elif b.event.client_name %}
+                👤 {{ b.event.client_name }}
+              {% endif %}
+              {% if (b.event.event_date or b.event.date) %}
+                {% if b.event.client or b.event.client_name %} • {% endif %}{{ (b.event.event_date or b.event.date).strftime('%b %d, %Y') }}
+              {% endif %}
+            </small>
+          </td>
+          <td>
+            <span class="badge badge-{{ (b.status.value if b.status else 'Draft')|lower|replace(' ', '-') }}">{{ b.status.value if b.status else 'Draft' }}</span>
+          </td>
+          <td style="text-align:right;"><strong>{{ CURRENCY }}{{ "{:,.2f}".format(b.total_cost_ugx or 0) }}</strong></td>
+          <td>{{ b.created_at.strftime('%b %d, %Y') if b.created_at else '' }}</td>
+          <td style="text-align:right;">
+            <a class="btn-ghost btn-sm" href="{{ url_for('production.budget_view', budget_id=b.id) }}">View</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" class="muted" style="text-align:center; padding: 2rem;">No budgets yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if pagination is defined and pagination.pages and pagination.pages > 1 %}
+  <nav class="pagination" aria-label="Budgets pagination">
+    <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
+    <div class="pagination-controls">
+      {% if pagination.has_prev %}
+      <a class="btn-secondary" href="{{ url_for('production.budgets_list', page=pagination.prev_num) }}">← Previous</a>
+      {% else %}
+      <span class="btn-disabled">← Previous</span>
+      {% endif %}
+      {% if pagination.has_next %}
+      <a class="btn-secondary" href="{{ url_for('production.budgets_list', page=pagination.next_num) }}">Next →</a>
+      {% else %}
+      <span class="btn-disabled">Next →</span>
+      {% endif %}
+    </div>
+  </nav>
+  {% endif %}
+</section>
+
+<script>
+function openFileManagerForBudget() {
+  window.location.href = "{{ url_for('production.budget_import_file_manager') }}";
+}
+</script>
+{% endblock %}
+

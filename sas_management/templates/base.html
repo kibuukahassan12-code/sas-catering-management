@@ -75,12 +75,12 @@
         <div class="app-drawer-content">
             {% if current_user.is_authenticated %}
             <ul class="app-nav-menu">
+                {% if current_user.is_admin %}
                 <li class="app-nav-item">
                     <a href="{{ url_for('university.dashboard') }}" class="app-nav-link">
                         🎓 Employee University
                     </a>
                 </li>
-                {% if current_user.is_admin %}
                 <li class="app-nav-item">
                     <a href="{{ url_for('admin.dashboard') }}" class="app-nav-link">
                         <span class="app-nav-icon">🛡️</span>
@@ -88,7 +88,7 @@
                     </a>
                 </li>
                 {% endif %}
-                {% if current_user.is_authenticated %}
+                {% if current_user.is_admin or current_user.has_permission('ai:ai_chat') %}
                 <li class="app-nav-item">
                     <a href="{{ url_for('ai.chat') }}" class="app-nav-link">
                         <span class="app-nav-icon">🤖</span>

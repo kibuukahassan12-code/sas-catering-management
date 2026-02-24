@@ -76,6 +76,9 @@
     <div style="padding: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
         <a href="{{ url_for('admin.users_list') }}" class="btn-primary">👥 Manage Users</a>
         <a href="{{ url_for('admin.users_add') }}" class="btn-secondary">➕ Create User</a>
+        <a href="{{ url_for('admin.users_by_department') }}" class="btn-secondary">🏢 Users by Department</a>
+        <a href="{{ url_for('admin.departments_list') }}" class="btn-secondary">🏭 Manage Departments</a>
+        <a href="{{ url_for('admin.departments_add') }}" class="btn-secondary">➕ Create Department</a>
         <a href="{{ url_for('admin.roles_list') }}" class="btn-secondary">🔐 Manage Roles</a>
         <a href="{{ url_for('admin.role_create') }}" class="btn-secondary">➕ Create Role</a>
         <a href="{{ url_for('admin.permissions_list') }}" class="btn-secondary">🔑 View Permissions</a>

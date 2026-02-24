@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- SAS Brand Colors -->
+    <color name="brand_orange">#F26822</color>
+    <color name="brand_accent">#F6BC38</color>
+    <color name="brand_blue">#2d5016</color>
+    
+    <!-- Background Colors -->
+    <color name="background_dark">#000000</color>
+    <color name="surface_dark">#111111</color>
+    <color name="surface_light">#1A1A1A</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#F5F5F5</color>
+    <color name="text_secondary">#CCCCCC</color>
+    <color name="text_muted">#999999</color>
+    
+    <!-- Material 3 Colors -->
+    <color name="md_theme_light_primary">#F26822</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_secondary">#F6BC38</color>
+    <color name="md_theme_light_onSecondary">#000000</color>
+    <color name="md_theme_light_error">#FF5252</color>
+    <color name="md_theme_light_onError">#FFFFFF</color>
+    <color name="md_theme_light_background">#000000</color>
+    <color name="md_theme_light_onBackground">#F5F5F5</color>
+    <color name="md_theme_light_surface">#111111</color>
+    <color name="md_theme_light_onSurface">#F5F5F5</color>
+    
+    <color name="md_theme_dark_primary">#F26822</color>
+    <color name="md_theme_dark_onPrimary">#FFFFFF</color>
+    <color name="md_theme_dark_secondary">#F6BC38</color>
+    <color name="md_theme_dark_onSecondary">#000000</color>
+    <color name="md_theme_dark_error">#FF5252</color>
+    <color name="md_theme_dark_onError">#FFFFFF</color>
+    <color name="md_theme_dark_background">#000000</color>
+    <color name="md_theme_dark_onBackground">#F5F5F5</color>
+    <color name="md_theme_dark_surface">#111111</color>
+    <color name="md_theme_dark_onSurface">#F5F5F5</color>
+</resources>
+

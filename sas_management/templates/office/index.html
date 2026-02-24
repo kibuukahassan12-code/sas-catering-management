@@ -1,0 +1,709 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+    <div>
+        <p class="eyebrow">SAS Office</p>
+        <h1>File Manager</h1>
+        <p class="muted">Organize, store, and access all your files and documents.</p>
+    </div>
+    <div class="quick-links">
+        <button type="button" class="btn-secondary" onclick="triggerFileUpload()" title="Upload files to the file manager">📤 Upload File</button>
+        <button type="button" class="btn-secondary" onclick="showNewFolderDialog()" title="Create a new folder">📁 New Folder</button>
+    </div>
+</section>
+
+<!-- Breadcrumb Navigation -->
+{% if breadcrumbs %}
+<nav class="office-breadcrumb">
+    <a href="{{ url_for('office.index') }}">📁 Root</a>
+    {% for crumb in breadcrumbs %}
+    <span> / </span>
+    <a href="{{ url_for('office.index', folder=crumb.id) }}">{{ crumb.name }}</a>
+    {% endfor %}
+</nav>
+{% endif %}
+
+<!-- Search Bar -->
+<div class="office-search">
+    <input type="text" id="office-search-input" placeholder="Search files and folders..." class="office-search-box">
+    <div id="office-search-results" class="office-search-results hidden"></div>
+</div>
+
+<!-- File Manager Grid -->
+<div class="office-container">
+    <!-- Folders -->
+    {% if folders %}
+    <div class="office-section">
+        <h3>📁 Folders</h3>
+        <div class="office-grid">
+            {% for folder in folders %}
+            <div class="office-item office-folder">
+                <a href="{{ url_for('office.index', folder=folder.id) }}" class="office-item-link">
+                    <div class="office-item-icon">📁</div>
+                    <div class="office-item-name">{{ folder.name }}</div>
+                    <div class="office-item-meta">Created {{ folder.created_at.strftime('%Y-%m-%d') if folder.created_at else 'N/A' }}</div>
+                </a>
+                {% if current_user.is_admin %}
+                <div class="office-item-actions">
+                    <form method="POST" action="{{ url_for('office.delete_folder', folder_id=folder.id) }}" class="office-item-delete" onsubmit="return confirm('Delete folder?')">
+                        <button type="submit" class="btn-icon-danger" title="Delete folder">🗑</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Files -->
+    {% if files %}
+    <div class="office-section">
+        <h3>📄 Files</h3>
+        <div class="office-grid">
+            {% for file in files %}
+            <div class="office-item office-file office-file-{{ file.file_type }}" 
+                 data-file-id="{{ file.id }}" 
+                 data-file-type="{{ file.file_type }}"
+                 data-view-url="{{ url_for('office.view_file', file_id=file.id) }}"
+                 data-download-url="{{ url_for('office.download_file', file_id=file.id) }}"
+                 style="cursor: pointer;">
+                <div class="office-item-link">
+                    {% if file.file_type == 'image' %}
+                    <div class="office-item-icon">🖼️</div>
+                    {% elif file.file_type == 'video' %}
+                    <div class="office-item-icon">🎥</div>
+                    {% elif file.file_type == 'audio' %}
+                    <div class="office-item-icon">🎵</div>
+                    {% elif file.file_type == 'archive' %}
+                    <div class="office-item-icon">📦</div>
+                    {% else %}
+                    <div class="office-item-icon">📄</div>
+                    {% endif %}
+                    <div class="office-item-name" title="{{ file.original_filename }} (Double-click to open)">{{ file.name }}</div>
+                    <div class="office-item-meta">{{ format_file_size(file.file_size) }} · {{ file.original_filename.rsplit('.', 1)[-1].upper() if '.' in file.original_filename else 'FILE' }}</div>
+                </div>
+                <div class="office-item-actions">
+                    <a href="{{ url_for('office.view_file', file_id=file.id) }}" 
+                       target="_blank" 
+                       rel="noopener noreferrer"
+                       class="btn-icon btn-view" 
+                       title="View file in new browser tab (no download)" 
+                       data-file-ext="{{ file.original_filename.rsplit('.', 1)[-1].lower() if '.' in file.original_filename else '' }}"
+                       onclick="event.stopPropagation(); return true;">
+                       👁️ View
+                    </a>
+                    <a href="{{ url_for('office.download_file', file_id=file.id) }}" 
+                       class="btn-icon btn-download" 
+                       title="Download file"
+                       download="{{ file.original_filename }}"
+                       onclick="event.stopPropagation(); return true;">
+                       ⬇️ Download
+                    </a>
+                    {% if current_user.is_admin %}
+                    <form method="POST" action="{{ url_for('office.delete_file', file_id=file.id) }}" class="office-item-delete" onsubmit="return confirm('Delete file?')">
+                        <button type="submit" class="btn-icon-danger" title="Delete">🗑</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Empty State -->
+    {% if not folders and not files %}
+    <div class="office-empty">
+        <div class="office-empty-icon">📁</div>
+        <h3>No files or folders</h3>
+        <p>Upload files or create folders to get started.</p>
+        <div class="office-empty-actions">
+            <button type="button" class="btn-primary" onclick="document.getElementById('file-input').click()">Upload File</button>
+            <button type="button" class="btn-secondary" onclick="showNewFolderDialog()">Create Folder</button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Hidden File Input (triggers upload form) -->
+<!-- NOTE: accept="*/*" means ALL file formats are accepted - no restrictions -->
+<input type="file" id="file-input" multiple style="display:none;" accept="*/*" onchange="handleFileSelect(event)">
+
+<!-- New Folder Dialog -->
+<div id="new-folder-dialog" class="office-dialog hidden">
+    <div class="office-dialog-content">
+        <h3>Create New Folder</h3>
+        <form method="POST" action="{{ url_for('office.create_folder') }}" id="new-folder-form" onsubmit="return validateFolderName(this)">
+            <input type="hidden" name="parent_id" value="{{ current_folder.id if current_folder else '' }}" id="folder-parent-id">
+            <div class="form-group">
+                <label>Folder Name</label>
+                <input type="text" name="name" required placeholder="Enter folder name" autofocus>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">Create</button>
+                <button type="button" class="btn-secondary" onclick="hideNewFolderDialog()">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Upload Form (hidden, submitted via JavaScript) -->
+<!-- NOTE: accept="*/*" means ALL file formats are accepted - no restrictions -->
+<form method="POST" action="{{ url_for('office.upload_file') }}" enctype="multipart/form-data" id="upload-form" style="display:none;">
+    <input type="hidden" name="folder_id" id="upload-folder-id" value="{{ current_folder.id if current_folder else '' }}">
+    <input type="file" name="file" id="upload-file-input" multiple accept="*/*">
+    <input type="hidden" name="extract_zip" id="extract-zip-input" value="false">
+</form>
+
+<style>
+.office-breadcrumb {
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+}
+.office-breadcrumb a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.office-breadcrumb a:hover {
+    text-decoration: underline;
+}
+.office-search {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+.office-search-box {
+    width: 100%;
+    max-width: 500px;
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    background: transparent !important;
+    color: var(--text);
+    font-size: 0.95rem;
+}
+.office-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-width: 500px;
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    margin-top: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 100;
+}
+.office-search-results.hidden {
+    display: none;
+}
+.office-container {
+    margin-top: 1.5rem;
+}
+.office-section {
+    margin-bottom: 2rem;
+}
+.office-section h3 {
+    margin-bottom: 1rem;
+    color: var(--accent);
+    font-size: 1.1rem;
+}
+.office-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+}
+.office-item {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+    transition: all 0.2s;
+}
+.office-item:hover {
+    border-color: var(--brand);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(242,104,34,0.2);
+}
+.office-item.office-file {
+    cursor: pointer;
+    user-select: none;
+}
+.office-item.office-file:hover {
+    background: rgba(242,104,34,0.05);
+}
+.office-item-link {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+}
+.office-item-icon {
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+.office-item-name {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    word-break: break-word;
+    color: var(--text);
+}
+.office-item-meta {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.6);
+}
+.office-item-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+.btn-icon {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: var(--text);
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+}
+.btn-icon.btn-view {
+    background: rgba(242,104,34,0.1);
+    border-color: rgba(242,104,34,0.3);
+    color: var(--brand);
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+}
+.btn-icon.btn-view:hover {
+    background: rgba(242,104,34,0.2);
+    border-color: var(--brand);
+    transform: translateY(-1px);
+}
+.btn-icon.btn-download {
+    background: rgba(34,197,94,0.1);
+    border-color: rgba(34,197,94,0.3);
+    color: #22c55e;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+}
+.btn-icon.btn-download:hover {
+    background: rgba(34,197,94,0.2);
+    border-color: #22c55e;
+    transform: translateY(-1px);
+}
+.btn-icon:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--brand);
+}
+.btn-icon-danger {
+    background: transparent;
+    border: 1px solid rgba(220,38,38,0.3);
+    color: #dc2626;
+    padding: 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+}
+.btn-icon-danger:hover {
+    background: rgba(220,38,38,0.1);
+}
+.office-item-delete {
+    margin: 0;
+}
+.office-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: rgba(255,255,255,0.6);
+}
+.office-empty-icon {
+    font-size: 5rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+.office-empty h3 {
+    margin-bottom: 0.5rem;
+    color: var(--text);
+}
+.office-empty-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+.office-dialog {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.office-dialog.hidden {
+    display: none;
+}
+.office-dialog-content {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.office-dialog-content h3 {
+    margin-bottom: 1.5rem;
+    color: var(--accent);
+}
+.form-group {
+    margin-bottom: 1rem;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+    font-weight: 500;
+}
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: transparent !important;
+    color: var(--text);
+}
+.form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+}
+/* Button hover effects for better UX */
+.quick-links button,
+.office-empty-actions button {
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.quick-links button:hover,
+.office-empty-actions button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(242,104,34,0.3);
+}
+.quick-links button:active,
+.office-empty-actions button:active {
+    transform: translateY(0);
+}
+/* Ensure buttons are clickable */
+button[type="button"] {
+    cursor: pointer;
+    user-select: none;
+}
+button[type="button"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+// Trigger file upload - ensures file input exists and is clickable
+function triggerFileUpload() {
+    const fileInput = document.getElementById('file-input');
+    if (fileInput) {
+        fileInput.click();
+    } else {
+        console.error('File input not found');
+        alert('File upload is not available. Please refresh the page.');
+    }
+}
+
+function showNewFolderDialog() {
+    const dialog = document.getElementById('new-folder-dialog');
+    if (dialog) {
+        dialog.classList.remove('hidden');
+        // Focus on the input field
+        const input = dialog.querySelector('input[name="name"]');
+        if (input) {
+            setTimeout(() => input.focus(), 100);
+        }
+    } else {
+        console.error('New folder dialog not found');
+    }
+}
+function hideNewFolderDialog() {
+    const dialog = document.getElementById('new-folder-dialog');
+    if (dialog) {
+        dialog.classList.add('hidden');
+        const form = document.getElementById('new-folder-form');
+        if (form) {
+            form.reset();
+        }
+    }
+}
+
+// Validate folder name before submission
+function validateFolderName(form) {
+    const nameInput = form.querySelector('input[name="name"]');
+    if (nameInput) {
+        const name = nameInput.value.trim();
+        if (!name) {
+            alert('Please enter a folder name');
+            nameInput.focus();
+            return false;
+        }
+        // Check for invalid characters
+        const invalidChars = /[<>:"/\\|?*]/;
+        if (invalidChars.test(name)) {
+            alert('Folder name contains invalid characters. Please avoid: < > : " / \\ | ? *');
+            nameInput.focus();
+            return false;
+        }
+    }
+    return true;
+}
+
+// Close dialog when clicking outside
+document.addEventListener('click', function(e) {
+    const dialog = document.getElementById('new-folder-dialog');
+    if (dialog && !dialog.classList.contains('hidden')) {
+        const dialogContent = dialog.querySelector('.office-dialog-content');
+        if (dialogContent && !dialogContent.contains(e.target) && !e.target.matches('[onclick*="showNewFolderDialog"]')) {
+            hideNewFolderDialog();
+        }
+    }
+});
+
+// Close dialog on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideNewFolderDialog();
+    }
+});
+function handleFileSelect(event) {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
+        return;
+    }
+    
+    // Check if any file is a ZIP file
+    const hasZip = Array.from(files).some(f => 
+        f.name.toLowerCase().endsWith('.zip')
+    );
+    
+    if (hasZip) {
+        // Ask user if they want to extract ZIP files
+        const extract = confirm('ZIP file(s) detected. Do you want to extract the contents?');
+        document.getElementById('extract-zip-input').value = extract ? 'true' : 'false';
+    } else {
+        document.getElementById('extract-zip-input').value = 'false';
+    }
+    
+    const form = document.getElementById('upload-form');
+    const uploadFileInput = document.getElementById('upload-file-input');
+    const folderInput = document.getElementById('upload-folder-id');
+    
+    // Transfer files to form's file input using DataTransfer API
+    try {
+        const dataTransfer = new DataTransfer();
+        for (let i = 0; i < files.length; i++) {
+            dataTransfer.items.add(files[i]);
+        }
+        uploadFileInput.files = dataTransfer.files;
+    } catch (e) {
+        console.error('Error transferring files:', e);
+        alert('Error preparing files for upload. Please try again.');
+        return;
+    }
+    
+    // Update folder ID
+    const currentFolderId = {{ current_folder.id if current_folder else 'null' }};
+    folderInput.value = currentFolderId !== null && currentFolderId !== 'null' ? currentFolderId : '';
+    
+    // Submit form
+    form.submit();
+}
+
+// Search functionality
+const searchInput = document.getElementById('office-search-input');
+const searchResults = document.getElementById('office-search-results');
+let searchTimeout = null;
+
+searchInput.addEventListener('input', function() {
+    const query = this.value.trim();
+    clearTimeout(searchTimeout);
+    
+    if (!query) {
+        searchResults.classList.add('hidden');
+        return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+        fetch(`{{ url_for('office.api_search') }}?q=${encodeURIComponent(query)}`)
+            .then(r => r.json())
+            .then(data => {
+                let html = '';
+                if (data.folders && data.folders.length > 0) {
+                    html += '<div style="padding:0.5rem;font-weight:600;color:var(--accent);">Folders</div>';
+                    data.folders.forEach(f => {
+                        html += `<a href="{{ url_for('office.index') }}?folder=${f.id}" style="display:block;padding:0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);text-decoration:none;color:var(--text);">📁 ${f.name}</a>`;
+                    });
+                }
+                if (data.files && data.files.length > 0) {
+                    html += '<div style="padding:0.5rem;font-weight:600;color:var(--accent);">Files</div>';
+                    data.files.forEach(f => {
+                        const baseUrl = '{{ url_for("office.view_file", file_id=999999) }}';
+                        const viewUrl = baseUrl.replace('999999', f.id);
+                        html += `<a href="${viewUrl}" target="_blank" rel="noopener noreferrer" style="display:block;padding:0.75rem;border-bottom:1px solid rgba(255,255,255,0.1);text-decoration:none;color:var(--text);">📄 ${f.original_filename}</a>`;
+                    });
+                }
+                if (!html) {
+                    html = '<div style="padding:1rem;text-align:center;color:rgba(255,255,255,0.6);">No results found</div>';
+                }
+                searchResults.innerHTML = html;
+                searchResults.classList.remove('hidden');
+            })
+            .catch(() => {
+                searchResults.classList.add('hidden');
+            });
+    }, 300);
+});
+
+// Close search on click outside
+document.addEventListener('click', function(e) {
+    if (!searchInput.contains(e.target) && !searchResults.contains(e.target)) {
+        searchResults.classList.add('hidden');
+    }
+});
+
+// Handle View button clicks - ensure files open in new browser tab
+document.addEventListener('DOMContentLoaded', function() {
+    const viewButtons = document.querySelectorAll('.btn-icon.btn-view');
+    
+    viewButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            // Stop event propagation to prevent double-click handler from firing
+            e.stopPropagation();
+            
+            const fileExt = button.getAttribute('data-file-ext') || '';
+            const href = button.getAttribute('href');
+            
+            // Log file type for debugging
+            if (['xlsx', 'xls', 'xlsm', 'xlsb'].includes(fileExt.toLowerCase())) {
+                console.log('Viewing Excel file - will open in new browser tab:', href);
+            } else if (['docx', 'doc'].includes(fileExt.toLowerCase())) {
+                console.log('Viewing Word file - will open in new browser tab:', href);
+            } else if (['pptx', 'ppt'].includes(fileExt.toLowerCase())) {
+                console.log('Viewing PowerPoint file - will open in new browser tab:', href);
+            } else if (fileExt.toLowerCase() === 'pdf') {
+                console.log('Viewing PDF file - will open in new browser tab:', href);
+            }
+            
+            // IMPORTANT: Don't prevent default - let the link navigate normally
+            // The href already has target="_blank" which opens in new tab
+            // The backend view_file route will serve the file with Content-Disposition: inline
+            // to display in browser, not download
+        });
+    });
+    
+    // Handle Download button clicks - ensure files are downloaded
+    const downloadButtons = document.querySelectorAll('.btn-icon.btn-download');
+    
+    downloadButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            // Stop event propagation to prevent double-click handler from firing
+            e.stopPropagation();
+            
+            // Let the link navigate normally - the download attribute and backend route
+            // will ensure the file is downloaded, not displayed
+            console.log('Downloading file:', button.getAttribute('href'));
+        });
+    });
+});
+
+// Double-click to open files
+document.addEventListener('DOMContentLoaded', function() {
+    const fileItems = document.querySelectorAll('.office-item.office-file');
+    
+    fileItems.forEach(function(item) {
+        // Prevent single click from triggering when double-clicking
+        let clickTimer = null;
+        
+        item.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action buttons
+            if (e.target.closest('.office-item-actions')) {
+                return;
+            }
+            
+            // Clear any pending single-click action
+            if (clickTimer) {
+                clearTimeout(clickTimer);
+            }
+            
+            // Set a timer for single-click (not used currently, but can be added later)
+            clickTimer = setTimeout(function() {
+                // Single click could be used for selection in the future
+            }, 300);
+        });
+        
+        // Handle double-click to open file
+        item.addEventListener('dblclick', function(e) {
+            // Don't trigger if clicking on action buttons
+            if (e.target.closest('.office-item-actions')) {
+                return;
+            }
+            
+            // Clear any pending single-click action
+            if (clickTimer) {
+                clearTimeout(clickTimer);
+                clickTimer = null;
+            }
+            
+            const fileId = item.getAttribute('data-file-id');
+            const fileType = item.getAttribute('data-file-type');
+            const viewUrl = item.getAttribute('data-view-url');
+            const downloadUrl = item.getAttribute('data-download-url');
+            
+            if (!fileId) {
+                console.error('File ID not found');
+                return;
+            }
+            
+            // Open file in view mode - this will open in native application
+            // Excel files (.xlsx, .xls, .xlsm, .xlsb) open in Microsoft Excel
+            // Word files (.docx, .doc) open in Microsoft Word
+            // PDFs open in PDF viewer, etc.
+            // The backend sets proper MIME types and Content-Disposition: inline
+            // so the browser/OS knows which application to use
+            if (viewUrl) {
+                // Use view route for all files - opens in native app with proper MIME types
+                // For Excel files (.xlsx, .xls, .xlsm, .xlsb), this will open in Microsoft Excel
+                // The backend sets Content-Disposition: inline and proper MIME types
+                // which tells the browser/OS to open the file in the associated application
+                const fileExt = item.getAttribute('data-file-ext') || '';
+                if (['xlsx', 'xls', 'xlsm', 'xlsb'].includes(fileExt.toLowerCase())) {
+                    // Excel file - will open in Microsoft Excel
+                    console.log('Opening Excel file in Microsoft Excel:', viewUrl);
+                }
+                window.open(viewUrl, '_blank');
+            } else if (downloadUrl) {
+                // Fallback to download if view URL not available
+                window.location.href = downloadUrl;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
