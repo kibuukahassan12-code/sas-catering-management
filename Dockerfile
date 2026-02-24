@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -15,4 +15,4 @@ COPY . .
 
 EXPOSE 10000
 
-CMD ["python", "-m", "sas_management.app"]
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000"]
