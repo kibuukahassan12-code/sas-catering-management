@@ -114,7 +114,7 @@ def contract_new(event_id):
                         'event_time': str(event.event_time) if event.event_time else 'N/A',
                         'venue': event.venue or 'N/A',
                         'guest_count': event.guest_count or 0,
-                        'quoted_value': float(event.quoted_value or 0)
+                        'quoted_value': float(event.budget_estimate or 0)
                     }
                     client_data = {
                         'name': client.name,

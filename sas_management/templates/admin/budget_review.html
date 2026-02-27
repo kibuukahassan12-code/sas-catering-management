@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+select, select option, option { background: transparent !important; background-color: transparent !important; color: var(--text, #f5f5f5) !important; }
+select:focus, select:focus option { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+select option:hover, select option:checked { background: var(--surface, #111111) !important; background-color: var(--surface, #111111) !important; }
+</style>
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Admin Panel</p>
+    <h1>Review Budget</h1>
+    <p class="muted">
+      {% if budget.event %}
+        {{ budget.event.title or budget.event.event_name or 'Untitled Event' }}
+        {% if budget.event.event_date or budget.event.date %} • {{ (budget.event.event_date or budget.event.date).strftime('%b %d, %Y') }}{% endif %}
+      {% endif %}
+    </p>
+  </div>
+  <div class="quick-links">
+    <a class="btn-secondary" href="{{ url_for('admin.budgets_list') }}">← Back to Budgets</a>
+  </div>
+</section>
+
+<!-- Budget Info -->
+<section class="panel">
+  <div class="panel-header">
+    <h3>Budget Information</h3>
+    <span class="badge badge-{{ budget.status.value|lower }}">{{ budget.status.value }}</span>
+  </div>
+  
+  {% if budget.event and budget.event.client %}
+  <div style="padding: 1rem; background: rgba(34, 197, 94, 0.1); border-radius: 6px; margin-bottom: 1rem; border-left: 3px solid #22c55e;">
+    <h4 style="color: white; margin-bottom: 0.75rem; font-size: 1rem;">Client Information</h4>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; color: rgba(255,255,255,0.9);">
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Client Name:</strong>
+        <div style="font-weight: 600; margin-top: 0.25rem;">{{ budget.event.client.name }}</div>
+      </div>
+      {% if budget.event.client.company %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Company:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client.company }}</div>
+      </div>
+      {% endif %}
+      {% if budget.event.client.email %}
+      <div>
+        <strong style="color: rgba(255,255,255,0.7); font-size: 0.875rem;">Email:</strong>
+        <div style="margin-top: 0.25rem;">{{ budget.event.client.email }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+    <article class="summary-card">
+      <p>Total Budget</p>
+      <h3 style="text-align:right; color: #F26822;">UGX {{ "{:,.0f}".format(budget.total_cost_ugx or 0) }}</h3>
+    </article>
+    <article class="summary-card">
+      <p>Submitted</p>
+      <h3 style="text-align:right;">{{ budget.submitted_at.strftime('%b %d, %Y') if budget.submitted_at else '—' }}</h3>
+    </article>
+    <article class="summary-card">
+      <p>Items</p>
+      <h3 style="text-align:right;">{{ budget_items|length if budget_items else 0 }}</h3>
+    </article>
+  </div>
+</section>
+
+<!-- Budget Items -->
+<section class="panel">
+  <div class="panel-header">
+    <h3>Budget Line Items</h3>
+  </div>
+  <div class="table-wrapper">
+    <table class="responsive-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Description</th>
+          <th style="text-align: right;">Qty</th>
+          <th style="text-align: right;">Unit Cost</th>
+          <th style="text-align: right;">Total</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in budget_items %}
+        <tr>
+          <td><span class="badge">{{ item.category }}</span></td>
+          <td><strong>{{ item.description }}</strong></td>
+          <td style="text-align: right;">{{ item.quantity }}</td>
+          <td style="text-align: right;">{{ "{:,.0f}".format(item.unit_cost_ugx or 0) }}</td>
+          <td style="text-align: right;"><strong>{{ "{:,.0f}".format(item.total_cost_ugx or 0) }}</strong></td>
+          <td class="muted">{{ item.notes or '—' }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" class="muted" style="text-align: center; padding: 2rem;">No items in this budget.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background: #2c3e50;">
+          <td colspan="4" style="text-align: right; color: white; font-weight: bold;">GRAND TOTAL:</td>
+          <td style="text-align: right; color: #F26822; font-weight: bold; font-size: 1.2em;">UGX {{ "{:,.0f}".format(budget.total_cost_ugx or 0) }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<!-- Review Form -->
+<section class="panel" style="border: 2px solid #F26822;">
+  <div class="panel-header" style="background: linear-gradient(135deg, #fff8f5 0%, #fff 100%);">
+    <h3>Budget Review</h3>
+    <span class="badge badge-submitted">Pending Decision</span>
+  </div>
+  <form method="post" action="{{ url_for('admin.budget_review', budget_id=budget.id) }}">
+    <div style="padding: 1.5rem;">
+      <label class="form-control" style="display:block; margin-bottom: 1rem;">
+        <span style="font-weight: 600; color: white;">Recommendations / Notes to Production</span>
+        <textarea name="admin_recommendations" rows="5" placeholder="Add recommendations, adjustments, cost-saving suggestions..." style="width:100%; margin-top: 0.5rem;">{{ budget.admin_recommendations or '' }}</textarea>
+      </label>
+      
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;">
+        <button class="btn-primary" type="submit" name="action" value="approve" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%); padding: 0.75rem 2rem; font-size: 1.1rem;">
+          ✓ Approve Budget
+        </button>
+        <button class="btn-danger" type="submit" name="action" value="reject" style="padding: 0.75rem 2rem; font-size: 1.1rem;">
+          ✗ Reject Budget
+        </button>
+        <a href="{{ url_for('admin.budgets_list') }}" class="btn-secondary" style="padding: 0.75rem 2rem;">Cancel</a>
+      </div>
+    </div>
+  </form>
+</section>
+{% endblock %}

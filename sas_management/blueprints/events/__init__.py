@@ -189,7 +189,7 @@ def event_create():
             event.transport_cost = safe_float(request.form.get("transport_cost"), 0.0)
             event.equipment_cost = safe_float(request.form.get("equipment_cost"), 0.0)
             event.ingredients_cost = safe_float(request.form.get("ingredients_cost"), 0.0)
-            event.quoted_value = safe_float(request.form.get("quoted_value"), 0.0)
+            event.budget_estimate = safe_float(request.form.get("quoted_value"), 0.0)
             
             # Calculate total cost and profit
             event.calculate_costs()
@@ -306,7 +306,7 @@ def event_edit(event_id):
             event.transport_cost = safe_float(request.form.get("transport_cost"), 0.0)
             event.equipment_cost = safe_float(request.form.get("equipment_cost"), 0.0)
             event.ingredients_cost = safe_float(request.form.get("ingredients_cost"), 0.0)
-            event.quoted_value = safe_float(request.form.get("quoted_value"), 0.0)
+            event.budget_estimate = safe_float(request.form.get("quoted_value"), 0.0)
             
             # Calculate total cost and profit
             event.calculate_costs()

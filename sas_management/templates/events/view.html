@@ -147,20 +147,6 @@
         </div>
     </div>
     
-    <!-- Cost Summary Section -->
-    <div style="padding: 1.5rem; border-top: 1px solid var(--border); margin-top: 1rem;">
-        <h4 class="mt-4">Cost Summary</h4>
-        <table class="table table-bordered">
-            <tr><th>Labor Cost</th><td>{{ event.labor_cost }}</td></tr>
-            <tr><th>Transport Cost</th><td>{{ event.transport_cost }}</td></tr>
-            <tr><th>Equipment Cost</th><td>{{ event.equipment_cost }}</td></tr>
-            <tr><th>Ingredients Cost</th><td>{{ event.ingredients_cost }}</td></tr>
-            <tr><th>Total Cost</th><td><b>{{ event.total_cost }}</b></td></tr>
-            <tr><th>Quoted Value</th><td>{{ event.quoted_value }}</td></tr>
-            <tr><th>Profit</th><td><b>{{ event.profit }}</b></td></tr>
-        </table>
-    </div>
-    
     {% if event.notes %}
     <div style="padding: 1.5rem; border-top: 1px solid var(--border);">
         <label class="muted" style="display: block; margin-bottom: 0.5rem; font-size: 0.875rem;">Notes</label>

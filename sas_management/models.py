@@ -57,6 +57,7 @@ class ProductionBudgetStatus(str, Enum):
 
 class BudgetItemCategory(str, Enum):
     FoodItems = "Food Items"
+    Food = "Food"
     Sauces = "Sauces"
     MarketAccessories = "Market Accessories"
     Spices = "Spices"
@@ -64,8 +65,11 @@ class BudgetItemCategory(str, Enum):
     TeaBeverages = "Tea & Beverages"
     Transport = "Transport"
     Hire = "Hire"
+    HireItems = "HireItems"
     ProductionLabour = "Production Labour"
     ServiceLabour = "Service Labour"
+    KitchenTeam = "KitchenTeam"
+    Other = "Other"
 
 # ============================================================================
 # CORE MODELS
@@ -544,18 +548,20 @@ class Event(db.Model):
     event_date = db.Column(db.Date, nullable=True)  # Legacy field for backward compatibility
     start_time = db.Column(db.String(50), nullable=True)
     end_time = db.Column(db.String(50), nullable=True)
+    event_time = db.Column(db.String(50), nullable=True)  # Legacy alias for start_time
+    venue_map_link = db.Column(db.String(500), nullable=True)
     guest_count = db.Column(db.Integer, nullable=False, default=0)
     menu_package_id = db.Column(db.Integer, db.ForeignKey("menu_package.id"), nullable=True)
     budget_estimate = db.Column(db.Numeric(12, 2), nullable=False, default=0.00)
-    quoted_value = db.Column(db.Float, default=0.0)  # Legacy field for backward compatibility
+    quoted_value = db.Column(db.Float, nullable=True, default=0.0)  # Legacy alias column
     actual_cost = db.Column(db.Numeric(12, 2), nullable=True)
-    # Budgeting & Cost Sheet fields
-    labor_cost = db.Column(db.Float, default=0.0)
-    transport_cost = db.Column(db.Float, default=0.0)
-    equipment_cost = db.Column(db.Float, default=0.0)
-    ingredients_cost = db.Column(db.Float, default=0.0)
-    total_cost = db.Column(db.Float, default=0.0)
-    profit = db.Column(db.Float, default=0.0)
+    actual_cogs_ugx = db.Column(db.Float, nullable=True, default=0.0)
+    labor_cost = db.Column(db.Float, nullable=True, default=0.0)
+    transport_cost = db.Column(db.Float, nullable=True, default=0.0)
+    equipment_cost = db.Column(db.Float, nullable=True, default=0.0)
+    ingredients_cost = db.Column(db.Float, nullable=True, default=0.0)
+    total_cost = db.Column(db.Float, nullable=True, default=0.0)
+    profit = db.Column(db.Float, nullable=True, default=0.0)
     status = db.Column(db.String(50), default='Not Started')  # Support both enum and string
     notes = db.Column(db.Text, nullable=True)
     signature_path = db.Column(db.String(500), nullable=True)  # Path to client signature image
@@ -591,16 +597,6 @@ class Event(db.Model):
         completed = sum(1 for item in items if item.completed)
         return int((completed / len(items)) * 100) if items else 0
     
-    def calculate_costs(self):
-        """Calculate total cost and profit from individual cost components."""
-        self.total_cost = (
-            (self.labor_cost or 0)
-            + (self.transport_cost or 0)
-            + (self.equipment_cost or 0)
-            + (self.ingredients_cost or 0)
-        )
-        self.profit = (self.quoted_value or 0) - self.total_cost
-
     # ---------------------------------------------------------------------
     # Template compatibility aliases (legacy templates use these names)
     # ---------------------------------------------------------------------
@@ -613,6 +609,17 @@ class Event(db.Model):
     def event_name(self, value):
         self.title = value
 
+    def calculate_costs(self):
+        """Recalculate total_cost and profit from component cost fields."""
+        self.total_cost = (
+            (self.labor_cost or 0.0)
+            + (self.transport_cost or 0.0)
+            + (self.equipment_cost or 0.0)
+            + (self.ingredients_cost or 0.0)
+        )
+        revenue = float(self.budget_estimate or self.quoted_value or 0)
+        self.profit = revenue - self.total_cost
+
     @property
     def venue(self):
         """Legacy alias for venue name (string)."""
@@ -620,6 +627,11 @@ class Event(db.Model):
             return self.venue_obj.name if self.venue_obj else None
         except Exception:
             return None
+
+    @venue.setter
+    def venue(self, value):
+        """Allow setting venue as a string (stored via venue_obj lookup or ignored)."""
+        pass  # venue is managed via venue_id/venue_obj; string sets are silently ignored
     
     @property
     def floor_plan_id(self):
@@ -2182,7 +2194,7 @@ class ProductionBudgetItem(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     budget_id = db.Column(db.Integer, db.ForeignKey("production_budget.id"), nullable=False)
-    category = db.Column(db.Enum(BudgetItemCategory), nullable=False, default=BudgetItemCategory.FoodItems)
+    category = db.Column(db.String(64), nullable=False, default=BudgetItemCategory.FoodItems.value)
     description = db.Column(db.String(255), nullable=False)
     quantity = db.Column(db.Numeric(12, 2), nullable=False, default=1)
     unit_cost_ugx = db.Column(db.Numeric(14, 2), nullable=False, default=0.00)

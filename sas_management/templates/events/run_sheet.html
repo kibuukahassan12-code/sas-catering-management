@@ -279,8 +279,8 @@
     <div class="run-sheet-section">
         <h2>Financial Summary</h2>
         <div class="info-row">
-            <strong>Quoted Value:</strong>
-            <span>{{ CURRENCY }}{{ "{:,.2f}".format(event.quoted_value or 0) }}</span>
+            <strong>Budget Estimate:</strong>
+            <span>{{ CURRENCY }}{{ "{:,.2f}".format(event.budget_estimate or 0) }}</span>
         </div>
         {% if event.actual_cogs_ugx %}
         <div class="info-row">

@@ -132,7 +132,7 @@ def _analyze_item_pricing(item):
 
 def _analyze_event_pricing(event):
     """Analyze and suggest pricing for event."""
-    current_quote = float(event.quoted_value or 0)
+    current_quote = float(event.budget_estimate or 0)
     total_cost = float(event.total_cost or 0)
     guest_count = event.guest_count or 1
     

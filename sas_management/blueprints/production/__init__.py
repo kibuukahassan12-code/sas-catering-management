@@ -4,7 +4,7 @@ from decimal import Decimal
 import json
 
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask_login import login_required, current_user
 
 from sas_management.models import (
     Event, ProductionOrder, Recipe, UserRole, User, db,
@@ -402,3 +402,491 @@ def api_order_sheet(order_id):
 # Import and register quality control routes
 from blueprints.production.quality_control import add_quality_control_routes
 add_quality_control_routes(production_bp, role_required, paginate_query)
+
+
+# ============================
+# PRODUCTION BUDGET ROUTES
+# ============================
+from sas_management.models import ProductionBudget, ProductionBudgetItem, BudgetItemCategory, ProductionBudgetStatus
+from sas_management.models import Event, User, UserRole
+from decimal import Decimal
+
+
+@production_bp.route("/budgets")
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budgets_list():
+    """List all production budgets."""
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+    status_filter = request.args.get("status", "")
+
+    budgets_query = ProductionBudget.query
+    if status_filter:
+        try:
+            status_enum = ProductionBudgetStatus(status_filter)
+            budgets_query = budgets_query.filter(ProductionBudget.status == status_enum)
+        except ValueError:
+            pass
+    budgets_query = budgets_query.order_by(ProductionBudget.created_at.desc())
+    pagination = budgets_query.paginate(page=page, per_page=per_page, error_out=False)
+    budgets = pagination.items
+
+    return render_template(
+        "production/budgets_list.html",
+        budgets=budgets,
+        pagination=pagination,
+    )
+
+
+@production_bp.route("/budgets/export")
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budgets_export():
+    """Export budgets to CSV."""
+    try:
+        import csv
+        from io import StringIO
+        from flask import make_response
+        from datetime import datetime
+        
+        budgets = ProductionBudget.query.order_by(ProductionBudget.created_at.desc()).all()
+        
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        writer.writerow([
+            'ID', 'Event', 'Client', 'Status', 'Total Cost (UGX)', 
+            'Created', 'Submitted', 'Approved/Rejected'
+        ])
+        
+        for budget in budgets:
+            event_title = budget.event.title if budget.event else 'N/A'
+            client_name = budget.event.client.name if budget.event and budget.event.client else 'N/A'
+            
+            writer.writerow([
+                budget.id,
+                event_title,
+                client_name,
+                budget.status.value if budget.status else 'N/A',
+                budget.total_cost_ugx or 0,
+                budget.created_at.strftime('%Y-%m-%d') if budget.created_at else '',
+                budget.submitted_at.strftime('%Y-%m-%d') if budget.submitted_at else '',
+                budget.reviewed_at.strftime('%Y-%m-%d') if budget.reviewed_at else ''
+            ])
+        
+        output.seek(0)
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename=production_budgets_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+        
+        return response
+    except Exception as e:
+        flash(f"Error exporting budgets: {str(e)}", "danger")
+        return redirect(url_for("production.budgets_list"))
+
+
+@production_bp.route("/budget/new", methods=["GET", "POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_new():
+    """Create a new production budget."""
+    if request.method == "POST":
+        try:
+            event_id = request.form.get("event_id", type=int)
+            if not event_id:
+                flash("Please select an event.", "danger")
+                return redirect(url_for("production.budget_new"))
+            
+            budget = ProductionBudget(
+                event_id=event_id,
+                created_by=current_user.id,
+                status=ProductionBudgetStatus.Draft,
+            )
+            db.session.add(budget)
+            db.session.flush()
+            
+            # Read form arrays
+            form_categories = request.form.getlist("category[]")
+            form_descriptions = request.form.getlist("description[]")
+            form_quantities = request.form.getlist("quantity[]")
+            form_costs = request.form.getlist("unit_cost_ugx[]")
+            form_notes = request.form.getlist("notes[]")
+            
+            if form_categories:
+                for i, cat_val in enumerate(form_categories):
+                    qty = Decimal(form_quantities[i]) if i < len(form_quantities) and form_quantities[i] else Decimal("1")
+                    cost = Decimal(form_costs[i]) if i < len(form_costs) and form_costs[i] else Decimal("0")
+                    desc = form_descriptions[i] if i < len(form_descriptions) else cat_val
+                    notes = form_notes[i] if i < len(form_notes) else ""
+                    item = ProductionBudgetItem(
+                        budget_id=budget.id,
+                        category=cat_val,
+                        description=desc,
+                        quantity=qty,
+                        unit_cost_ugx=cost,
+                        total_cost_ugx=qty * cost,
+                        notes=notes,
+                    )
+                    db.session.add(item)
+            else:
+                # No form rows submitted - create one empty row per category
+                default_cats = [
+                    BudgetItemCategory.FoodItems, BudgetItemCategory.Sauces,
+                    BudgetItemCategory.MarketAccessories, BudgetItemCategory.Spices,
+                    BudgetItemCategory.Fruits, BudgetItemCategory.TeaBeverages,
+                    BudgetItemCategory.Transport, BudgetItemCategory.Hire,
+                    BudgetItemCategory.ProductionLabour, BudgetItemCategory.ServiceLabour,
+                ]
+                for cat in default_cats:
+                    item = ProductionBudgetItem(
+                        budget_id=budget.id,
+                        category=cat.value,
+                        description=f"{cat.value} - Initial item",
+                        quantity=Decimal("1"),
+                        unit_cost_ugx=Decimal("0"),
+                        total_cost_ugx=Decimal("0"),
+                    )
+                    db.session.add(item)
+            
+            budget.recalc_totals()
+            db.session.commit()
+            flash("Budget created successfully.", "success")
+            return redirect(url_for("production.budget_view", budget_id=budget.id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error creating budget: {str(e)}", "danger")
+    
+    events = Event.query.filter(Event.status == "Confirmed").order_by(Event.event_date.desc()).all()
+    from sas_management.models import BudgetItemCategory
+    categories = list(BudgetItemCategory)
+    return render_template("production/budget_form.html", events=events, categories=categories)
+
+
+@production_bp.route("/budget/<int:budget_id>")
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_view(budget_id):
+    """View budget details."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    budget_items = ProductionBudgetItem.query.filter_by(budget_id=budget_id).order_by(ProductionBudgetItem.category).all()
+    
+    is_admin = current_user.role == UserRole.Admin
+    upcoming_events = Event.query.filter(Event.status == "Confirmed").order_by(Event.event_date.asc()).all()
+    
+    return render_template(
+        "production/budget_view.html",
+        budget=budget,
+        budget_items=budget_items,
+        is_admin=is_admin,
+        upcoming_events=upcoming_events,
+    )
+
+
+@production_bp.route("/budget/<int:budget_id>/pdf")
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_pdf(budget_id):
+    budget = ProductionBudget.query.get_or_404(budget_id)
+
+    if budget.status != ProductionBudgetStatus.Approved:
+        flash("Only approved budgets can be downloaded as PDF.", "warning")
+        return redirect(url_for("production.budget_view", budget_id=budget_id))
+
+    from flask import make_response
+    from sas_management.services.production_budget_pdf_service import (
+        generate_production_budget_pdf_bytes,
+    )
+
+    pdf_bytes = generate_production_budget_pdf_bytes(budget)
+    response = make_response(pdf_bytes)
+    response.headers["Content-Type"] = "application/pdf"
+    response.headers[
+        "Content-Disposition"
+    ] = f"inline; filename=production_budget_{budget.id}.pdf"
+    return response
+
+
+@production_bp.route("/budget/<int:budget_id>/edit", methods=["GET", "POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_edit(budget_id):
+    """Edit budget."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    
+    if budget.status != ProductionBudgetStatus.Draft:
+        flash("Only draft budgets can be edited.", "warning")
+        return redirect(url_for("production.budget_view", budget_id=budget_id))
+    
+    if request.method == "POST":
+        try:
+            item_ids = request.form.getlist("item_id[]")
+            quantities = request.form.getlist("quantity[]")
+            unit_costs = request.form.getlist("unit_cost_ugx[]")
+            descriptions = request.form.getlist("description[]")
+            categories_form = request.form.getlist("category[]")
+            notes_form = request.form.getlist("notes[]")
+            
+            # Update existing items
+            for i, item_id in enumerate(item_ids):
+                if not item_id:
+                    continue
+                item = ProductionBudgetItem.query.get(int(item_id))
+                if item:
+                    item.category = categories_form[i] if i < len(categories_form) else item.category
+                    item.description = descriptions[i] if i < len(descriptions) else item.description
+                    item.quantity = Decimal(quantities[i] or "0") if i < len(quantities) else item.quantity
+                    item.unit_cost_ugx = Decimal(unit_costs[i] or "0") if i < len(unit_costs) else item.unit_cost_ugx
+                    item.total_cost_ugx = item.quantity * item.unit_cost_ugx
+                    item.notes = notes_form[i] if i < len(notes_form) else item.notes
+            
+            # Add any new rows (no item_id)
+            new_cats = request.form.getlist("new_category[]")
+            new_descs = request.form.getlist("new_description[]")
+            new_qtys = request.form.getlist("new_quantity[]")
+            new_costs = request.form.getlist("new_unit_cost_ugx[]")
+            new_notes = request.form.getlist("new_notes[]")
+            for i, cat_val in enumerate(new_cats):
+                if not cat_val:
+                    continue
+                qty = Decimal(new_qtys[i] or "1") if i < len(new_qtys) else Decimal("1")
+                cost = Decimal(new_costs[i] or "0") if i < len(new_costs) else Decimal("0")
+                new_item = ProductionBudgetItem(
+                    budget_id=budget_id,
+                    category=cat_val,
+                    description=new_descs[i] if i < len(new_descs) else cat_val,
+                    quantity=qty,
+                    unit_cost_ugx=cost,
+                    total_cost_ugx=qty * cost,
+                    notes=new_notes[i] if i < len(new_notes) else "",
+                )
+                db.session.add(new_item)
+            
+            budget.recalc_totals()
+            db.session.commit()
+            flash("Budget updated.", "success")
+            return redirect(url_for("production.budget_view", budget_id=budget_id))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error updating budget: {str(e)}", "danger")
+    
+    budget_items = ProductionBudgetItem.query.filter_by(budget_id=budget_id).order_by(ProductionBudgetItem.category).all()
+    from sas_management.models import BudgetItemCategory
+    categories = list(BudgetItemCategory)
+    events = Event.query.filter(Event.status == "Confirmed").order_by(Event.event_date.desc()).all()
+    return render_template("production/budget_form.html", budget=budget, budget_items=budget_items, categories=categories, events=events)
+
+
+@production_bp.route("/budget/<int:budget_id>/submit", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_submit(budget_id):
+    """Submit budget for approval."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    
+    if budget.status != ProductionBudgetStatus.Draft:
+        flash("Only draft budgets can be submitted.", "warning")
+        return redirect(url_for("production.budget_view", budget_id=budget_id))
+    
+    budget.status = ProductionBudgetStatus.Submitted
+    budget.submitted_at = datetime.utcnow()
+    db.session.commit()
+    
+    flash("Budget submitted for approval.", "success")
+    return redirect(url_for("production.budget_view", budget_id=budget_id))
+
+
+@production_bp.route("/budget/<int:budget_id>/review", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin)
+def budget_review(budget_id):
+    """Review and approve/reject budget."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    
+    if budget.status != ProductionBudgetStatus.Submitted:
+        flash("Only submitted budgets can be reviewed.", "warning")
+        return redirect(url_for("production.budget_view", budget_id=budget_id))
+    
+    action = request.form.get("action")
+    recommendations = request.form.get("admin_recommendations", "")
+    
+    if action == "approve":
+        budget.status = ProductionBudgetStatus.Approved
+    elif action == "reject":
+        budget.status = ProductionBudgetStatus.Rejected
+    else:
+        flash("Invalid action.", "danger")
+        return redirect(url_for("production.budget_view", budget_id=budget_id))
+    
+    budget.reviewed_by = current_user.id
+    budget.reviewed_at = datetime.utcnow()
+    budget.admin_recommendations = recommendations
+    db.session.commit()
+    
+    flash(f"Budget {action}d successfully.", "success")
+    return redirect(url_for("production.budget_view", budget_id=budget_id))
+
+
+@production_bp.route("/budget/<int:budget_id>/update-event", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_update_event(budget_id):
+    """Update event associated with budget."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    event_id = request.form.get("event_id", type=int)
+    
+    if event_id:
+        budget.event_id = event_id
+        db.session.commit()
+        flash("Budget event updated.", "success")
+    
+    return redirect(url_for("production.budget_view", budget_id=budget_id))
+
+
+@production_bp.route("/budget/<int:budget_id>/delete", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin)
+def budget_delete(budget_id):
+    """Delete a budget."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    
+    if budget.status not in [ProductionBudgetStatus.Draft, ProductionBudgetStatus.Rejected]:
+        flash("Only draft or rejected budgets can be deleted.", "warning")
+        return redirect(url_for("production.budgets_list"))
+    
+    db.session.delete(budget)
+    db.session.commit()
+    
+    flash("Budget deleted.", "success")
+    return redirect(url_for("production.budgets_list"))
+
+
+@production_bp.route("/budget/import-file-manager")
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_import_file_manager():
+    """Open file manager to select file for budget import."""
+    return render_template("production/budget_import_file_manager.html")
+
+
+@production_bp.route("/budget/<int:budget_id>/add-item", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def budget_add_item(budget_id):
+    """Add item to budget."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    
+    if budget.status != ProductionBudgetStatus.Draft:
+        flash("Only draft budgets can be edited.", "warning")
+        return redirect(url_for("production.budget_view", budget_id=budget_id))
+    
+    category = request.form.get("category", BudgetItemCategory.FoodItems.value)
+    description = request.form.get("description", "")
+    quantity = Decimal(request.form.get("quantity", 1))
+    unit_cost = Decimal(request.form.get("unit_cost", 0))
+    
+    item = ProductionBudgetItem(
+        budget_id=budget_id,
+        category=category,
+        description=description,
+        quantity=quantity,
+        unit_cost_ugx=unit_cost,
+        total_cost_ugx=quantity * unit_cost,
+    )
+    db.session.add(item)
+    budget.recalc_totals()
+    db.session.commit()
+    
+    flash("Item added.", "success")
+    return redirect(url_for("production.budget_view", budget_id=budget_id))
+
+
+# ============================
+# DAILY INVENTORY ROUTES
+# ============================
+from sas_management.models import ProductionInventoryItem, ProductionInventoryMovement
+
+
+@production_bp.route("/inventory")
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def daily_inventory_list():
+    """List daily inventory items."""
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+    
+    items_query = ProductionInventoryItem.query.order_by(ProductionInventoryItem.name.asc())
+    pagination = items_query.paginate(page=page, per_page=per_page, error_out=False)
+    items = pagination.items
+    
+    return render_template(
+        "production/daily_inventory_list.html",
+        items=items,
+        pagination=pagination,
+    )
+
+
+@production_bp.route("/inventory/new", methods=["GET", "POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def daily_inventory_new():
+    """Create new inventory item."""
+    if request.method == "POST":
+        try:
+            item = ProductionInventoryItem(
+                name=request.form.get("name"),
+                category=request.form.get("category"),
+                unit=request.form.get("unit"),
+                current_stock=Decimal(request.form.get("current_stock", 0)),
+                min_stock_level=Decimal(request.form.get("min_stock_level", 0)),
+                cost_per_unit=Decimal(request.form.get("cost_per_unit", 0)),
+            )
+            db.session.add(item)
+            db.session.commit()
+            flash("Inventory item created.", "success")
+            return redirect(url_for("production.daily_inventory_list"))
+        except Exception as e:
+            flash(f"Error: {str(e)}", "danger")
+    
+    return render_template("production/daily_inventory_form.html")
+
+
+@production_bp.route("/inventory/<int:item_id>/movement", methods=["POST"])
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def daily_inventory_movement(item_id):
+    """Record inventory movement."""
+    item = ProductionInventoryItem.query.get_or_404(item_id)
+    
+    movement_type = request.form.get("type")
+    quantity = Decimal(request.form.get("quantity", 0))
+    notes = request.form.get("notes", "")
+    
+    if movement_type == "in":
+        item.current_stock += quantity
+    elif movement_type == "out":
+        item.current_stock -= quantity
+    
+    movement = ProductionInventoryMovement(
+        item_id=item_id,
+        movement_type=movement_type,
+        quantity=quantity,
+        notes=notes,
+        performed_by=current_user.id,
+    )
+    db.session.add(movement)
+    db.session.commit()
+    
+    flash("Movement recorded.", "success")
+    return redirect(url_for("production.daily_inventory_list"))
+
+
+@production_bp.route("/inventory/report")
+@login_required
+@role_required(UserRole.Admin, UserRole.KitchenStaff)
+def daily_inventory_report():
+    """View inventory report."""
+    items = ProductionInventoryItem.query.all()
+    return render_template("production/daily_inventory_report.html", items=items)

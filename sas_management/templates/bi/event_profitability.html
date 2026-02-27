@@ -81,7 +81,7 @@
                         </a>
                     </td>
                     <td>{{ event.event_date.strftime('%Y-%m-%d') if event.event_date else '—' }}</td>
-                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(event.quoted_value or 0) }}</strong></td>
+                    <td><strong>{{ CURRENCY }}{{ "{:,.0f}".format(event.budget_estimate or 0) }}</strong></td>
                     <td><span class="badge badge-info">{{ event.status }}</span></td>
                     <td>
                         <button class="btn-primary btn-sm" onclick="generateProfitability({{ event.id }})" id="btn-{{ event.id }}">

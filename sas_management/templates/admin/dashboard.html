@@ -66,6 +66,21 @@
             </div>
         </div>
     </div>
+
+    <div class="panel">
+        <div class="panel-header">
+            <h3>Budgets</h3>
+        </div>
+        <div style="padding: 1.5rem;">
+            <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent); margin-bottom: 0.5rem;">
+                {{ budget_stats.total or 0 }}
+            </div>
+            <div style="display: flex; gap: 1rem; font-size: 0.9rem;">
+                <span style="color: #F26822;">{{ budget_stats.submitted or 0 }} pending</span>
+                <span style="color: #28a745;">{{ budget_stats.approved or 0 }} approved</span>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Quick Actions -->
@@ -84,6 +99,11 @@
         <a href="{{ url_for('admin.permissions_list') }}" class="btn-secondary">🔑 View Permissions</a>
         <a href="{{ url_for('admin.groups_list') }}" class="btn-secondary">👔 Manage Groups</a>
         <a href="{{ url_for('admin.assign_roles') }}" class="btn-secondary">🔗 Assign Roles</a>
+        {% if budget_stats.submitted > 0 %}
+        <a href="{{ url_for('admin.budgets_list', status='submitted') }}" class="btn-primary" style="background: linear-gradient(135deg, #F26822 0%, #e55a1b 100%);">📊 Review Budgets ({{ budget_stats.submitted }})</a>
+        {% else %}
+        <a href="{{ url_for('admin.budgets_list') }}" class="btn-secondary">📊 Manage Budgets</a>
+        {% endif %}
         <a href="{{ url_for('ai.chat') }}" class="btn-secondary">
             🤖 SAS AI
         </a>
@@ -203,6 +223,58 @@
         </div>
     </section>
 </div>
+
+<!-- Pending Budgets for Review -->
+{% if pending_review_budgets %}
+<section class="panel" style="margin-top: 2rem; border-left: 4px solid #F26822;">
+    <div class="panel-header">
+        <h3>📊 Budgets Pending Review</h3>
+        <a href="{{ url_for('admin.budgets_list', status='submitted') }}" class="btn-primary btn-sm">View All Pending</a>
+    </div>
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Client</th>
+                    <th>Total</th>
+                    <th>Submitted</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for budget in pending_review_budgets %}
+                <tr>
+                    <td><strong>{{ budget.event.title or budget.event.event_name or 'Untitled' }}</strong></td>
+                    <td>
+                        {% if budget.event.client %}
+                            {{ budget.event.client.name }}
+                        {% elif budget.event.client_name %}
+                            {{ budget.event.client_name }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right;"><strong>UGX {{ "{:,.0f}".format(budget.total_cost_ugx or 0) }}</strong></td>
+                    <td>{{ budget.submitted_at.strftime('%b %d, %Y') if budget.submitted_at else '—' }}</td>
+                    <td style="text-align: right;">
+                        <div style="display:flex; gap: 0.5rem; justify-content: flex-end; flex-wrap: wrap;">
+                            <a href="{{ url_for('admin.budget_review', budget_id=budget.id) }}" class="btn-secondary btn-sm">Review</a>
+                            <form method="post" action="{{ url_for('admin.budget_review', budget_id=budget.id) }}" style="margin:0;">
+                                <button type="submit" name="action" value="approve" class="btn-primary btn-sm" style="background: linear-gradient(135deg, #28a745 0%, #218838 100%);">Approve</button>
+                            </form>
+                            <form method="post" action="{{ url_for('admin.budget_review', budget_id=budget.id) }}" style="margin:0;">
+                                <button type="submit" name="action" value="reject" class="btn-danger btn-sm">Reject</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
 
 <!-- Activity Logs -->
 {% if recent_audit_logs %}

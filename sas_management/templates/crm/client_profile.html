@@ -917,7 +917,7 @@
                                             {{ event.status }}
                                         </span>
                                     </td>
-                                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(event.quoted_value) }}</td>
+                                    <td>{{ CURRENCY }}{{ "{:,.2f}".format(event.budget_estimate or 0) }}</td>
                                     <td>
                                         <a class="btn-primary btn-sm" href="{{ url_for('core.events_edit', event_id=event.id) }}">View</a>
                                     </td>

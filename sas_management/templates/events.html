@@ -36,7 +36,7 @@
                     <td data-label="Date">{{ event.event_date.strftime('%b %d, %Y') }}</td>
                     <td data-label="Guests">{{ event.guest_count }}</td>
                     <td data-label="Status">{{ event.status }}</td>
-                    <td data-label="Quote">{{ CURRENCY }}{{ "{:,.2f}".format(event.quoted_value or 0) }}</td>
+                    <td data-label="Budget">{{ CURRENCY }}{{ "{:,.2f}".format(event.budget_estimate or 0) }}</td>
                     <td data-label="COGS">
                         {% if event.actual_cogs_ugx %}
                             {{ CURRENCY }}{{ "{:,.2f}".format(event.actual_cogs_ugx) }}

@@ -85,12 +85,12 @@ def _generate_response(message, user):
             month_start = date(today.year, today.month, 1)
             
             # Try to get revenue from events
-            week_revenue = sum(float(e.quoted_value or 0) for e in Event.query.filter(
+            week_revenue = sum(float(e.budget_estimate or 0) for e in Event.query.filter(
                 Event.date >= week_start,
                 Event.date <= today
             ).all())
             
-            month_revenue = sum(float(e.quoted_value or 0) for e in Event.query.filter(
+            month_revenue = sum(float(e.budget_estimate or 0) for e in Event.query.filter(
                 Event.date >= month_start,
                 Event.date <= today
             ).all())

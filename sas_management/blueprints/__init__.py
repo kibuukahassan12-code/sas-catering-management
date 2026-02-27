@@ -56,9 +56,8 @@ def register_blueprints(app):
     from blueprints.communication import comm_bp
     from blueprints.menu_builder import menu_builder_bp
     from blueprints.contracts import contracts_bp
-    
-    # Hire blueprint (special import)
-    from hire import hire
+    from blueprints.office import office_bp
+    from sas_management.hire import hire
     
     # Register core blueprints
     app.register_blueprint(core_bp)
@@ -101,6 +100,7 @@ def register_blueprints(app):
     app.register_blueprint(comm_bp)
     app.register_blueprint(menu_builder_bp)
     app.register_blueprint(contracts_bp)
+    app.register_blueprint(office_bp)
     
     # Additional/optional blueprints - these should never prevent app startup
     # If any optional blueprint cannot be imported, it will be logged and skipped.

@@ -310,6 +310,13 @@ def create_app():
                     {"name": "Dashboard", "url": url_for("core.dashboard")},
                     {"name": "Clients CRM", "url": url_for("core.clients_list")},
                     {
+                        "name": "SAS Office",
+                        "url": url_for("office.index"),
+                        "children": [
+                            {"name": "File Manager", "url": url_for("office.index")},
+                        ]
+                    },
+                    {
                         "name": "Events",
                         "url": url_for("events.events_list"),
                         "children": [

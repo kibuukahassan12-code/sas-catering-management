@@ -42,8 +42,8 @@ def run(payload, user):
         # Calculate average daily revenue
         daily_revenues = []
         for event in historical_events:
-            if event.quoted_value:
-                daily_revenues.append(float(event.quoted_value))
+            if event.budget_estimate:
+                daily_revenues.append(float(event.budget_estimate))
         
         avg_daily_revenue = mean(daily_revenues) if daily_revenues else 0
         
@@ -53,7 +53,7 @@ def run(payload, user):
             Event.date <= forecast_date
         ).all()
         
-        confirmed_revenue = sum(float(e.quoted_value or 0) for e in upcoming_events)
+        confirmed_revenue = sum(float(e.budget_estimate or 0) for e in upcoming_events)
         
         # Predict additional revenue based on historical patterns
         days_without_events = timeframe_days - len(upcoming_events)

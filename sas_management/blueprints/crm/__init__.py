@@ -340,7 +340,7 @@ def pipeline():
         try:
             from sqlalchemy import func
             result = (
-                db.session.query(func.coalesce(func.sum(Event.quoted_value), 0))
+                db.session.query(func.coalesce(func.sum(Event.budget_estimate), 0))
                 .join(IncomingLead, IncomingLead.converted_event_id == Event.id)
                 .filter(IncomingLead.pipeline_stage.in_(["Qualified", "Proposal Sent", "Negotiation", "Awaiting Payment", "Confirmed"]))
                 .scalar()
@@ -853,7 +853,7 @@ def convert_lead(lead_id):
                         event_date=event_date,
                         guest_count=int(guest_count) if guest_count else 0,
                         status="Draft",
-                        quoted_value=Decimal('0.00')
+                        budget_estimate=Decimal('0.00')
                     )
                     db.session.add(event)
                     db.session.flush()

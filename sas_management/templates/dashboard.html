@@ -125,8 +125,8 @@
                             <span class="event-value">{{ event.guest_count }}</span>
                         </div>
                         <div class="event-field">
-                            <span class="event-label">Value:</span>
-                            <span class="event-value"><span class="currency-symbol">{{ CURRENCY }}</span>{{ format_millions(event.quoted_value or 0) }}</span>
+                            <span class="event-label">Budget:</span>
+                            <span class="event-value"><span class="currency-symbol">{{ CURRENCY }}</span>{{ format_millions(event.budget_estimate or 0) }}</span>
                         </div>
                     </div>
                     <div class="event-card-actions">
@@ -231,6 +231,68 @@
                     </ul>
                 </div>
             </div>
+        </div>
+        {% endif %}
+
+        <!-- PRODUCTION BUDGETS (Admin only) -->
+        {% if show_full_dashboard %}
+        <div class="panel" style="margin-bottom: 2rem; border-left: 4px solid #F26822;">
+            <div class="panel-header">
+                <h3>📊 Production Budgets</h3>
+                <a class="btn-secondary btn-sm" href="{{ url_for('admin.budgets_list') }}">Open Budgets</a>
+            </div>
+            <div class="summary-grid">
+                <article class="summary-card">
+                    <p>Total Budgets</p>
+                    <h2>{{ budget_stats.total if budget_stats is defined else 0 }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Draft</p>
+                    <h2>{{ budget_stats.draft if budget_stats is defined else 0 }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Submitted</p>
+                    <h2 style="color: #F26822;">{{ budget_stats.submitted if budget_stats is defined else 0 }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Approved</p>
+                    <h2 style="color: #28a745;">{{ budget_stats.approved if budget_stats is defined else 0 }}</h2>
+                </article>
+                <article class="summary-card">
+                    <p>Rejected</p>
+                    <h2 style="color: #dc3545;">{{ budget_stats.rejected if budget_stats is defined else 0 }}</h2>
+                </article>
+            </div>
+
+            {% if pending_review_budgets is defined and pending_review_budgets %}
+            <div style="padding: 1rem;">
+                <h4 style="margin: 0 0 0.75rem 0;">Pending Review</h4>
+                <div class="table-wrapper">
+                    <table class="responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Event</th>
+                                <th>Total</th>
+                                <th>Submitted</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for budget in pending_review_budgets %}
+                            <tr>
+                                <td><strong>{{ budget.event.title or budget.event.event_name or 'Untitled' }}</strong></td>
+                                <td style="text-align: right;"><strong>{{ CURRENCY }}{{ "{:,.0f}".format(budget.total_cost_ugx or 0) }}</strong></td>
+                                <td>{{ budget.submitted_at.strftime('%b %d, %Y') if budget.submitted_at else '—' }}</td>
+                                <td style="text-align: right;">
+                                    <a class="btn-primary btn-sm" href="{{ url_for('admin.budget_review', budget_id=budget.id) }}">Review</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
         </div>
         {% endif %}
 

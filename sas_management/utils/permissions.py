@@ -36,11 +36,17 @@ def require_permission(permission_name):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for("core.login", next=request.path))
+
             # Admin bypass: If user is Admin, allow access immediately
-            if current_user.is_authenticated and hasattr(current_user, "is_admin") and current_user.is_admin:
+            if hasattr(current_user, "is_admin") and current_user.is_admin:
                 return func(*args, **kwargs)
-            # ALL PERMISSIONS GRANTED - No restrictions for non-admin users (Phase 0/1/2/3 baseline)
-            return func(*args, **kwargs)
+
+            if hasattr(current_user, "has_permission") and current_user.has_permission(permission_name):
+                return func(*args, **kwargs)
+
+            return render_template("errors/403.html"), 403
 
         return wrapper
 
@@ -59,11 +65,20 @@ def has_permission(permission_name):
     Returns:
         Boolean indicating if user has permission (always True for admin, True for others)
     """
+    if not current_user.is_authenticated:
+        return False
+
     # Admin bypass: If user is Admin, grant all permissions
-    if current_user.is_authenticated and hasattr(current_user, "is_admin") and current_user.is_admin:
+    if hasattr(current_user, "is_admin") and current_user.is_admin:
         return True
-    # ALL PERMISSIONS GRANTED - No restrictions for non-admin users
-    return True
+
+    if hasattr(current_user, "has_permission"):
+        try:
+            return bool(current_user.has_permission(permission_name))
+        except Exception:
+            return False
+
+    return False
 
 
 # Alias for backward compatibility
@@ -89,11 +104,17 @@ def require_role(role_name):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for("core.login", next=request.path))
+
             # Admin bypass: If user is Admin, allow access immediately
-            if current_user.is_authenticated and hasattr(current_user, "is_admin") and current_user.is_admin:
+            if hasattr(current_user, "is_admin") and current_user.is_admin:
                 return func(*args, **kwargs)
-            # ALL ROLES GRANTED - No restrictions for non-admin users
-            return func(*args, **kwargs)
+
+            if hasattr(current_user, "has_role") and current_user.has_role(role_name):
+                return func(*args, **kwargs)
+
+            return render_template("errors/403.html"), 403
 
         return wrapper
 

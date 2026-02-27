@@ -297,49 +297,7 @@
             <textarea id="notes" name="notes" class="form-control" rows="4" placeholder="Special dietary requirements, setup instructions, or other important notes...">{{ event.notes if event else '' }}</textarea>
         </div>
     </div>
-
-    <!-- Budgeting & Cost Sheet Section -->
-    <div class="sas-card">
-        <h3 class="mt-4">Budgeting & Cost Sheet</h3>
-        <div class="row">
-            <div class="col-md-4">
-                <label>Labor Cost</label>
-                <input type="number" name="labor_cost" class="form-control"
-                       value="{{ event.labor_cost if event else '' }}">
-            </div>
-            <div class="col-md-4">
-                <label>Transport Cost</label>
-                <input type="number" name="transport_cost" class="form-control"
-                       value="{{ event.transport_cost if event else '' }}">
-            </div>
-            <div class="col-md-4">
-                <label>Equipment Hire</label>
-                <input type="number" name="equipment_cost" class="form-control"
-                       value="{{ event.equipment_cost if event else '' }}">
-            </div>
-            <div class="col-md-4 mt-3">
-                <label>Ingredients Cost</label>
-                <input type="number" name="ingredients_cost" class="form-control"
-                       value="{{ event.ingredients_cost if event else '' }}">
-            </div>
-            <div class="col-md-4 mt-3">
-                <label>Quoted Value</label>
-                <input type="number" name="quoted_value" class="form-control"
-                       value="{{ event.quoted_value if event else '' }}">
-            </div>
-            <div class="col-md-4 mt-3">
-                <label><b>Total Cost</b></label>
-                <input type="number" class="form-control" readonly
-                       value="{{ event.total_cost if event else 0 }}">
-            </div>
-            <div class="col-md-4 mt-3">
-                <label><b>Profit</b></label>
-                <input type="number" class="form-control" readonly
-                       value="{{ event.profit if event else 0 }}">
-            </div>
-        </div>
-    </div>
-
+    
     <!-- Submit Buttons -->
     <div style="display: flex; gap: 1rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 2px solid var(--sas-light);">
         <button type="submit" class="btn-primary">{{ 'Update Event' if event else 'Create Event' }}</button>
@@ -462,35 +420,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (select.value) {
         showPackagePreview(select.value);
     }
-    
-    // Initialize cost calculation
-    calculateCosts();
-});
-
-// Auto-calculate total cost and profit
-function calculateCosts() {
-    const laborCost = parseFloat(document.getElementById('labor_cost').value) || 0;
-    const transportCost = parseFloat(document.getElementById('transport_cost').value) || 0;
-    const equipmentCost = parseFloat(document.getElementById('equipment_cost').value) || 0;
-    const ingredientsCost = parseFloat(document.getElementById('ingredients_cost').value) || 0;
-    const quotedValue = parseFloat(document.getElementById('quoted_value').value) || 0;
-    
-    const totalCost = laborCost + transportCost + equipmentCost + ingredientsCost;
-    const profit = quotedValue - totalCost;
-    
-    document.getElementById('total_cost').value = totalCost.toFixed(2);
-    document.getElementById('profit').value = profit.toFixed(2);
-}
-
-// Add event listeners for cost fields
-document.addEventListener('DOMContentLoaded', function() {
-    ['labor_cost', 'transport_cost', 'equipment_cost', 'ingredients_cost', 'quoted_value'].forEach(function(fieldId) {
-        const field = document.getElementById(fieldId);
-        if (field) {
-            field.addEventListener('input', calculateCosts);
-            field.addEventListener('change', calculateCosts);
-        }
-    });
 });
 </script>
 {% endblock %}

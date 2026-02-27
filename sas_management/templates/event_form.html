@@ -75,8 +75,8 @@
         </label>
 
         <label class="form-control">
-            <span>Quoted Value ({{ CURRENCY.rstrip() }})</span>
-            <input type="number" min="0" step="0.01" name="quoted_value" value="{{ event.quoted_value if event else '' }}" required>
+            <span>Budget Estimate ({{ CURRENCY.rstrip() }})</span>
+            <input type="number" min="0" step="0.01" name="budget_estimate" value="{{ event.budget_estimate if event else '' }}">
         </label>
 
         <label class="form-control form-control-full">

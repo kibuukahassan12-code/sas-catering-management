@@ -48,3 +48,23 @@ sas_management/instance/*/
 dist/
 *.egg-info/
 
+# Node
+node_modules/
+package-lock.json
+
+# IDE
+.idea/
+
+# Mobile apps
+android/
+www/
+sas-mobile/android/
+sas-mobile/node_modules/
+
+# Capacitor
+capacitor.config.ts
+capacitor.config.js
+
+# Windows reserved
+nul
+

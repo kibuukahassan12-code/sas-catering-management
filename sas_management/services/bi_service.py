@@ -23,13 +23,11 @@ def calculate_event_profitability(event_id):
         if not event:
             raise ValueError("Event not found")
         
-        # Calculate revenue (quoted value or actual)
-        revenue = float(event.quoted_value or 0)
-        # If event completed, use actual revenue if available
-        # For now, use quoted value
+        # Calculate revenue (budget estimate or actual cost)
+        revenue = float(event.budget_estimate or 0)
         
-        # Calculate COGS
-        cost_of_goods = float(event.actual_cogs_ugx or 0)
+        # Calculate COGS (actual cost)
+        cost_of_goods = float(event.actual_cost or 0)
         
         # Estimate labor cost (simplified - based on staff assignments)
         labor_cost = 0.0
@@ -572,7 +570,7 @@ def run_sales_forecasting(source="all", model="simple", days=14):
                     Event.event_date >= historical_start
                 ).all()
                 
-                event_revenue = [float(e.quoted_value or 0) for e in historical_events]
+                event_revenue = [float(e.budget_estimate or 0) for e in historical_events]
                 daily_avg = statistics.mean(event_revenue) / 30 if event_revenue else 100000
                 
             elif src == "Bakery":
@@ -749,7 +747,7 @@ def calculate_customer_behavior(customer_id):
             frequency = 0
         
         # Average Order Value (AOV)
-        event_values = [float(e.quoted_value or 0) for e in events]
+        event_values = [float(e.budget_estimate or 0) for e in events]
         aov = statistics.mean(event_values) if event_values else 0
         
         # Lifetime Value (LTV)

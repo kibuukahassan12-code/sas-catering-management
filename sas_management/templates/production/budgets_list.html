@@ -1,5 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
+
+{# ── Compute stats ── #}
+{% set ns = namespace(total=0, draft=0, submitted=0, approved=0, rejected=0, grand=0) %}
+{% for b in budgets %}
+  {% set ns.total = ns.total + 1 %}
+  {% set st = (b.status.value if b.status else 'Draft') %}
+  {% if st == 'Draft' %}{% set ns.draft = ns.draft + 1 %}{% endif %}
+  {% if st == 'Submitted' %}{% set ns.submitted = ns.submitted + 1 %}{% endif %}
+  {% if st == 'Approved' %}{% set ns.approved = ns.approved + 1 %}{% endif %}
+  {% if st == 'Rejected' %}{% set ns.rejected = ns.rejected + 1 %}{% endif %}
+  {% set ns.grand = ns.grand + (b.total_cost_ugx or 0) %}
+{% endfor %}
+
 <section class="page-header">
   <div>
     <p class="eyebrow">Production Department</p>
@@ -8,55 +21,148 @@
   </div>
   <div class="quick-links">
     <a class="btn-primary" href="{{ url_for('production.budget_new') }}">+ New Budget</a>
-    <button type="button" class="btn-secondary" onclick="openFileManagerForBudget()">📁 Import from File Manager</button>
-    <a class="btn-secondary" href="{{ url_for('production.index') }}">← Production Dashboard</a>
+    <a class="btn-secondary" href="{{ url_for('production.budgets_export') }}">📥 Export CSV</a>
+    <button type="button" class="btn-secondary" onclick="openFileManagerForBudget()">📁 Import</button>
+    <a class="btn-secondary" href="{{ url_for('production.index') }}">← Dashboard</a>
   </div>
 </section>
 
+<!-- ── KPI STAT CARDS ── -->
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+  <div class="panel">
+    <div class="panel-header"><h3>Total Budgets</h3></div>
+    <div style="padding: 1.25rem;">
+      <div style="font-size: 2.5rem; font-weight: bold; color: var(--accent);">{{ ns.total }}</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">All budgets</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h3>Draft</h3></div>
+    <div style="padding: 1.25rem;">
+      <div style="font-size: 2.5rem; font-weight: bold; color: #6c757d;">{{ ns.draft }}</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Not submitted</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h3>Pending Review</h3></div>
+    <div style="padding: 1.25rem;">
+      <div style="font-size: 2.5rem; font-weight: bold; color: #F26822;">{{ ns.submitted }}</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Awaiting admin</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h3>Approved</h3></div>
+    <div style="padding: 1.25rem;">
+      <div style="font-size: 2.5rem; font-weight: bold; color: #28a745;">{{ ns.approved }}</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">Ready to execute</div>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="panel-header"><h3>Total Value</h3></div>
+    <div style="padding: 1.25rem;">
+      <div style="font-size: 1.5rem; font-weight: bold; color: var(--accent); line-height: 1.2;">{{ CURRENCY }}{{ "{:,.0f}".format(ns.grand) }}</div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.25rem;">All budgets combined</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FILTER TABS ── -->
+<div style="display: flex; gap: 0.5rem; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center;">
+  <a href="{{ url_for('production.budgets_list') }}"
+     class="{% if not request.args.get('status') %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+    All ({{ ns.total }})
+  </a>
+  <a href="{{ url_for('production.budgets_list', status='Draft') }}"
+     class="{% if request.args.get('status') == 'Draft' %}btn-primary{% else %}btn-secondary{% endif %} btn-sm">
+    ✏️ Draft ({{ ns.draft }})
+  </a>
+  <a href="{{ url_for('production.budgets_list', status='Submitted') }}"
+     class="btn-sm {% if request.args.get('status') == 'Submitted' %}btn-primary{% else %}btn-secondary{% endif %}"
+     style="{% if ns.submitted > 0 and request.args.get('status') != 'Submitted' %}border-color:#F26822; color:#F26822;{% endif %}">
+    ⏳ Pending ({{ ns.submitted }})
+  </a>
+  <a href="{{ url_for('production.budgets_list', status='Approved') }}"
+     class="btn-sm {% if request.args.get('status') == 'Approved' %}btn-primary{% else %}btn-secondary{% endif %}"
+     style="{% if ns.approved > 0 and request.args.get('status') != 'Approved' %}border-color:#28a745; color:#28a745;{% endif %}">
+    ✓ Approved ({{ ns.approved }})
+  </a>
+  <a href="{{ url_for('production.budgets_list', status='Rejected') }}"
+     class="btn-sm {% if request.args.get('status') == 'Rejected' %}btn-primary{% else %}btn-secondary{% endif %}"
+     style="{% if ns.rejected > 0 and request.args.get('status') != 'Rejected' %}border-color:#dc3545; color:#dc3545;{% endif %}">
+    ✗ Rejected ({{ ns.rejected }})
+  </a>
+</div>
+
+<!-- ── BUDGETS TABLE ── -->
 <section class="panel">
   <div class="panel-header">
-    <h3>Budgets</h3>
-    <span class="badge">{{ budgets|length }} shown</span>
+    <h3>📊 Budget List</h3>
+    <span class="badge" style="background: rgba(242,104,34,0.15); color: #F26822;">{{ budgets|length }} shown</span>
   </div>
   <div class="table-wrapper">
     <table class="responsive-table">
       <thead>
         <tr>
-          <th>Event / Client</th>
-          <th>Status</th>
-          <th>Total</th>
-          <th>Created</th>
-          <th></th>
+          <th style="width: 36px;">#</th>
+          <th>Event</th>
+          <th>Client</th>
+          <th style="width: 130px;">Status</th>
+          <th style="text-align:right; width: 160px;">Total ({{ CURRENCY }})</th>
+          <th style="width: 110px;">Created</th>
+          <th style="text-align:right; width: 200px;">Actions</th>
         </tr>
       </thead>
       <tbody>
         {% for b in budgets %}
-        <tr>
+        {% set st = (b.status.value if b.status else 'Draft') %}
+        <tr style="border-left: 3px solid {% if st == 'Approved' %}#28a745{% elif st == 'Submitted' %}#F26822{% elif st == 'Rejected' %}#dc3545{% else %}#6c757d{% endif %};">
+          <td style="color: var(--text-muted); font-size: 0.85rem;">{{ loop.index }}</td>
           <td>
-            <strong>{{ b.event.title or b.event.event_name or 'Untitled Event' }}</strong><br>
-            <small class="muted">
-              {% if b.event.client %}
-                👤 {{ b.event.client.name }}{% if b.event.client.company %} - {{ b.event.client.company }}{% endif %}
-              {% elif b.event.client_name %}
-                👤 {{ b.event.client_name }}
-              {% endif %}
-              {% if (b.event.event_date or b.event.date) %}
-                {% if b.event.client or b.event.client_name %} • {% endif %}{{ (b.event.event_date or b.event.date).strftime('%b %d, %Y') }}
-              {% endif %}
-            </small>
+            <strong>{{ b.event.title or b.event.event_name or 'Untitled Event' }}</strong>
+            {% set evt_date = (b.event.event_date or b.event.date) if b.event else none %}
+            {% if evt_date %}
+            <br><small style="color: var(--text-muted);">📅 {{ evt_date.strftime('%b %d, %Y') }}</small>
+            {% endif %}
           </td>
           <td>
-            <span class="badge badge-{{ (b.status.value if b.status else 'Draft')|lower|replace(' ', '-') }}">{{ b.status.value if b.status else 'Draft' }}</span>
+            {% if b.event and b.event.client %}
+              {{ b.event.client.name }}
+              {% if b.event.client.company %}<br><small style="color: var(--text-muted);">{{ b.event.client.company }}</small>{% endif %}
+            {% elif b.event and b.event.client_name %}
+              {{ b.event.client_name }}
+            {% else %}
+              <span style="color: var(--text-muted);">—</span>
+            {% endif %}
           </td>
-          <td style="text-align:right;"><strong>{{ CURRENCY }}{{ "{:,.2f}".format(b.total_cost_ugx or 0) }}</strong></td>
-          <td>{{ b.created_at.strftime('%b %d, %Y') if b.created_at else '' }}</td>
+          <td>
+            <span class="badge" style="{% if st == 'Approved' %}background:rgba(40,167,69,0.2);color:#28a745;{% elif st == 'Submitted' %}background:rgba(242,104,34,0.2);color:#F26822;{% elif st == 'Rejected' %}background:rgba(220,53,69,0.2);color:#dc3545;{% else %}background:rgba(108,117,125,0.2);color:#6c757d;{% endif %} font-weight:600; padding: 0.3rem 0.65rem; border-radius: 20px; font-size: 0.8rem; white-space:nowrap;">
+              {% if st == 'Approved' %}✓ {% elif st == 'Submitted' %}⏳ {% elif st == 'Rejected' %}✗ {% else %}✏️ {% endif %}{{ st }}
+            </span>
+          </td>
+          <td style="text-align:right; font-weight: 600;">
+            {{ "{:,.0f}".format(b.total_cost_ugx or 0) }}
+          </td>
+          <td style="color: var(--text-muted); font-size: 0.85rem; white-space: nowrap;">
+            {{ b.created_at.strftime('%b %d, %Y') if b.created_at else '—' }}
+          </td>
           <td style="text-align:right;">
-            <a class="btn-ghost btn-sm" href="{{ url_for('production.budget_view', budget_id=b.id) }}">View</a>
+            <div style="display:flex; gap:0.35rem; justify-content:flex-end; flex-wrap:wrap;">
+              <a class="btn-ghost btn-sm" href="{{ url_for('production.budget_view', budget_id=b.id) }}">👁 View</a>
+              {% if st == 'Draft' %}
+              <a class="btn-secondary btn-sm" href="{{ url_for('production.budget_edit', budget_id=b.id) }}">✏️ Edit</a>
+              <form method="post" action="{{ url_for('production.budget_submit', budget_id=b.id) }}" style="margin:0;" onsubmit="return confirm('Submit this budget to admin for review?')">
+                <button type="submit" class="btn-primary btn-sm" style="background:linear-gradient(135deg,#F26822 0%,#e55a1b 100%);">Submit</button>
+              </form>
+              {% endif %}
+            </div>
           </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="5" class="muted" style="text-align:center; padding: 2rem;">No budgets yet.</td>
+          <td colspan="7" style="text-align:center; padding: 3rem 1rem;">
+            <div style="color: var(--text-muted); font-size: 1.1rem; margin-bottom: 1rem;">📋 No budgets yet</div>
+            <a class="btn-primary" href="{{ url_for('production.budget_new') }}">+ Create First Budget</a>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
@@ -64,18 +170,18 @@
   </div>
 
   {% if pagination is defined and pagination.pages and pagination.pages > 1 %}
-  <nav class="pagination" aria-label="Budgets pagination">
-    <span>Page {{ pagination.page }} of {{ pagination.pages }}</span>
-    <div class="pagination-controls">
+  <nav class="pagination" aria-label="Budgets pagination" style="padding: 1rem 1.5rem; display:flex; align-items:center; justify-content:space-between;">
+    <span style="color: var(--text-muted); font-size: 0.9rem;">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+    <div style="display:flex; gap:0.5rem;">
       {% if pagination.has_prev %}
-      <a class="btn-secondary" href="{{ url_for('production.budgets_list', page=pagination.prev_num) }}">← Previous</a>
+      <a class="btn-secondary btn-sm" href="{{ url_for('production.budgets_list', page=pagination.prev_num) }}">← Previous</a>
       {% else %}
-      <span class="btn-disabled">← Previous</span>
+      <span class="btn-disabled btn-sm">← Previous</span>
       {% endif %}
       {% if pagination.has_next %}
-      <a class="btn-secondary" href="{{ url_for('production.budgets_list', page=pagination.next_num) }}">Next →</a>
+      <a class="btn-secondary btn-sm" href="{{ url_for('production.budgets_list', page=pagination.next_num) }}">Next →</a>
       {% else %}
-      <span class="btn-disabled">Next →</span>
+      <span class="btn-disabled btn-sm">Next →</span>
       {% endif %}
     </div>
   </nav>
@@ -88,4 +194,3 @@ function openFileManagerForBudget() {
 }
 </script>
 {% endblock %}
-

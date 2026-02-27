@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-header">
+  <div>
+    <p class="eyebrow">Admin Panel</p>
+    <h1>Production Budgets</h1>
+    <p class="muted">Review and approve production budgets submitted by the production team.</p>
+  </div>
+  <div class="quick-links">
+    <a class="btn-secondary" href="{{ url_for('admin.dashboard') }}">← Admin Dashboard</a>
+    <a class="btn-primary" href="{{ url_for('admin.budgets_export') }}">📥 Export CSV</a>
+  </div>
+</section>
+
+<!-- Budget Statistics -->
+<div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+  <div class="panel" style="padding: 1rem; text-align: center;">
+    <div style="font-size: 2rem; font-weight: bold; color: var(--accent);">{{ stats.total }}</div>
+    <div class="muted">Total</div>
+  </div>
+  <div class="panel" style="padding: 1rem; text-align: center;">
+    <div style="font-size: 2rem; font-weight: bold; color: #6c757d;">{{ stats.draft }}</div>
+    <div class="muted">Draft</div>
+  </div>
+  <div class="panel" style="padding: 1rem; text-align: center;">
+    <div style="font-size: 2rem; font-weight: bold; color: #F26822;">{{ stats.submitted }}</div>
+    <div class="muted">Pending Review</div>
+  </div>
+  <div class="panel" style="padding: 1rem; text-align: center;">
+    <div style="font-size: 2rem; font-weight: bold; color: #28a745;">{{ stats.approved }}</div>
+    <div class="muted">Approved</div>
+  </div>
+  <div class="panel" style="padding: 1rem; text-align: center;">
+    <div style="font-size: 2rem; font-weight: bold; color: #dc3545;">{{ stats.rejected }}</div>
+    <div class="muted">Rejected</div>
+  </div>
+</div>
+
+<!-- Filter Tabs -->
+<div class="tabs" style="margin-bottom: 1.5rem;">
+  <a href="{{ url_for('admin.budgets_list') }}" class="tab {% if current_filter == 'all' %}active{% endif %}">All</a>
+  <a href="{{ url_for('admin.budgets_list', status='submitted') }}" class="tab {% if current_filter == 'submitted' %}active{% endif %}">Pending Review</a>
+  <a href="{{ url_for('admin.budgets_list', status='approved') }}" class="tab {% if current_filter == 'approved' %}active{% endif %}">Approved</a>
+  <a href="{{ url_for('admin.budgets_list', status='rejected') }}" class="tab {% if current_filter == 'rejected' %}active{% endif %}">Rejected</a>
+  <a href="{{ url_for('admin.budgets_list', status='draft') }}" class="tab {% if current_filter == 'draft' %}active{% endif %}">Draft</a>
+</div>
+
+<!-- Budgets List -->
+<section class="panel">
+  <div class="panel-header">
+    <h3>
+      {% if current_filter == 'all' %}All Budgets
+      {% elif current_filter == 'submitted' %}Pending Review
+      {% elif current_filter == 'approved' %}Approved Budgets
+      {% elif current_filter == 'rejected' %}Rejected Budgets
+      {% elif current_filter == 'draft' %}Draft Budgets
+      {% endif %}
+    </h3>
+  </div>
+  <div class="table-wrapper">
+    <table class="responsive-table">
+      <thead>
+        <tr>
+          <th>Event</th>
+          <th>Client</th>
+          <th>Status</th>
+          <th>Total (UGX)</th>
+          <th>Submitted</th>
+          <th>Reviewed</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for budget in budgets %}
+        <tr>
+          <td>
+            <strong>{{ budget.event.title or budget.event.event_name or 'Untitled Event' }}</strong><br>
+            <small class="muted">
+              {% if budget.event.event_date or budget.event.date %}
+                {{ (budget.event.event_date or budget.event.date).strftime('%b %d, %Y') }}
+              {% endif %}
+            </small>
+          </td>
+          <td>
+            {% if budget.event.client %}
+              {{ budget.event.client.name }}
+            {% elif budget.event.client_name %}
+              {{ budget.event.client_name }}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge badge-{{ budget.status.value|lower }}">{{ budget.status.value }}</span>
+          </td>
+          <td style="text-align: right;"><strong>{{ "{:,.0f}".format(budget.total_cost_ugx or 0) }}</strong></td>
+          <td>{{ budget.submitted_at.strftime('%b %d, %Y') if budget.submitted_at else '—' }}</td>
+          <td>{{ budget.reviewed_at.strftime('%b %d, %Y') if budget.reviewed_at else '—' }}</td>
+          <td style="text-align: right;">
+            {% if budget.status.value == 'Submitted' %}
+              <a class="btn-primary btn-sm" href="{{ url_for('admin.budget_review', budget_id=budget.id) }}">Review</a>
+            {% else %}
+              <a class="btn-ghost btn-sm" href="{{ url_for('production.budget_view', budget_id=budget.id) }}" target="_blank">View</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="7" class="muted" style="text-align: center; padding: 2rem;">
+            No budgets found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

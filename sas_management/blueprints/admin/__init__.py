@@ -2,7 +2,7 @@
 from flask import Blueprint, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import func, or_
-from sas_management.models import Role, Permission, RolePermission, User, UserRole, Group, Department, db, Event, Client, Transaction, AuditLog, RoleAssignmentLog
+from sas_management.models import Role, Permission, RolePermission, User, UserRole, Group, Department, db, Event, Client, Transaction, AuditLog, RoleAssignmentLog, ProductionBudget, ProductionBudgetItem, ProductionBudgetStatus
 from sas_management.utils import require_permission, role_required, paginate_query
 from sas_management.utils.helpers import get_or_404
 from sas_management.utils.permissions import require_role
@@ -40,9 +40,15 @@ def admin_required(f):
                     return f(*args, **kwargs)
         except Exception:
             pass
-        
-        # ALL PERMISSIONS GRANTED - No restrictions
-        return f(*args, **kwargs)
+
+        # Require actual admin privileges for all other users
+        try:
+            if hasattr(current_user, "is_admin") and current_user.is_admin:
+                return f(*args, **kwargs)
+        except Exception:
+            pass
+
+        return render_template("errors/403.html"), 403
     return decorated_function
 
 
@@ -83,6 +89,25 @@ def dashboard():
         total_clients = Client.query.count()
         total_events = Event.query.count()
         
+        # Budget statistics
+        try:
+            total_budgets = ProductionBudget.query.count()
+            draft_budgets = ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Draft).count()
+            submitted_budgets = ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Submitted).count()
+            approved_budgets = ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Approved).count()
+            rejected_budgets = ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Rejected).count()
+            pending_review_budgets = ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Submitted).order_by(ProductionBudget.submitted_at.desc()).limit(5).all()
+            budget_stats = {
+                "total": total_budgets,
+                "draft": draft_budgets,
+                "submitted": submitted_budgets,
+                "approved": approved_budgets,
+                "rejected": rejected_budgets,
+            }
+        except Exception:
+            budget_stats = {"total": 0, "draft": 0, "submitted": 0, "approved": 0, "rejected": 0}
+            pending_review_budgets = []
+        
         # Recent activity
         recent_users = User.query.order_by(User.id.desc()).limit(5).all()
         recent_roles = Role.query.order_by(Role.id.desc()).limit(5).all()
@@ -117,13 +142,139 @@ def dashboard():
             recent_users=recent_users,
             recent_roles=recent_roles,
             recent_audit_logs=recent_audit_logs,
-            users_by_role=users_by_role
+            users_by_role=users_by_role,
+            budget_stats=budget_stats,
+            pending_review_budgets=pending_review_budgets
         )
     except Exception as e:
         from flask import current_app
         current_app.logger.exception(f"Error loading admin dashboard: {e}")
         flash("Error loading admin dashboard.", "danger")
-        return render_template("admin/dashboard.html", stats={}, recent_users=[], recent_roles=[], recent_audit_logs=[], users_by_role={})
+        return render_template("admin/dashboard.html", stats={}, recent_users=[], recent_roles=[], recent_audit_logs=[], users_by_role={}, budget_stats={"total": 0, "draft": 0, "submitted": 0, "approved": 0, "rejected": 0}, pending_review_budgets=[])
+
+
+@admin_bp.route("/budgets")
+@admin_required
+def budgets_list():
+    """List all production budgets with admin review functionality."""
+    try:
+        status_filter = request.args.get("status", "all")
+        
+        query = ProductionBudget.query
+        
+        if status_filter == "submitted":
+            query = query.filter_by(status=ProductionBudgetStatus.Submitted)
+        elif status_filter == "approved":
+            query = query.filter_by(status=ProductionBudgetStatus.Approved)
+        elif status_filter == "rejected":
+            query = query.filter_by(status=ProductionBudgetStatus.Rejected)
+        elif status_filter == "draft":
+            query = query.filter_by(status=ProductionBudgetStatus.Draft)
+        
+        budgets = query.order_by(ProductionBudget.created_at.desc()).all()
+        
+        stats = {
+            "total": ProductionBudget.query.count(),
+            "draft": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Draft).count(),
+            "submitted": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Submitted).count(),
+            "approved": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Approved).count(),
+            "rejected": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Rejected).count(),
+        }
+        
+        return render_template("admin/budgets_list.html", budgets=budgets, stats=stats, current_filter=status_filter)
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception(f"Error loading budgets: {e}")
+        flash("Error loading budgets.", "danger")
+        return render_template("admin/budgets_list.html", budgets=[], stats={"total": 0, "draft": 0, "submitted": 0, "approved": 0, "rejected": 0}, current_filter="all")
+
+
+@admin_bp.route("/budgets/export")
+@admin_required
+def budgets_export():
+    """Export budgets to CSV."""
+    try:
+        import csv
+        from io import StringIO
+        from flask import make_response
+        
+        budgets = ProductionBudget.query.order_by(ProductionBudget.created_at.desc()).all()
+        
+        # Create CSV
+        output = StringIO()
+        writer = csv.writer(output)
+        
+        # Header
+        writer.writerow([
+            'ID', 'Event', 'Client', 'Status', 'Total Cost (UGX)', 
+            'Created', 'Submitted', 'Reviewed By', 'Reviewed At'
+        ])
+        
+        # Data
+        for budget in budgets:
+            event_title = budget.event.title if budget.event else 'N/A'
+            client_name = budget.event.client.name if budget.event and budget.event.client else 'N/A'
+            
+            writer.writerow([
+                budget.id,
+                event_title,
+                client_name,
+                budget.status.value if budget.status else 'N/A',
+                budget.total_cost_ugx or 0,
+                budget.created_at.strftime('%Y-%m-%d') if budget.created_at else '',
+                budget.submitted_at.strftime('%Y-%m-%d') if budget.submitted_at else '',
+                budget.reviewed_by or '',
+                budget.reviewed_at.strftime('%Y-%m-%d') if budget.reviewed_at else ''
+            ])
+        
+        output.seek(0)
+        response = make_response(output.getvalue())
+        response.headers['Content-Type'] = 'text/csv'
+        response.headers['Content-Disposition'] = f'attachment; filename=budgets_export_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+        
+        return response
+    except Exception as e:
+        from flask import current_app
+        current_app.logger.exception(f"Error exporting budgets: {e}")
+        flash("Error exporting budgets.", "danger")
+        return redirect(url_for("admin.budgets_list"))
+
+
+@admin_bp.route("/budgets/<int:budget_id>/review", methods=["GET", "POST"])
+@admin_required
+def budget_review(budget_id):
+    """Review and approve/reject a production budget."""
+    budget = ProductionBudget.query.get_or_404(budget_id)
+    
+    if request.method == "POST":
+        action = request.form.get("action")
+        recommendations = request.form.get("admin_recommendations", "").strip()
+        
+        if action not in ["approve", "reject"]:
+            flash("Invalid action.", "danger")
+            return redirect(url_for("admin.budget_review", budget_id=budget_id))
+        
+        if budget.status != ProductionBudgetStatus.Submitted:
+            flash("Only submitted budgets can be reviewed.", "warning")
+            return redirect(url_for("admin.budgets_list"))
+        
+        if action == "approve":
+            budget.status = ProductionBudgetStatus.Approved
+            flash("Budget approved successfully.", "success")
+        else:
+            budget.status = ProductionBudgetStatus.Rejected
+            flash("Budget rejected.", "info")
+        
+        budget.reviewed_by = current_user.id
+        budget.reviewed_at = datetime.utcnow()
+        budget.admin_recommendations = recommendations
+        db.session.commit()
+        
+        return redirect(url_for("admin.budgets_list"))
+    
+    budget_items = ProductionBudgetItem.query.filter_by(budget_id=budget_id).order_by(ProductionBudgetItem.category).all()
+    
+    return render_template("admin/budget_review.html", budget=budget, budget_items=budget_items)
 
 
 @admin_bp.route("/roles")

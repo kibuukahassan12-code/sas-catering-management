@@ -124,7 +124,7 @@ def _scan_financial_risks():
         
         for event in events:
             cost = float(event.total_cost or 0)
-            revenue = float(event.quoted_value or 0)
+            revenue = float(event.budget_estimate or 0)
             
             if cost > 0 and revenue > 0:
                 margin = ((revenue - cost) / cost) * 100

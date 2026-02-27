@@ -3,15 +3,11 @@ from decimal import Decimal
 from functools import wraps
 
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
-from flask_login import current_user, login_user, logout_user, login_required
+from flask_login import current_user, login_user, logout_user, login_required as flask_login_required
 from functools import wraps
 
 # No-op login_required - all access allowed
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        return f(*args, **kwargs)
-    return decorated_function
+login_required = flask_login_required
 
 from sas_management.models import (
     CateringItem,
@@ -342,7 +338,7 @@ def dashboard():
 
         try:
             total_confirmed_quote = (
-                db.session.query(db.func.coalesce(db.func.sum(Event.quoted_value), 0))
+                db.session.query(db.func.coalesce(db.func.sum(Event.budget_estimate), 0))
                 .filter(Event.status == "Confirmed")
                 .scalar() or Decimal('0.00')
             )
@@ -376,13 +372,36 @@ def dashboard():
         # Calculate pipeline value with error handling
         try:
             pipeline_value = (
-                db.session.query(db.func.coalesce(db.func.sum(Event.quoted_value), 0))
+                db.session.query(db.func.coalesce(db.func.sum(Event.budget_estimate), 0))
                 .join(IncomingLead, IncomingLead.converted_event_id == Event.id)
                 .filter(IncomingLead.pipeline_stage.in_(["Qualified", "Proposal Sent", "Negotiation", "Awaiting Payment"]))
                 .scalar() or Decimal('0.00')
             )
         except Exception as e:
             current_app.logger.error(f"Error calculating pipeline value: {e}")
+
+        # Budget metrics (admin only)
+        budget_stats = {"total": 0, "draft": 0, "submitted": 0, "approved": 0, "rejected": 0}
+        pending_review_budgets = []
+        if show_full_dashboard:
+            try:
+                from sas_management.models import ProductionBudget, ProductionBudgetStatus
+
+                budget_stats = {
+                    "total": ProductionBudget.query.count(),
+                    "draft": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Draft).count(),
+                    "submitted": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Submitted).count(),
+                    "approved": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Approved).count(),
+                    "rejected": ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Rejected).count(),
+                }
+                pending_review_budgets = (
+                    ProductionBudget.query.filter_by(status=ProductionBudgetStatus.Submitted)
+                    .order_by(ProductionBudget.submitted_at.desc())
+                    .limit(5)
+                    .all()
+                )
+            except Exception as e:
+                current_app.logger.error(f"Error loading production budget metrics: {e}")
         
         # Invoice metrics with error handling
         try:
@@ -494,6 +513,13 @@ def dashboard():
         # Dashboard - always available
         modules.append({"name": "Dashboard", "url": url_for("core.dashboard")})
         
+        # SAS Office - File Manager (for admin users)
+        if is_admin_user:
+            office_children = [
+                {"name": "File Manager", "url": url_for("office.index")},
+            ]
+            modules.append({"name": "SAS Office", "url": url_for("office.index"), "icon": "folder", "children": office_children})
+        
         # ALL MODULES - Show everything for admin users
         if is_admin_user:
             # Clients CRM
@@ -536,6 +562,8 @@ def dashboard():
             # Production Department
             production_children = [
                 {"name": "Production Overview", "url": url_for("production.index")},
+                {"name": "Production Budgets", "url": url_for("production.budgets_list")},
+                {"name": "New Budget", "url": url_for("production.budget_new")},
                 {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
                 {"name": "Catering Menu", "url": url_for("catering.menu_list")},
                 {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
@@ -590,6 +618,12 @@ def dashboard():
             
         else:
             # Non-admin users - use permission-based filtering
+            # SAS Office - available to all authenticated users
+            office_children = [
+                {"name": "File Manager", "url": url_for("office.index")},
+            ]
+            modules.append({"name": "SAS Office", "url": url_for("office.index"), "icon": "folder", "children": office_children})
+            
             # Clients CRM - check permission
             if has_any_permission('view_clients', 'manage_clients', 'view_all'):
                 modules.append({"name": "Clients CRM", "url": url_for("core.clients_list")})
@@ -638,6 +672,8 @@ def dashboard():
                     "url": url_for("production.index"),
                     "children": [
                         {"name": "Production Overview", "url": url_for("production.index")},
+                        {"name": "Production Budgets", "url": url_for("production.budgets_list")},
+                        {"name": "New Budget", "url": url_for("production.budget_new")},
                         {"name": "Menu Builder", "url": url_for("menu_builder.dashboard")},
                         {"name": "Catering Menu", "url": url_for("catering.menu_list")},
                         {"name": "Ingredient Inventory", "url": url_for("inventory.ingredients_list")},
@@ -712,23 +748,9 @@ def dashboard():
             try:
                 from sas_management.ai.state import is_enabled
                 
-                sas_ai_children = [
-                {"name": "AI Dashboard", "url": url_for("ai.dashboard")},
-                ]
-                
-                # Always add AI Chat - it's the main entry point
-                sas_ai_children.append({"name": "AI Chat", "url": url_for("ai.chat")})
-                
-                # Note: feature_list route may not exist, using chat as fallback
-                try:
-                    sas_ai_children.append({"name": "All Features", "url": url_for("ai.chat")})
-                except:
-                    pass
-                
                 sas_ai_module = {
-                "name": "🤖 SAS AI",
-                "url": url_for("ai.chat"),  # Main entry point is chat
-                "children": sas_ai_children,
+                    "name": "🤖 SAS AI",
+                    "url": url_for("ai.chat"),
                 }
                 modules.append(sas_ai_module)
             except Exception as e:
@@ -781,6 +803,8 @@ def dashboard():
             announcements=announcements,
             CURRENCY=current_app.config.get("CURRENCY_PREFIX", "UGX "),
             show_employee_university=show_employee_university,
+            budget_stats=budget_stats,
+            pending_review_budgets=pending_review_budgets,
         )
     except Exception as e:
         current_app.logger.exception(f"Critical error in dashboard: {e}")
@@ -813,6 +837,8 @@ def dashboard():
             recent_tasks=[],
             announcements=[],
             CURRENCY=current_app.config.get("CURRENCY_PREFIX", "UGX "),
+            budget_stats={"total": 0, "draft": 0, "submitted": 0, "approved": 0, "rejected": 0},
+            pending_review_budgets=[],
         )
 
 
@@ -841,7 +867,7 @@ def api_dashboard_upcoming_events():
                 "date": e.event_date.isoformat(),
                 "guests": e.guest_count,
                 "status": e.status,
-                "quoted_value": float(e.quoted_value or 0)
+                "quoted_value": float(e.budget_estimate or 0)
             }
             for e in events
         ]
@@ -863,7 +889,7 @@ def api_dashboard_pipeline():
         
         # Calculate total value for leads in this stage
         value = (
-            db.session.query(db.func.coalesce(db.func.sum(Event.quoted_value), 0))
+            db.session.query(db.func.coalesce(db.func.sum(Event.budget_estimate), 0))
             .join(IncomingLead, IncomingLead.converted_event_id == Event.id)
             .filter(IncomingLead.pipeline_stage == stage)
             .scalar()
@@ -1160,7 +1186,7 @@ def events_add():
             venue=request.form.get("venue", "").strip() or None,
             venue_map_link=request.form.get("venue_map_link", "").strip() or None,
             status=request.form.get("status", "Draft"),
-            quoted_value=get_decimal(request.form.get("quoted_value")),
+            budget_estimate=get_decimal(request.form.get("quoted_value")),  
             notes=request.form.get("notes", "").strip() or None,
         )
         db.session.add(event)
@@ -1285,8 +1311,8 @@ def events_edit(event_id):
         except ValueError:
             pass
         event.guest_count = request.form.get("guest_count", type=int) or event.guest_count
-        event.quoted_value = get_decimal(
-            request.form.get("quoted_value"), fallback=str(event.quoted_value)
+        event.budget_estimate = get_decimal(
+            request.form.get("quoted_value"), fallback=str(event.budget_estimate)
         )
 
         # If status is changing to "Confirmed", calculate COGS and deplete stock
